@@ -1,4 +1,4 @@
-# Project: [ชื่อโปรเจกต์ของคุณ]
+# Project: [LifeBalnce]
 _A brief, one-sentence description of what your project does._
 
 ## Team: [ชื่อทีมของคุณ]
