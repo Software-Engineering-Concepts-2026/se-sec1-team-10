@@ -1,10 +1,10 @@
-# Project: [LifeBalnce]
+# Project: [LifeBalance]
 _A brief, one-sentence description of what your project does._
 
-## Team: [ชื่อทีมของคุณ]
-- [ชื่อ-นามสกุล], GitHub: `[github_username]`
-- [ชื่อ-นามสกุล], GitHub: `[github_username]`
-- [ชื่อ-นามสกุล], GitHub: `[github_username]`
+## Team: [Another]
+- [จิตตินี สุดตา], GitHub: `[github_username]`
+- [ชยากร เตชะพัฒนาวงศ์], GitHub: `[github_username]`
+- [ภัทรพล รัชนิกรเพ็ญ], GitHub: `[github_username]`
 
 ---
 
