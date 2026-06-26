@@ -2,9 +2,9 @@
 _A brief, one-sentence description of what your project does._
 
 ## Team: [Another]
-- [จิตตินี สุดตา], GitHub: `[github_username]`
-- [ชยากร เตชะพัฒนาวงศ์], GitHub: `[github_username]`
-- [ภัทรพล รัชนิกรเพ็ญ], GitHub: `[github_username]`
+- [จิตตินี สุดตา], GitHub: `[@JJ08039]`
+- [ชยากร เตชะพัฒนาวงศ์], GitHub: `[@Chayakorn05]`
+- [ภัทรพล รัชนิกรเพ็ญ], GitHub: `[@Pattarapol01]`
 
 ---
 
