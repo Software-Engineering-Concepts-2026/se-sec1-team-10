@@ -1,5 +1,5 @@
 ## Persona 1: วัยทำงานที่เน้นประสิทธิภาพ (The High-Efficiency Professional)
-
+![Persona 1](img/per1.jpg)
 ### 1. Bio & Photo Description
 * **ชื่อ-นามสกุล:** คุณปกรณณ์ (กรณ์) อายุ 32 ปี
 * **อาชีพ:** Senior Product Manager ที่บริษัทเทคโนโลยีแห่งหนึ่งในกรุงเทพฯ

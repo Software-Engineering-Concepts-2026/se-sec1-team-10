@@ -1,4 +1,5 @@
 ## Persona 2: ผู้ที่ต้องการควบคุมน้ำหนักหลังคลอด (The Post-partum Health Optimizer)
+![Persona 2](img/per2.jpg)
 
 ### 1. Bio & Photo Description
 * **ชื่อ-นามสกุล:** คุณมนัสวี (พิมพ์) อายุ 34 ปี
