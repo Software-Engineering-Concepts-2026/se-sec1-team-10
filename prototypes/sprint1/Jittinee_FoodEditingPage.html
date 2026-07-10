@@ -1,28 +1,144 @@
-...
-</main>
+<!DOCTYPE html>
+<html lang="th">
+<head><link rel="stylesheet" href="Jittinee_FoodEditingPage.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ข้อมูลอาหาร - LifeBalance</title>
+    <link rel="stylesheet" href="styles/food-edit.css">
+</head>
+<body>
+    <header class="food-edit-header">
+        <h1 class="food-edit-title">ข้อมูลอาหาร</h1>
+        <button class="food-edit-menu-btn" aria-label="เมนูตัวเลือก" aria-haspopup="true" aria-expanded="false">
+            <span class="food-edit-menu-icon">⋮</span>
+        </button>
+        
+        <nav class="food-edit-dropdown-menu" role="menu" hidden>
+            <button class="food-edit-dropdown-item" role="menuitem">
+                แก้ไขรูปภาพ
+            </button>
+            <button class="food-edit-dropdown-item" role="menuitem">
+                ลบบันทึก
+            </button>
+        </nav>
+    </header>
 
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    const form = document.getElementById("foodEditForm");
+    <main class="food-edit-main">
+        <section class="food-edit-preview-section">
+            <img 
+                src="" 
+                alt="รูปภาพอาหาร" 
+                class="food-edit-preview-image"
+            >
+        </section>
 
-    form.addEventListener("submit", function (event) {
-        event.preventDefault();
+        <section class="food-edit-form-section">
+            <form class="food-edit-form" id="foodEditForm">
+                <!-- Food Name -->
+                <div class="food-edit-form-group">
+                    <label for="foodName" class="food-edit-label">
+                        ชื่ออาหาร
+                    </label>
+                    <input 
+                        type="text" 
+                        id="foodName" 
+                        name="foodName" 
+                        class="food-edit-input"
+                        placeholder="เช่น ข้าวมัสมั่น"
+                        required
+                    >
+                </div>
 
-        const fields = form.querySelectorAll("input, textarea");
+                <!-- Calories -->
+                <div class="food-edit-form-group">
+                    <label for="calories" class="food-edit-label">
+                        แคลอรี่ (Kcal)
+                    </label>
+                    <input 
+                        type="number" 
+                        id="calories" 
+                        name="calories" 
+                        class="food-edit-input"
+                        placeholder="0"
+                        min="0"
+                        step="1"
+                        required
+                    >
+                </div>
 
-        for (const field of fields) {
-            if (field.value.trim() === "") {
-                alert("Please fill in all fields.");
-                field.focus();
-                return;
-            }
-        }
+                <!-- Macronutrients Row -->
+                <div class="food-edit-macronutrients">
+                    <div class="food-edit-form-group">
+                        <label for="carbohydrates" class="food-edit-label">
+                            คาร์โบไฮเดรต (g)
+                        </label>
+                        <input 
+                            type="number" 
+                            id="carbohydrates" 
+                            name="carbohydrates" 
+                            class="food-edit-input"
+                            placeholder="0"
+                            min="0"
+                            step="0.1"
+                        >
+                    </div>
 
-        alert("Registration successful! (This is a prototype)");
-    });
-});
-</script>
+                    <div class="food-edit-form-group">
+                        <label for="protein" class="food-edit-label">
+                            โปรตีน (g)
+                        </label>
+                        <input 
+                            type="number" 
+                            id="protein" 
+                            name="protein" 
+                            class="food-edit-input"
+                            placeholder="0"
+                            min="0"
+                            step="0.1"
+                        >
+                    </div>
 
-<script src="scripts/food-edit.js"></script>
+                    <div class="food-edit-form-group">
+                        <label for="fat" class="food-edit-label">
+                            ไขมัน (g)
+                        </label>
+                        <input 
+                            type="number" 
+                            id="fat" 
+                            name="fat" 
+                            class="food-edit-input"
+                            placeholder="0"
+                            min="0"
+                            step="0.1"
+                        >
+                    </div>
+                </div>
+
+                <!-- Additional Notes -->
+                <div class="food-edit-form-group">
+                    <label for="notes" class="food-edit-label">
+                        หมายเหตุเพิ่มเติม
+                    </label>
+                    <textarea 
+                        id="notes" 
+                        name="notes" 
+                        class="food-edit-textarea"
+                        placeholder="เพิ่มข้อมูลเพิ่มเติมเกี่ยวกับอาหาร..."
+                        rows="4"
+                    ></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <button 
+                    type="submit" 
+                    class="food-edit-submit-btn"
+                >
+                    บันทึกการแก้ไข
+                </button>
+            </form>
+        </section>
+    </main>
+
+    <script src="Jittinee_FoodEditingPage.js"></script>
 </body>
 </html>
