@@ -1,0 +1,291 @@
+/* Global Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    background-color: #f5f5f5;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+/* Header */
+.food-edit-header {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.food-edit-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Menu Button */
+.food-edit-menu-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #333;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.food-edit-menu-btn:hover {
+    background-color: #f0f0f0;
+}
+
+.food-edit-menu-btn:active {
+    background-color: #e0e0e0;
+}
+
+.food-edit-menu-icon {
+    display: block;
+    line-height: 1;
+}
+
+/* Dropdown Menu */
+.food-edit-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 20px;
+    margin-top: 8px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 180px;
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.food-edit-dropdown-menu[hidden] {
+    display: none;
+}
+
+.food-edit-dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 12px 16px;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    color: #333;
+    font-size: 14px;
+    transition: background-color 0.2s ease;
+}
+
+.food-edit-dropdown-item:first-child {
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.food-edit-dropdown-item:hover {
+    background-color: #f9f9f9;
+}
+
+.food-edit-dropdown-item:active {
+    background-color: #f0f0f0;
+}
+
+/* Main Container */
+.food-edit-main {
+    max-width: 600px;
+    margin: 0 auto;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+/* Preview Section */
+.food-edit-preview-section {
+    width: 100%;
+    height: 300px;
+    overflow: hidden;
+    background-color: #f9f9f9;
+}
+
+.food-edit-preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px 12px 0 0;
+}
+
+/* Form Section */
+.food-edit-form-section {
+    padding: 30px 20px;
+}
+
+.food-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Form Group */
+.food-edit-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.food-edit-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    display: block;
+}
+
+/* Input and Textarea Styles */
+.food-edit-input,
+.food-edit-textarea {
+    padding: 12px 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #333;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    width: 100%;
+}
+
+.food-edit-input::placeholder,
+.food-edit-textarea::placeholder {
+    color: #999;
+}
+
+.food-edit-input:focus,
+.food-edit-textarea:focus {
+    outline: none;
+    border-color: #4caf50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+/* Macronutrients Row */
+.food-edit-macronutrients {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.food-edit-macronutrients .food-edit-form-group {
+    gap: 6px;
+}
+
+.food-edit-macronutrients .food-edit-label {
+    font-size: 13px;
+}
+
+.food-edit-macronutrients .food-edit-input {
+    padding: 10px 12px;
+    font-size: 13px;
+}
+
+/* Textarea */
+.food-edit-textarea {
+    resize: vertical;
+    min-height: 100px;
+    font-family: inherit;
+}
+
+/* Submit Button */
+.food-edit-submit-btn {
+    padding: 14px 24px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+    margin-top: 10px;
+}
+
+.food-edit-submit-btn:hover {
+    background-color: #45a049;
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.food-edit-submit-btn:active {
+    background-color: #3d8b40;
+    transform: scale(0.98);
+}
+
+/* Responsive Design for Smaller Screens */
+@media (max-width: 480px) {
+    body {
+        padding: 12px;
+    }
+
+    .food-edit-header {
+        padding: 16px;
+        margin-bottom: 20px;
+    }
+
+    .food-edit-title {
+        font-size: 20px;
+    }
+
+    .food-edit-preview-section {
+        height: 250px;
+    }
+
+    .food-edit-form-section {
+        padding: 20px 16px;
+    }
+
+    .food-edit-form {
+        gap: 16px;
+    }
+
+    .food-edit-macronutrients {
+        gap: 10px;
+    }
+
+    .food-edit-input,
+    .food-edit-textarea {
+        padding: 10px 12px;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    .food-edit-submit-btn {
+        padding: 12px 20px;
+        font-size: 15px;
+    }
+}
+
+/* Responsive Design for Larger Screens */
+@media (min-width: 768px) {
+    .food-edit-main {
+        margin-top: 20px;
+    }
+
+    .food-edit-preview-section {
+        height: 400px;
+    }
+
+    .food-edit-form-section {
+        padding: 40px;
+    }
+
+    .food-edit-form {
+        gap: 24px;
+    }
+}
