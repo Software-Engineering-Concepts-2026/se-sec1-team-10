@@ -1,0 +1,28 @@
+...
+</main>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("foodEditForm");
+
+    form.addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        const fields = form.querySelectorAll("input, textarea");
+
+        for (const field of fields) {
+            if (field.value.trim() === "") {
+                alert("Please fill in all fields.");
+                field.focus();
+                return;
+            }
+        }
+
+        alert("Registration successful! (This is a prototype)");
+    });
+});
+</script>
+
+<script src="scripts/food-edit.js"></script>
+</body>
+</html>
