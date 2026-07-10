@@ -1,0 +1,235 @@
+/*
+  Design tokens
+  -------------
+  Palette inspired by a Thai market stall: herb green + chili coral
+  on a pale sage-white ground, instead of the default cream/terracotta combo.
+*/
+:root {
+  --ink: #24312B;
+  --ink-soft: #5C6D64;
+  --paper: #F1F4F0;
+  --card: #FFFFFF;
+  --line: #DDE4DE;
+
+  --herb: #33604A;
+  --herb-soft: #E2EEE5;
+  --coral: #FF6B4A;
+  --coral-soft: #FFE4DA;
+
+  --radius-lg: 28px;
+  --radius-md: 18px;
+  --radius-pill: 999px;
+
+  --shadow-card: 0 6px 16px rgba(36, 49, 43, 0.08);
+  --shadow-frame: 0 30px 60px rgba(36, 49, 43, 0.18);
+
+  --font-display: 'Prompt', 'Noto Sans Thai', sans-serif;
+  --font-body: 'Noto Sans Thai', 'Prompt', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #E9EEE9 0%, #DCE4DC 100%);
+  font-family: var(--font-body);
+  padding: 40px 16px;
+}
+
+/* Phone frame ------------------------------------------------------ */
+
+.phone-frame {
+  width: 380px;
+  height: 780px;
+  background: var(--ink);
+  border-radius: 44px;
+  padding: 14px;
+  box-shadow: var(--shadow-frame);
+}
+
+.app-screen {
+  width: 100%;
+  height: 100%;
+  background: var(--paper);
+  border-radius: 32px;
+  padding: 28px 20px 20px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.app-screen::-webkit-scrollbar {
+  display: none;
+}
+
+/* Search bar --------------------------------------------------------- */
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  box-shadow: var(--shadow-card);
+}
+
+.search-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--ink-soft);
+  flex-shrink: 0;
+}
+
+.search-bar input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--ink);
+  width: 100%;
+}
+
+.search-bar input::placeholder {
+  color: #9AA69E;
+}
+
+/* Filter pills -------------------------------------------------------- */
+
+.filter-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--herb);
+  background: var(--herb-soft);
+  color: var(--herb);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.pill svg {
+  width: 15px;
+  height: 15px;
+}
+
+.pill:hover {
+  background: var(--herb);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.pill:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 2px;
+}
+
+/* Food grid ------------------------------------------------------------ */
+
+.food-grid {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding-bottom: 12px;
+}
+
+.food-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.food-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 22px rgba(36, 49, 43, 0.14);
+}
+
+.food-card:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 3px;
+}
+
+.food-image {
+  height: 108px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--herb-soft);
+}
+
+.food-emoji {
+  font-size: 40px;
+  line-height: 1;
+}
+
+/* A little variety in each card's backdrop, echoing the dish */
+.food-image--somtam      { background: linear-gradient(160deg, #E4F1E6, #CFE8D4); }
+.food-image--padthai     { background: linear-gradient(160deg, #FFE9D8, #FFD8BC); }
+.food-image--greencurry  { background: linear-gradient(160deg, #E0EEE0, #C7E2CB); }
+.food-image--satay       { background: linear-gradient(160deg, #FDE7CF, #F9D2A6); }
+.food-image--tomyum      { background: linear-gradient(160deg, #FFE1D6, #FFC4B2); }
+.food-image--mango       { background: linear-gradient(160deg, #FFF3D2, #FFE6A3); }
+
+.food-info {
+  padding: 12px 14px 14px;
+}
+
+.food-name {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.food-meta {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+/* Small screens -------------------------------------------------------- */
+
+@media (max-width: 420px) {
+  .phone-frame {
+    width: 100%;
+    height: 100vh;
+    border-radius: 0;
+    padding: 10px;
+  }
+  .app-screen {
+    border-radius: 20px;
+  }
+}
+
+/* Reduced motion --------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .pill,
+  .food-card {
+    transition: none;
+  }
+}
