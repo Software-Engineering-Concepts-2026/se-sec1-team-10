@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Food Logging</title>
-  <link rel="stylesheet" href="chayakorn_Food Logging_style.css" />
+  <link rel="stylesheet" href="food-logging.css" />
 </head>
 <body>
   <main class="screen">
@@ -18,17 +18,15 @@
       </select>
       <input type="hidden" id="mealType" name="mealType" value="อาหารเช้า" />
     </header>
-
     <section class="photo-card">
       <div class="photo-card__placeholder" id="photoPlaceholder">
         <div class="photo-card__content" id="photoContent">
-            <span class="photo-card__label">แตะเพื่ออัปโหลดรูป</span>
+          <span class="photo-card__label">แตะเพื่ออัปโหลดรูป</span>
           <span class="photo-card__upload-button">+ เลือกภาพ</span>
         </div>
       </div>
       <input id="foodImage" type="file" accept="image/*" class="photo-card__upload" aria-label="Upload food image" />
     </section>
-
     <section class="form-group">
       <label for="foodName">ชื่ออาหาร</label>
       <input id="foodName" name="foodName" type="text" placeholder="เช่น ข้าวมันไก่" />
@@ -40,142 +38,20 @@
           <div class="calorie-label">พลังงานรวม</div>
           <div class="calorie-value" id="calorieValue">0 kcal</div>
         </div>
-
         <div class="macro-grid">
-          <div class="macro-pill carb">
-            <label for="carbs">🍚 คาร์บ</label>
-            <input id="carbs" name="carbs" type="number" min="0" step="0.1" inputmode="decimal" placeholder="0 ก." />
-          </div>
-          <div class="macro-pill sugar">
-            <label for="sugar">🍬 น้ำตาล</label>
-            <input id="sugar" name="sugar" type="number" min="0" step="0.1" inputmode="decimal" placeholder="0 ก." />
-          </div>
-          <div class="macro-pill protein">
-            <label for="protein">🥩 โปรตีน</label>
-            <input id="protein" name="protein" type="number" min="0" step="0.1" inputmode="decimal" placeholder="0 ก." />
-          </div>
-          <div class="macro-pill fat">
-            <label for="fat">🥑 ไขมัน</label>
-            <input id="fat" name="fat" type="number" min="0" step="0.1" inputmode="decimal" placeholder="0 ก." />
-          </div>
+          <div class="macro-pill carb"><label for="carbs">🍚 คาร์บ</label><input id="carbs" name="carbs" type="number" min="0" step="0.1" inputmode="decimal" placeholder="0 ก." /></div>
+          <div class="macro-pill sugar"><label for="sugar">🍬 น้ำตาล</label><input id="sugar" name="sugar" type="number" min="0" step="0.1" inputmode="decimal" placeholder="0 ก." /></div>
+          <div class="macro-pill protein"><label for="protein">🥩 โปรตีน</label><input id="protein" name="protein" type="number" min="0" step="0.1" inputmode="decimal" placeholder="0 ก." /></div>
+          <div class="macro-pill fat"><label for="fat">🥑 ไขมัน</label><input id="fat" name="fat" type="number" min="0" step="0.1" inputmode="decimal" placeholder="0 ก." /></div>
         </div>
       </div>
     </section>
-
     <section class="ingredients-group">
-      <div class="ingredients-header">
-        <span>ส่วนประกอบ</span>
-        <button type="button" class="add-ingredient">+ เพิ่มส่วนประกอบ</button>
-      </div>
+      <div class="ingredients-header"><span>ส่วนประกอบ</span><button type="button" class="add-ingredient">+ เพิ่มส่วนประกอบ</button></div>
       <div class="ingredient-list"></div>
     </section>
-
     <button type="button" class="primary-button" disabled>บันทึกข้อมูล</button>
   </main>
-
-  <script >
-    document.addEventListener('DOMContentLoaded', () => {
-  const fileInput = document.getElementById('foodImage');
-  const photoPlaceholder = document.getElementById('photoPlaceholder');
-  const photoContent = document.getElementById('photoContent');
-  const ingredientList = document.querySelector('.ingredient-list');
-  const addIngredientButton = document.querySelector('.add-ingredient');
-  const mealSelect = document.getElementById('mealSelect');
-  const mealInput = document.getElementById('mealType');
-  const foodNameInput = document.getElementById('foodName');
-  const carbsInput = document.getElementById('carbs');
-  const sugarInput = document.getElementById('sugar');
-  const proteinInput = document.getElementById('protein');
-  const fatInput = document.getElementById('fat');
-  const calorieValue = document.getElementById('calorieValue');
-  const saveButton = document.querySelector('.primary-button');
-
-  // ฟังก์ชันเพิ่มช่องกรอกส่วนประกอบ
-  function createIngredientRow() {
-    const row = document.createElement('div');
-    row.className = 'ingredient-row';
-    row.innerHTML = `
-      <input type="text" class="ingredient-input" placeholder="ชื่อวัตถุดิบ" />
-      <input type="text" class="quantity-input" placeholder="กรัม" />
-      <button type="button" class="remove-ingredient" aria-label="ลบ">×</button>
-    `;
-
-    const removeButton = row.querySelector('.remove-ingredient');
-    removeButton.addEventListener('click', () => row.remove());
-
-    ingredientList.appendChild(row);
-    row.querySelector('.ingredient-input').focus();
-  }
-
-  function formatGram(value) {
-    const number = Number(value || 0);
-    return Number.isInteger(number) ? `${number} ก.` : `${number.toFixed(1)} ก.`;
-  }
-
-  function updateNutritionSummary() {
-    const carbs = Number(carbsInput.value || 0);
-    const sugar = Number(sugarInput.value || 0);
-    const protein = Number(proteinInput.value || 0);
-    const fat = Number(fatInput.value || 0);
-    const calories = (carbs + sugar) * 4 + protein * 4 + fat * 9;
-
-    calorieValue.textContent = `${Math.round(calories)} kcal`;
-    updateFormState();
-  }
-
-  function updateFormState() {
-    const nameFilled = foodNameInput.value.trim().length > 0;
-    const macroFilled = [carbsInput, sugarInput, proteinInput, fatInput].some((input) => Number(input.value || 0) > 0);
-    const imageSelected = fileInput.files && fileInput.files.length > 0;
-    saveButton.disabled = !(nameFilled && (macroFilled || imageSelected));
-  }
-
-  // อัปเดตค่าประเภทมื้ออาหาร
-  mealSelect.addEventListener('change', () => {
-    mealInput.value = mealSelect.value;
-  });
-
-  [carbsInput, sugarInput, proteinInput, fatInput].forEach((input) => {
-    input.addEventListener('input', updateNutritionSummary);
-  });
-
-  foodNameInput.addEventListener('input', updateFormState);
-  updateNutritionSummary();
-  updateFormState();
-
-  // คลิกกล่องเพื่ออัปโหลดรูป
-  photoPlaceholder.addEventListener('click', () => fileInput.click());
-
-  // แสดงพรีวิวรูปภาพ
-  fileInput.addEventListener('change', (event) => {
-    const file = event.target.files && event.target.files[0];
-    if (!file) {
-      photoPlaceholder.classList.remove('has-image');
-      photoPlaceholder.style.backgroundImage = '';
-      photoPlaceholder.style.borderStyle = 'dashed';
-      photoContent.querySelector('.photo-card__label').textContent = 'แตะเพื่ออัปโหลดรูป';
-      photoContent.querySelector('.photo-card__upload-button').textContent = '+ เลือกภาพ';
-      updateFormState();
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      photoPlaceholder.style.backgroundImage = `url(${e.target.result})`;
-      photoPlaceholder.style.backgroundSize = 'cover';
-      photoPlaceholder.style.backgroundPosition = 'center';
-      photoPlaceholder.style.borderStyle = 'solid';
-      photoPlaceholder.classList.add('has-image');
-      photoContent.querySelector('.photo-card__label').textContent = '';
-      photoContent.querySelector('.photo-card__upload-button').textContent = '📷 เปลี่ยนรูป';
-      updateFormState();
-    };
-    reader.readAsDataURL(file);
-  });
-
-  // ปุ่มเพิ่มส่วนประกอบ
-  addIngredientButton.addEventListener('click', () => createIngredientRow());
-});
-  </script>
+  <script src="food-logging.js"></script>
 </body>
 </html>

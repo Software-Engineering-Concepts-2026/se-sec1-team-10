@@ -47,6 +47,32 @@
 
   let activeMode = null; // null | 'history' | 'favorites'
 
+  function getRestrictionIds(mode, favoriteIds, historyIds) {
+    if (mode === 'favorites') {
+      return new Set(favoriteIds);
+    }
+
+    if (mode === 'history') {
+      return new Set(historyIds);
+    }
+
+    return null;
+  }
+
+  function getVisibleCardIds(cardData, query, restrictToIds) {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    return new Set(
+      cardData
+        .filter((card) => {
+          const matchesQuery = !normalizedQuery || card.name.toLowerCase().includes(normalizedQuery);
+          const matchesMode = !restrictToIds || restrictToIds.has(card.id);
+          return matchesQuery && matchesMode;
+        })
+        .map((card) => card.id)
+    );
+  }
+
   // ---- Favorites -------------------------------------------------
 
   function applyFavoriteStyles() {
@@ -120,28 +146,23 @@
   // ---- Search + combined visibility ----------------------------------
 
   function applySearchAndVisibility(restrictToIds) {
-    const query = searchInput.value.trim().toLowerCase();
-    let visibleCount = 0;
+    const cardData = cards.map((card) => ({
+      id: card.dataset.id,
+      name: card.dataset.name,
+    }));
+    const visibleIds = getVisibleCardIds(cardData, searchInput.value, restrictToIds);
 
     cards.forEach((card) => {
-      const matchesQuery = !query || card.dataset.name.toLowerCase().includes(query);
-      const matchesMode = !restrictToIds || restrictToIds.has(card.dataset.id);
-      const visible = matchesQuery && matchesMode;
+      const visible = visibleIds.has(card.dataset.id);
 
       card.classList.toggle('is-hidden', !visible);
-      if (visible) visibleCount += 1;
     });
 
-    emptyState.hidden = visibleCount !== 0;
+    emptyState.hidden = visibleIds.size !== 0;
   }
 
   function handleSearchInput() {
-    const restrictToIds =
-      activeMode === 'favorites'
-        ? new Set(favorites)
-        : activeMode === 'history'
-        ? new Set(history)
-        : null;
+    const restrictToIds = getRestrictionIds(activeMode, favorites, history);
     applySearchAndVisibility(restrictToIds);
   }
 
