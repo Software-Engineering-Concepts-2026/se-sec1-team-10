@@ -2,21 +2,38 @@
 .git
 .gitignore
 
+# Environment / secrets
+.env
+.env.*
+
 # Python virtual environment
 .venv/
 venv/
 env/
-.supercharged/
 
-# IDE / OS specific
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE / OS
 .vscode/
 .idea/
-*.DS_Store
+.DS_Store
 
-# Documentation and prototypes (not needed in production image)
+# Node.js
+node_modules/
+
+# Logs
+*.log
+
+# Tests / coverage
+tests/
+coverage/
+
+# Documentation / prototypes
 docs/
 prototypes/
 
-# Local development files
-*.pyc
-__pycache__/
+# Markdown files
+*.md

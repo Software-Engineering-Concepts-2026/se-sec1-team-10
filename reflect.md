@@ -92,3 +92,55 @@ C4Container
 - **Backend (Node.js + Express):** เลือก Node.js เพราะการทำงานแบบ Non-blocking I/O มีประสิทธิภาพสูงในการรับส่งข้อมูล JSON ขนาดเล็กผ่าน REST API และช่วยให้ทีมสามารถใช้ภาษา TypeScript ร่วมกันได้ทั้งหน้าบ้านและหลังบ้าน
 - **Database (PostgreSQL):** เลือก PostgreSQL เพราะข้อมูลโภชนาการและบันทึกอาหารต้องการความถูกต้องของโครงสร้างและความสัมพันธ์ (Relational Integrity) สูง ป้องกันปัญหาข้อมูลสูญหายหรือไม่สอดคล้องกัน
 
+
+
+# Lab 6 Reflection
+
+## 1. Dockerfile
+
+ใน Lab 6 ได้เรียนรู้การสร้าง Docker image สำหรับ Stats Service
+ซึ่งเป็น REST API ที่พัฒนาด้วย Python และ FastAPI โดยเลือกใช้
+`python:3.12-slim` เป็น Base Image เพื่อให้มีขนาด image ที่เหมาะสม
+
+ได้เรียนรู้การกำหนด `WORKDIR`, `COPY`, `EXPOSE` และ `USER`
+เพื่อให้ container สามารถทำงานได้อย่างถูกต้องและลดความเสี่ยงจาก
+การรัน application ด้วย root user
+
+หลังจากสร้าง Dockerfile ได้ทดสอบ Build image ด้วยคำสั่ง
+`docker build` และพบว่า image สามารถสร้างได้สำเร็จ โดยมีขนาด
+ประมาณ 244 MB ซึ่งต่ำกว่าเกณฑ์ 500 MB ที่กำหนดไว้ใน Lab
+
+## 2. Service
+
+Service ที่นำมา Containerize คือ `stats-service` ซึ่งเป็น REST API
+สำหรับจัดการข้อมูลสถิติของระบบ
+
+ก่อนสร้าง container ได้ทดสอบ service ในเครื่องด้วย Uvicorn และตรวจสอบ
+endpoint `/health` ว่าสามารถตอบกลับสถานะ healthy ได้
+
+หลังจากสร้าง Docker image แล้ว ได้ Run container โดย map port
+8000 ของเครื่องเข้ากับ port 8000 ภายใน container และตรวจสอบด้วย
+`docker ps` พบว่า container ทำงานอยู่ในสถานะ Up
+
+จากการทดลองพบว่า Container เหมาะกับ Stats Service เพราะ service
+สามารถทำงานแยกเป็นอิสระและสามารถ package application กับ dependencies
+ไว้ใน image เดียว ทำให้สามารถนำไป deploy ใน environment อื่นได้ง่าย
+
+## 3. REST Endpoint
+
+หลังจาก Run container ได้ทดสอบ REST endpoint ของ Stats Service
+ผ่าน browser
+
+Endpoint ที่ทดสอบคือ:
+
+- `GET /health` สำหรับตรวจสอบสถานะของ service
+- `GET /stats` สำหรับเรียกข้อมูลสถิติ
+
+ผลการทดสอบพบว่า endpoint สามารถตอบกลับได้สำเร็จ และ `/health`
+ส่ง response:
+
+```json
+{
+  "status": "healthy"
+}
+
