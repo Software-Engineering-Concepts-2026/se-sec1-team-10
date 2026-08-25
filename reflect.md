@@ -43,7 +43,40 @@ feature/lab3-requirements
 
 ผลลัพธ์จาก AI ถูกนำมาตรวจสอบและปรับแก้โดยทีมให้สอดคล้องกับ Project Proposal, Persona และ User Stories ของทีมก่อนนำไปใช้จริง
 
-# Architectural Reflections (Post-Quiz 5)
+
+# Exit Ticket — ท้ายบรรยาย Lab 4 (reflect.md)
+
+## B1. Apply — Prompt Critique (Five S's)
+
+### Prompt เดิมที่มีปัญหา:
+> *"ช่วยเขียน code Python ที่ดีๆ หน่อย"*
+
+### ปรับปรุงใหม่ตามหลัก Five S's (`calculate_discount`):
+> *"คุณคือ Senior Python Developer (Set the scene) กรุณาเขียนฟังก์ชันชื่อ `calculate_discount(price: float, discount_percent: float, member_type: str) -> float` (Specific) เพื่อคำนวณราคาสินค้าสุทธิหลังหักส่วนลด โดยมีเงื่อนไขเพิ่มเติม: สมาชิกประเภท 'VIP' ได้รับส่วนลดเพิ่ม 5% จากราคาสุทธิ, ราคาและเปอร์เซ็นต์ต้องไม่ติดลบ (Short & Scope) พร้อมใส่ Type Hinting, Docstring และเขียน Unit Test ด้วย `pytest` ครอบคลุม Edge Cases เช่น ค่าติดลบ หรือส่วนลดเกิน 100% (Structured)"*
+
+### คำอธิบายการปรับปรุง:
+- **Set the scene:** กำหนดบทบาทชัดเจน (Senior Python Developer)
+- **Specific & Scope:** ระบุชื่อฟังก์ชัน, Parameter types, Return type, Business logic (ส่วนลด VIP) และขอบเขตเงื่อนไขชัดเจน
+- **Short:** กระชับ ไม่เยิ่นเย้อ
+- **Structured:** กำหนดรูปแบบผลลัพธ์ที่ต้องการ (Docstring, Type hints, `pytest` cases)
+
+---
+
+## B2. Connect — AI ในงานที่ใช้
+
+* **1 Task ที่ AI ช่วยได้จริง (Productive):**
+  - **การสร้าง Boilerplate Code & Test Cases:** เช่น การให้ AI ช่วยเขียนโครงร่าง CRUD API, Mock ข้อมูล JSON สำหรับทดสอบ หรือสร้าง Unit Tests เพื่อครอบคลุม Edge Cases ต่างๆ ช่วยประหยัดเวลาในการพิมพ์โค้ดซ้ำซาก
+* **1 Task ที่ AI ใช้ไม่ได้ / ไม่ควรใช้ (Non-productive / Risk):**
+  - **การตัดสินใจเลือก System Architecture หรือ Business Trade-offs:** AI ไม่เข้าใจบริบทเชิงลึกของทีม ทรัพยากรที่มี หรือข้อจำกัดด้านงบประมาณ/เวลาจริง การให้ AI ตัดสินใจสถาปัตยกรรมทั้งหมดอาจนำไปสู่ Over-engineering หรือแก้ปัญหาไม่ตรงโจทย์ทางธุรกิจ
+
+---
+
+## B3. Reflect — AI Strategy (Starter Prototype Lab 4)
+
+* **Step ที่จะใช้ AI:** ใช้ในขั้นตอน **Rapid UI Skeleton & Mock Data Generation** ของการทำ Starter Prototype
+* **เหตุผล:** ในระยะเริ่มต้นของ Prototype (เช่น การทำหน้า Dashboard หรือฟอร์มบันทึกข้อมูล) การใช้ AI ช่วยสร้างโครงสร้าง HTML/CSS Layout และจำลองข้อมูลสถิติจะช่วยลดเวลาในการตั้งต้นลงอย่างมาก ทำให้ทีมสามารถนำเวลาไปโฟกัสกับการตรวจสอบ User Flow และทดสอบ Interactivity กับผู้ใช้งานจริงได้เร็วยิ่งขึ้น
+
+# Lab5 Architectural Reflections (Post-Quiz 5)
 
 ## B1. Apply — ADR ฉบับแรก
 - **Context:** ทีม LifeBalance มีขนาดเล็กและมีเวลาพัฒนาจำกัดในแต่ละ Sprint ต้องการส่งมอบฟังก์ชัน Food Logging และ Dashboard ให้เร็วที่สุด โดยไม่ต้องการสร้างภาระด้าน Infrastructure และการจัดการ Distributed Network
