@@ -1,22 +1,18 @@
 # C4 Model - Level 2: Container Diagram
 
-ไดอะแกรมแสดงสถาปัตยกรรมระดับ Container ของระบบ **LifeBalance** รวมถึงเทคโนโลยีและโปรโตคอลที่ใช้สื่อสาร
-
+## Diagram
 ```mermaid
 C4Container
-    title Container diagram for LifeBalance System
+    title Container Diagram - LifeBalance System
 
-    Person(user, "User / Office Worker", "ผู้ใช้งานผ่านเว็บบราวเซอร์บนมือถือหรือคอมพิวเตอร์")
+    Person(user, "Office Worker / User", "ผู้ใช้งานผ่านเว็บบราวเซอร์ (Mobile/Desktop)")
 
-    Container_Boundary(c1, "LifeBalance System") {
-        Container(spa, "Single-Page Application", "React, TypeScript, Vite", "ให้บริการ UI แบบ Mobile-first เพื่อให้ผู้ใช้กรอกข้อมูลอาหารและดู Dashboard")
-        Container(api, "Backend API Application", "Node.js, Express, TypeScript", "จัดการ Business Logic, การคำนวณสารอาหาร, การยืนยันตัวตน และ REST Endpoints")
-        ContainerDb(db, "Database", "PostgreSQL", "จัดเก็บข้อมูลผู้ใช้ (Users), บันทึกมื้ออาหาร (Food Logs), และวัตถุดิบ (Ingredients)")
+    Container_Boundary(c1, "LifeBalance System Boundary") {
+        Container(spa, "Single-Page Application", "React, TypeScript, Tailwind CSS", "หน้าเว็บ UI แบบ Mobile-first สำหรับบันทึกอาหารและแสดงผลกราฟ")
+        Container(api, "Backend API Application", "Node.js, Express, TypeScript", "จัดการ Business Logic, REST API Endpoints, และคำนวณโภชนาการ")
+        ContainerDb(db, "Database", "PostgreSQL", "จัดเก็บข้อมูลบัญชีผู้ใช้ บันทึกมื้ออาหาร และค่าสารอาหาร")
     }
 
-    System_Ext(oauth, "Google OAuth", "บริการยืนยันตัวตนผู้ใช้งาน")
-
     Rel(user, spa, "เข้าใช้งาน", "HTTPS")
-    Rel(spa, api, "เรียกใช้งาน API และรับส่งข้อมูล", "JSON/HTTPS")
-    Rel(api, db, "อ่านและเขียนข้อมูล", "SQL/Prisma TCP (Port 5432)")
-    Rel(api, oauth, "ตรวจสอบ Token ผู้ใช้งาน", "HTTPS/REST")
+    Rel(spa, api, "รับส่งข้อมูลผ่าน REST API", "JSON/HTTPS")
+    Rel(api, db, "อ่านและเขียนข้อมูล", "SQL via Prisma TCP (Port 5432)")

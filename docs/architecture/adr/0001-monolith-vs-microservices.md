@@ -1,26 +1,30 @@
-# 0001. Architecture Pattern: Modular Monolith vs. Microservices
+# ADR 0001: เริ่มต้นด้วย Modular Monolith สำหรับระบบ LifeBalance
 
-- **Status:** Accepted
-- **Date:** 2026-08-07
-- **Deciders:** ทีมพัฒนา LifeBalance
+## Status
+Accepted — 2026-08-25
 
-## 1. Context
-ระบบ LifeBalance อยู่ในช่วงเริ่มต้นของการพัฒนา (Sprint 1-2) โดยมีฟีเจอร์หลักคือ Food Logging และ Health Dashboard ทีมพัฒนาเป็นทีมขนาดเล็ก ทรัพยากรและเวลาในการพัฒนาจำกัด การเลือก Architecture ต้องเอื้อต่อการส่งมอบฟังก์ชันที่รวดเร็ว ไม่เพิ่มความซับซ้อนด้าน Network, Service Discovery และ Infrastructure
+## Context
+- ทีมขนาดเล็ก (4 คน), มีเวลาจำกัดตาม Sprint (~8 สัปดาห์)
+- ปริมาณผู้ใช้งานเริ่มต้นเป็นกลุ่มผู้ใช้งานทั่วไปและคนทำงานออฟฟิศ (~100 users/day)
+- ต้องการส่งมอบฟังก์ชันหลัก (Food Logging, Dashboard สรุปแคลอรี่) ให้พร้อม Demo ภายใน Sprint 2
+- ไม่มี DevOps / Ops Engineer ประจำทีม
+- ขอบเขต Requirement อยู่ในช่วงเริ่มต้นและอาจมีการปรับเปลี่ยนตาม Feedback
 
-## 2. Decision
-เราตัดสินใจเลือกสถาปัตยกรรมแบบ **Modular Monolith** (Single Backend Application ที่แบ่งโครงสร้างโฟลเดอร์ตาม Domain/Feature โมดูลอย่างชัดเจน) แทนการใช้ Microservices
+## Decision
+เลือกใช้สถาปัตยกรรมแบบ **Modular Monolith** บน Node.js + Express
+- รวมโมดูลทางธุรกิจ (Auth, Meal Logging, Nutrition Analytics) ไว้ใน Codebase และ Deployment Unit เดียวกัน
+- แยกโครงสร้างโค้ดภายในตามขอบเขตหน้าที่อย่างชัดเจน (Clear Module Boundaries)
+- หากในอนาคตมีผู้ใช้งานเกิน 1,000 คน/วัน หรือมีภาระการคำนวณด้านโภชนาการ/AI สูง → ค่อยพิจารณาแยกโมดูลนั้นออกเป็น Service อิสระ
 
-## 3. Consequences
-### ข้อดี (Positive Consequences):
-- ลดความซับซ้อนในการ Setup, Development, Testing และ CI/CD Pipeline
-- การสื่อสารระหว่างโมดูลเกิดขึ้นภายใน Memory เดียวกัน (In-process call) รวดเร็วและไม่มี Network latency
-- รองรับการทำ Database Transactions (ACID) ได้สมบูรณ์ในก้อนเดียว
-- สามารถ Migrate ไปเป็น Microservices ในอนาคตได้ง่าย หากแต่ละโมดูลถูกออกแบบให้ Loose-coupling ไว้ตั้งแต่แรก
+## Consequences
+- ✅ Deploy ง่าย เป็น Single Deployment Unit ไม่ซับซ้อน
+- ✅ ลดภาระด้าน Infrastructure และ Network Latency
+- ✅ จัดการ Database Transactions และ Data Consistency ของข้อมูลโภชนาการได้ง่าย
+- ✅ ทีมพัฒนาสามารถแชร์ TypeScript ร่วมกันได้รวดเร็ว
+- ❌ ไม่สามารถแยก Scale เฉพาะบางโมดูลที่มีปริมาณการใช้งานสูงได้อย่างอิสระ
+- ❌ หากโมดูลใดเกิด Failure รุนแรง อาจส่งผลกระทบต่อระบบส่วนอื่นได้
 
-### ข้อจำกัดและผลกระทบ (Negative Consequences):
-- ไม่สามารถ Scale แยกเฉพาะบางโมดูลที่มี Traffic สูงได้
-- หากส่วนใดส่วนหนึ่งของ Application ล่ม อาจส่งผลกระทบต่อทั้งระบบ
-
-## 4. Alternatives Considered
-- **Microservices Architecture:** ถูกปฏิเสธเนื่องจากสร้าง Overhead ด้าน DevOps สูงเกินไป และมีความเสี่ยงเรื่อง Data Consistency (Distributed Transactions) ในขณะที่ทีมยังมีขนาดเล็ก
-- **Serverless Functions:** ถูกปฏิเสธเนื่องจากปัญหา Cold Start และการจัดการ Context ของ Database Connection ค่อนข้างซับซ้อนสำหรับระบบที่ใช้ Relational Database
+## Alternatives Considered
+- **Microservices (3+ services)** — Rejected: DevOps overhead สูงเกินไป และเสี่ยงต่อปัญหา Data Consistency ข้าม Service ในช่วงเริ่มต้น
+- **Serverless Architecture** — Rejected: เสี่ยงต่อปัญหา Cold Start และจัดการ Local Development/State ได้ยากกว่า
+- **Full Monolith (ไม่มีการแยก Module)** — Rejected: ทำให้ยากต่อการ Refactor หรือแยก Service ในอนาคต
