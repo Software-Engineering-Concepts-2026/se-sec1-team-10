@@ -176,7 +176,7 @@ Endpoint ที่ทดสอบคือ:
 {
   "status": "healthy"
 }
-
+```
 # Lap 7 Reflection
 ## B1.Apply — DRY Hunt
 - Duplicate Code — index.html และ chayakorn_Food Logging_prototype.html มี CSS/JavaScript ซ้ำกัน
