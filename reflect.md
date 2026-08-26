@@ -178,24 +178,30 @@ Endpoint ที่ทดสอบคือ:
 }
 ```
 # Lap 7 Reflection
-## B1.Apply — DRY Hunt
+# B1.Apply — DRY Hunt
 - Duplicate Code — index.html และ chayakorn_Food Logging_prototype.html มี CSS/JavaScript ซ้ำกัน
 - Long Method — JavaScript บาง Function มีหลายขั้นตอน
 - Large HTML Structure — HTML มีโค้ดหลายส่วนรวมอยู่ในไฟล์เดียว
 - Repeated Logic — Event Listener มี Logic คล้ายกัน
 - Tight Coupling — HTML และ JavaScript พึ่งพากันโดยตรง
-## B2.Connect — Orthogonality Check 
-# Module ที่ตรวจ: JavaScript ของ Food Logging
-# ตรวจสอบ: ถ้าเปลี่ยน HTML เช่น id หรือโครงสร้าง Element → JavaScript ที่อ้างอิง Element นั้นอาจทำงานไม่ได้
-# ปัญหา: HTML และ JavaScript มี Coupling กัน
-# วิธี Decoupling: แยก Logic เป็น Function/Module และแยก JavaScript ออกจาก HTML เพื่อลดการพึ่งพากัน
-## B3.Reflect — Refactoring Plan
-# Smell: Duplicate Code
-# Before:
+# B2.Connect — Orthogonality Check 
+## Module ที่ตรวจ: 
+JavaScript ของ Food Logging
+## ตรวจสอบ: 
+ถ้าเปลี่ยน HTML เช่น id หรือโครงสร้าง Element → JavaScript ที่อ้างอิง Element นั้นอาจทำงานไม่ได้
+## ปัญหา:
+HTML และ JavaScript มี Coupling กัน
+## วิธี Decoupling: 
+แยก Logic เป็น Function/Module และแยก JavaScript ออกจาก HTML เพื่อลดการพึ่งพากัน
+# B3.Reflect — Refactoring Plan
+## Smell: Duplicate Code
+## Before:
 index.html และ chayakorn_Food Logging_prototype.html มี CSS/JavaScript ที่ซ้ำกัน
-# After:
+## After:
 แยกโค้ดที่ใช้ร่วมกันเป็น common.css และ common.js
-# ผลที่ได้: ลด Code Duplication แก้ไขง่ายขึ้น และสามารถ Reuse Code ได้
-# Testing: เปิดทั้ง 2 หน้า ตรวจสอบ UI, JavaScript และ Browser Console ว่ายังทำงานปกติและไม่มี Error
-# AI Workflow:
+## ผลที่ได้: 
+ลด Code Duplication แก้ไขง่ายขึ้น และสามารถ Reuse Code ได้
+## Testing: 
+เปิดทั้ง 2 หน้า ตรวจสอบ UI, JavaScript และ Browser Console ว่ายังทำงานปกติและไม่มี Error
+## AI Workflow:
 Explain → AI เสนอแนวทาง → ทีมตรวจสอบ Codebase → เลือกวิธี Refactor → Apply → Test
