@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  displayName  String
+  age          Int?
+  weightKg     Float?
+  heightCm     Float?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sessions     Session[]
+  exerciseLogs ExerciseLog[]
+  mealLogs     MealLog[]
+}
+
+model MealLog {
+  id            String           @id @default(uuid())
+  userId        String
+  name          String
+  mealType      String
+  imageData     String?
+  totalCalories Int
+  activityDate  DateTime         @db.Date
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredients   MealIngredient[]
+
+  @@index([userId, activityDate])
+}
+
+model MealIngredient {
+  id           String  @id @default(uuid())
+  mealLogId    String
+  name         String
+  carbsGrams   Float
+  sugarGrams   Float
+  proteinGrams Float
+  fatGrams     Float
+  mealLog      MealLog @relation(fields: [mealLogId], references: [id], onDelete: Cascade)
+
+  @@index([mealLogId])
+}
+
+model Session {
+  id         String   @id @default(uuid())
+  userId     String
+  expiresAt  DateTime
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model ExerciseLog {
+  id              String   @id @default(uuid())
+  userId          String
+  activityType    String
+  durationMinutes Int
+  weightKg        Float
+  caloriesBurned  Int
+  activityDate    DateTime @db.Date
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, activityDate])
+}
