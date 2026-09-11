@@ -6,6 +6,8 @@ export interface Repository {
   findUserById(id: string): Promise<User | null>;
   createUser(data: { email: string; displayName: string; passwordHash: string }): Promise<User>;
   updateProfile(id: string, data: ProfileInput): Promise<User>;
+  addWeightLog(userId: string, weightKg: number, heightCm: number): Promise<void>;
+  listWeightLogs(userId: string, start: Date): Promise<{ weightKg: number; heightCm: number; loggedAt: Date }[]>;
   updateGoals(id: string, data: GoalInput): Promise<User>;
   createSession(userId: string, expiresAt: Date): Promise<{ id: string }>;
   touchSession(id: string, userId: string, now: Date, expiresAt: Date): Promise<boolean>;
@@ -45,6 +47,8 @@ export function prismaRepository(db: PrismaClient): Repository {
       }
     },
     updateProfile: (id, data) => db.user.update({ where: { id }, data }),
+    async addWeightLog(userId, weightKg, heightCm) { await db.weightLog.create({ data: { userId, weightKg, heightCm } }); },
+    listWeightLogs: (userId, start) => db.weightLog.findMany({ where: { userId, loggedAt: { gte: start } }, orderBy: { loggedAt: 'asc' }, select: { weightKg: true, heightCm: true, loggedAt: true } }),
     updateGoals: (id, data) => db.user.update({ where: { id }, data }),
     async createSession(userId, expiresAt) {
       // Clean up expired sessions without ending active sessions on other devices.

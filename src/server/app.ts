@@ -97,6 +97,7 @@ export function createApp(repository: Repository, config: Config) {
   app.put('/api/profile', requireAuth, async (req, res) => {
     const data = profileSchema.parse(req.body);
     const user = await repository.updateProfile(res.locals.user.id, data);
+    await repository.addWeightLog(user.id, data.weightKg, data.heightCm);
     res.json({ user: publicUser(user), message: 'บันทึกข้อมูลส่วนตัวแล้ว' });
   });
   app.get('/api/exercises/daily', requireAuth, async (req, res) => {
@@ -114,6 +115,11 @@ export function createApp(repository: Repository, config: Config) {
     const { start, end } = dateBounds(query.date);
     const meals = (await repository.listMeals(res.locals.user.id, start, end)).map(publicMeal);
     res.json({ date: query.date, meals, caloriesConsumed: meals.reduce((total, meal) => total + meal.totalCalories, 0) });
+  });
+  app.get('/api/health-history', requireAuth, async (_req, res) => {
+    const start = new Date(); start.setFullYear(start.getFullYear() - 1);
+    const points = (await repository.listWeightLogs(res.locals.user.id, start)).map(point => ({ date: point.loggedAt.toISOString().slice(0, 10), weightKg: point.weightKg, bmi: calculateBmi(point.weightKg, point.heightCm) }));
+    res.json({ points });
   });
   app.get('/api/meals/history', requireAuth, async (req, res) => {
     const query = historyQuerySchema.parse(req.query);

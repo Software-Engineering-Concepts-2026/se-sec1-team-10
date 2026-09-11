@@ -9,6 +9,7 @@ import { GoalPanel } from './GoalPanel';
 import { FoodHistoryPanel } from './FoodHistoryPanel';
 import { FavoriteMealsPanel } from './FavoriteMealsPanel';
 import { ReminderPanel } from './ReminderPanel';
+import { HealthTrendPanel } from './HealthTrendPanel';
 
 type Feedback = { message: string; error: boolean; fields?: Record<string, string[]> } | null;
 function FeedbackMessage({ value }: { value: Feedback }) {
@@ -142,6 +143,7 @@ export function App() {
         </div>
         <DashboardPanel user={user} />
         <GoalPanel user={user} onSaved={setUser} />
+        <HealthTrendPanel />
         <WeeklySummaryPanel />
         <MealPanel />
         <FavoriteMealsPanel />

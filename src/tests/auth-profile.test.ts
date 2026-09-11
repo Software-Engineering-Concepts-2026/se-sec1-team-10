@@ -15,6 +15,7 @@ class MemoryRepository implements Repository {
   sessions = new Map<string, { id: string; userId: string; expiresAt: Date }>();
   exercises = new Map<string, ExerciseRecord>();
   meals = new Map<string, MealRecord>();
+  weightLogs: { userId: string; weightKg: number; heightCm: number; loggedAt: Date }[] = [];
   async findUserByEmail(email: string) { return [...this.users.values()].find(user => user.email === email) ?? null; }
   async findUserById(id: string) { return this.users.get(id) ?? null; }
   async createUser(data: { email: string; displayName: string; passwordHash: string }) {
@@ -32,6 +33,8 @@ class MemoryRepository implements Repository {
     this.users.set(id, updated); return updated;
   }
   async updateGoals(id: string, data: GoalInput) { return this.updateProfile(id, data as ProfileInput); }
+  async addWeightLog(userId: string, weightKg: number, heightCm: number) { this.weightLogs.push({ userId, weightKg, heightCm, loggedAt: new Date() }); }
+  async listWeightLogs(userId: string, start: Date) { return this.weightLogs.filter(item => item.userId === userId && item.loggedAt >= start); }
   async createSession(userId: string, expiresAt: Date) {
     const session = { id: randomUUID(), userId, expiresAt };
     this.sessions.set(session.id, session); return session;
@@ -79,7 +82,7 @@ class MemoryRepository implements Repository {
     const current = this.meals.get(id);
     return !!current && current.userId === userId && this.meals.delete(id);
   }
-  reset() { this.users.clear(); this.sessions.clear(); this.exercises.clear(); this.meals.clear(); }
+  reset() { this.users.clear(); this.sessions.clear(); this.exercises.clear(); this.meals.clear(); this.weightLogs = []; }
 }
 const repository = new MemoryRepository();
 const secret = 'test-only-secret-with-at-least-32-characters';
