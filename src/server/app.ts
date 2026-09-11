@@ -114,6 +114,21 @@ export function createApp(repository: Repository, config: Config) {
     const meals = (await repository.listMeals(res.locals.user.id, start, end)).map(publicMeal);
     res.json({ date: query.date, meals, caloriesConsumed: meals.reduce((total, meal) => total + meal.totalCalories, 0) });
   });
+  app.get('/api/summary/weekly', requireAuth, async (req, res) => {
+    const { date } = dailyExerciseQuerySchema.parse(req.query);
+    const { end } = dateBounds(date);
+    const start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const [meals, exercises] = await Promise.all([
+      repository.listMeals(res.locals.user.id, start, end), repository.listExercises(res.locals.user.id, start, end),
+    ]);
+    const dates = Array.from({ length: 7 }, (_, index) => new Date(start.getTime() + index * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+    const days = dates.map(day => {
+      const caloriesConsumed = meals.filter(meal => meal.activityDate === day).reduce((total, meal) => total + meal.totalCalories, 0);
+      const caloriesBurned = exercises.filter(exercise => exercise.activityDate === day).reduce((total, exercise) => total + exercise.caloriesBurned, 0);
+      return { date: day, caloriesConsumed, caloriesBurned, netCalories: caloriesConsumed - caloriesBurned };
+    });
+    res.json({ startDate: dates[0], endDate: date, days, caloriesConsumed: days.reduce((total, day) => total + day.caloriesConsumed, 0), caloriesBurned: days.reduce((total, day) => total + day.caloriesBurned, 0) });
+  });
   app.post('/api/meals', requireAuth, async (req, res) => {
     const data = mealSchema.parse(req.body);
     const meal = await repository.createMeal(res.locals.user.id, data, calculateMealCalories(data.ingredients));
