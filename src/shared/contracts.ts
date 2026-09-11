@@ -38,6 +38,7 @@ export const exerciseSchema = z.object({
 export const dailyExerciseQuerySchema = z.object({
   date: dateSchema,
 });
+export const historyQuerySchema = z.object({ from: dateSchema, to: dateSchema }).refine(value => value.from <= value.to, 'ช่วงวันที่ไม่ถูกต้อง');
 export type ExerciseInput = z.infer<typeof exerciseSchema>;
 export type ExerciseRecord = ExerciseInput & {
   id: string; userId: string; weightKg: number; caloriesBurned: number;

@@ -3,7 +3,7 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { ZodError } from 'zod';
-import { dailyExerciseQuerySchema, exerciseSchema, goalSchema, loginSchema, mealSchema, profileSchema, registerSchema, type PublicUser } from '../shared/contracts.js';
+import { dailyExerciseQuerySchema, exerciseSchema, goalSchema, historyQuerySchema, loginSchema, mealSchema, profileSchema, registerSchema, type PublicUser } from '../shared/contracts.js';
 import { DuplicateEmailError, type Repository } from './repository.js';
 import { COOKIE_NAME, SESSION_MS, hashPassword, tokenService, verifyPassword } from './security.js';
 import { calculateBmi } from './health.js';
@@ -114,6 +114,12 @@ export function createApp(repository: Repository, config: Config) {
     const { start, end } = dateBounds(query.date);
     const meals = (await repository.listMeals(res.locals.user.id, start, end)).map(publicMeal);
     res.json({ date: query.date, meals, caloriesConsumed: meals.reduce((total, meal) => total + meal.totalCalories, 0) });
+  });
+  app.get('/api/meals/history', requireAuth, async (req, res) => {
+    const query = historyQuerySchema.parse(req.query);
+    const { start } = dateBounds(query.from); const { end } = dateBounds(query.to);
+    const meals = (await repository.listMeals(res.locals.user.id, start, end)).map(publicMeal);
+    res.json({ meals });
   });
   app.put('/api/goals', requireAuth, async (req, res) => {
     const user = await repository.updateGoals(res.locals.user.id, goalSchema.parse(req.body));
