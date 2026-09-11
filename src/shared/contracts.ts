@@ -34,7 +34,6 @@ export const exerciseSchema = z.object({
 }).strict();
 export const dailyExerciseQuerySchema = z.object({
   date: dateSchema,
-  caloriesConsumed: z.coerce.number().min(0).max(100000).default(0),
 });
 export type ExerciseInput = z.infer<typeof exerciseSchema>;
 export type ExerciseRecord = ExerciseInput & {
@@ -42,3 +41,24 @@ export type ExerciseRecord = ExerciseInput & {
   createdAt: Date; updatedAt: Date;
 };
 export type PublicExercise = Omit<ExerciseRecord, 'userId' | 'createdAt' | 'updatedAt'>;
+
+const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
+const nutrientGrams = z.number().min(0, 'ต้องไม่น้อยกว่า 0').max(10000, 'จำนวนมากเกินไป');
+export const mealIngredientSchema = z.object({
+  name: z.string().trim().min(1, 'กรุณากรอกชื่อส่วนประกอบ').max(120),
+  carbsGrams: nutrientGrams,
+  sugarGrams: nutrientGrams,
+  proteinGrams: nutrientGrams,
+  fatGrams: nutrientGrams,
+}).strict();
+export const mealSchema = z.object({
+  name: z.string().trim().min(1, 'กรุณากรอกชื่ออาหาร').max(120),
+  mealType: z.enum(mealTypes, { error: 'กรุณาเลือกมื้ออาหาร' }),
+  activityDate: dateSchema,
+  imageData: z.string().regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/, 'รูปภาพไม่ถูกต้อง').max(300_000, 'รูปภาพมีขนาดใหญ่เกินไป').nullable().optional(),
+  ingredients: z.array(mealIngredientSchema).min(1, 'ต้องมีส่วนประกอบอย่างน้อย 1 รายการ').max(20),
+}).strict();
+export type MealInput = z.infer<typeof mealSchema>;
+export type MealIngredientRecord = z.infer<typeof mealIngredientSchema> & { id: string };
+export type MealRecord = Omit<MealInput, 'ingredients'> & { id: string; userId: string; totalCalories: number; createdAt: Date; updatedAt: Date; ingredients: MealIngredientRecord[] };
+export type PublicMeal = Omit<MealRecord, 'userId' | 'createdAt' | 'updatedAt'>;

@@ -1,5 +1,5 @@
 import type { PrismaClient, User } from '@prisma/client';
-import type { ExerciseInput, ExerciseRecord, ProfileInput } from '../shared/contracts.js';
+import type { ExerciseInput, ExerciseRecord, MealInput, MealRecord, ProfileInput } from '../shared/contracts.js';
 
 export interface Repository {
   findUserByEmail(email: string): Promise<User | null>;
@@ -13,6 +13,10 @@ export interface Repository {
   createExercise(userId: string, data: ExerciseInput, weightKg: number, caloriesBurned: number): Promise<ExerciseRecord>;
   updateExercise(id: string, userId: string, data: ExerciseInput, weightKg: number, caloriesBurned: number): Promise<ExerciseRecord | null>;
   deleteExercise(id: string, userId: string): Promise<boolean>;
+  listMeals(userId: string, start: Date, end: Date): Promise<MealRecord[]>;
+  createMeal(userId: string, data: MealInput, totalCalories: number): Promise<MealRecord>;
+  updateMeal(id: string, userId: string, data: MealInput, totalCalories: number): Promise<MealRecord | null>;
+  deleteMeal(id: string, userId: string): Promise<boolean>;
 }
 
 export class DuplicateEmailError extends Error {}
@@ -22,6 +26,11 @@ export function prismaRepository(db: PrismaClient): Repository {
     id: string; userId: string; activityType: string; durationMinutes: number; weightKg: number;
     caloriesBurned: number; activityDate: Date; createdAt: Date; updatedAt: Date;
   }): ExerciseRecord => ({ ...record, activityDate: record.activityDate.toISOString().slice(0, 10) });
+  const mealRecord = (record: {
+    id: string; userId: string; name: string; mealType: string; imageData: string | null; totalCalories: number;
+    activityDate: Date; createdAt: Date; updatedAt: Date;
+    ingredients: { id: string; name: string; carbsGrams: number; sugarGrams: number; proteinGrams: number; fatGrams: number }[];
+  }): MealRecord => ({ ...record, mealType: record.mealType as MealRecord['mealType'], activityDate: record.activityDate.toISOString().slice(0, 10) });
   return {
     findUserByEmail: email => db.user.findUnique({ where: { email } }),
     findUserById: id => db.user.findUnique({ where: { id } }),
@@ -71,6 +80,34 @@ export function prismaRepository(db: PrismaClient): Repository {
     },
     async deleteExercise(id, userId) {
       return (await db.exerciseLog.deleteMany({ where: { id, userId } })).count === 1;
+    },
+    async listMeals(userId, start, end) {
+      const records = await db.mealLog.findMany({
+        where: { userId, activityDate: { gte: start, lt: end } }, orderBy: [{ activityDate: 'desc' }, { createdAt: 'desc' }], include: { ingredients: true },
+      });
+      return records.map(mealRecord);
+    },
+    async createMeal(userId, data, totalCalories) {
+      const record = await db.mealLog.create({ data: {
+        userId, name: data.name, mealType: data.mealType, imageData: data.imageData ?? null, totalCalories,
+        activityDate: new Date(`${data.activityDate}T00:00:00.000Z`),
+        ingredients: { create: data.ingredients },
+      }, include: { ingredients: true } });
+      return mealRecord(record);
+    },
+    async updateMeal(id, userId, data, totalCalories) {
+      const result = await db.mealLog.updateMany({ where: { id, userId }, data: {
+        name: data.name, mealType: data.mealType, imageData: data.imageData ?? null, totalCalories,
+        activityDate: new Date(`${data.activityDate}T00:00:00.000Z`),
+      } });
+      if (result.count !== 1) return null;
+      await db.mealIngredient.deleteMany({ where: { mealLogId: id } });
+      await db.mealIngredient.createMany({ data: data.ingredients.map(ingredient => ({ mealLogId: id, ...ingredient })) });
+      const record = await db.mealLog.findUnique({ where: { id }, include: { ingredients: true } });
+      return record ? mealRecord(record) : null;
+    },
+    async deleteMeal(id, userId) {
+      return (await db.mealLog.deleteMany({ where: { id, userId } })).count === 1;
     },
   };
 }

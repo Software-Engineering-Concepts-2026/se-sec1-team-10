@@ -3,11 +3,12 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { ZodError } from 'zod';
-import { dailyExerciseQuerySchema, exerciseSchema, loginSchema, profileSchema, registerSchema, type PublicUser } from '../shared/contracts.js';
+import { dailyExerciseQuerySchema, exerciseSchema, loginSchema, mealSchema, profileSchema, registerSchema, type PublicUser } from '../shared/contracts.js';
 import { DuplicateEmailError, type Repository } from './repository.js';
 import { COOKIE_NAME, SESSION_MS, hashPassword, tokenService, verifyPassword } from './security.js';
 import { calculateBmi } from './health.js';
 import { calculateExerciseCalories, dateBounds, publicExercise } from './exercise.js';
+import { calculateMealCalories, publicMeal } from './meal.js';
 
 type Config = { jwtSecret: string; appOrigin: string; production?: boolean; now?: () => Date };
 
@@ -37,7 +38,7 @@ export function createApp(repository: Repository, config: Config) {
     }
     next();
   });
-  app.use(express.json({ limit: '16kb' }));
+  app.use(express.json({ limit: '320kb' }));
   app.use(cookieParser());
   app.get('/api/health', (_req, res) => { res.json({ status: 'ok' }); });
   const authLimiter = rateLimit({
@@ -101,11 +102,33 @@ export function createApp(repository: Repository, config: Config) {
     const query = dailyExerciseQuerySchema.parse(req.query);
     const { start, end } = dateBounds(query.date);
     const exercises = (await repository.listExercises(res.locals.user.id, start, end)).map(publicExercise);
+    const caloriesConsumed = (await repository.listMeals(res.locals.user.id, start, end)).reduce((total, meal) => total + meal.totalCalories, 0);
     const caloriesBurned = exercises.reduce((total, exercise) => total + exercise.caloriesBurned, 0);
     res.json({
-      date: query.date, exercises, caloriesConsumed: query.caloriesConsumed,
-      caloriesBurned, netCalories: query.caloriesConsumed - caloriesBurned,
+      date: query.date, exercises, caloriesConsumed, caloriesBurned, netCalories: caloriesConsumed - caloriesBurned,
     });
+  });
+  app.get('/api/meals/daily', requireAuth, async (req, res) => {
+    const query = dailyExerciseQuerySchema.parse(req.query);
+    const { start, end } = dateBounds(query.date);
+    const meals = (await repository.listMeals(res.locals.user.id, start, end)).map(publicMeal);
+    res.json({ date: query.date, meals, caloriesConsumed: meals.reduce((total, meal) => total + meal.totalCalories, 0) });
+  });
+  app.post('/api/meals', requireAuth, async (req, res) => {
+    const data = mealSchema.parse(req.body);
+    const meal = await repository.createMeal(res.locals.user.id, data, calculateMealCalories(data.ingredients));
+    res.status(201).json({ meal: publicMeal(meal), message: 'บันทึกอาหารแล้ว' });
+  });
+  app.put('/api/meals/:id', requireAuth, async (req, res) => {
+    const data = mealSchema.parse(req.body);
+    const meal = await repository.updateMeal(String(req.params.id), res.locals.user.id, data, calculateMealCalories(data.ingredients));
+    if (!meal) { res.status(404).json({ message: 'ไม่พบรายการอาหาร' }); return; }
+    res.json({ meal: publicMeal(meal), message: 'แก้ไขอาหารแล้ว' });
+  });
+  app.delete('/api/meals/:id', requireAuth, async (req, res) => {
+    const deleted = await repository.deleteMeal(String(req.params.id), res.locals.user.id);
+    if (!deleted) { res.status(404).json({ message: 'ไม่พบรายการอาหาร' }); return; }
+    res.status(204).end();
   });
   app.post('/api/exercises', requireAuth, async (req, res) => {
     const data = exerciseSchema.parse(req.body);

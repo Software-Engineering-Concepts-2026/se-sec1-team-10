@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import type { PublicUser } from '../shared/contracts';
 import { api, ApiError } from './api';
 import { ExercisePanel } from './ExercisePanel';
+import { MealPanel } from './MealPanel';
 
 type Feedback = { message: string; error: boolean; fields?: Record<string, string[]> } | null;
 function FeedbackMessage({ value }: { value: Feedback }) {
@@ -133,6 +134,7 @@ export function App() {
             </fieldset></form>
           </section>
         </div>
+        <MealPanel />
         <ExercisePanel user={user} />
       </div>}
     </main>

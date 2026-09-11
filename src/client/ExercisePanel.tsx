@@ -15,7 +15,6 @@ const activityLabel = (id: string) => activityOptions.find(option => option.id =
 
 export function ExercisePanel({ user }: { user: PublicUser }) {
   const [date, setDate] = useState(localDate);
-  const [caloriesConsumed, setCaloriesConsumed] = useState('0');
   const [summary, setSummary] = useState<DailySummary | null>(null);
   const [activityType, setActivityType] = useState<string>(activityOptions[0].id);
   const [durationMinutes, setDurationMinutes] = useState('30');
@@ -23,15 +22,20 @@ export function ExercisePanel({ user }: { user: PublicUser }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
 
-  async function loadSummary(selectedDate = date, consumed = Number(caloriesConsumed) || 0) {
+  async function loadSummary(selectedDate = date) {
     try {
-      const result = await api<DailySummary>(`/exercises/daily?date=${encodeURIComponent(selectedDate)}&caloriesConsumed=${consumed}`);
+      const result = await api<DailySummary>(`/exercises/daily?date=${encodeURIComponent(selectedDate)}`);
       setSummary(result);
     } catch (error) {
       setMessage({ text: error instanceof ApiError ? error.message : 'โหลดข้อมูลการออกกำลังกายไม่ได้', error: true });
     }
   }
-  useEffect(() => { void loadSummary(date, Number(caloriesConsumed) || 0); }, [date]);
+  useEffect(() => {
+    void loadSummary(date);
+    const refresh = () => { void loadSummary(); };
+    window.addEventListener('daily-calories-updated', refresh);
+    return () => window.removeEventListener('daily-calories-updated', refresh);
+  }, [date]);
 
   async function saveExercise(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setMessage(null);
@@ -67,10 +71,6 @@ export function ExercisePanel({ user }: { user: PublicUser }) {
       <div><span>เผาผลาญ</span><strong>{summary?.caloriesBurned ?? 0}</strong><small>kcal</small></div>
       <div className="net-calories"><span>Net Calories</span><strong>{summary?.netCalories ?? 0}</strong><small>kcal</small></div>
     </div>
-    <form className="intake-form" onSubmit={event => { event.preventDefault(); void loadSummary(); }}>
-      <label className="compact-field">แคลอรีที่รับประทานวันนี้<input type="number" min="0" max="100000" step="1" value={caloriesConsumed} onChange={event => setCaloriesConsumed(event.target.value)} required /></label>
-      <button className="secondary" type="submit">อัปเดตสรุป</button>
-    </form>
     <form className="exercise-form" onSubmit={saveExercise}>
       <label className="compact-field">กิจกรรม<select value={activityType} onChange={event => setActivityType(event.target.value)}>{activityOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
       <label className="compact-field">ระยะเวลา (นาที)<input type="number" min="1" max="1440" step="1" value={durationMinutes} onChange={event => setDurationMinutes(event.target.value)} required /></label>

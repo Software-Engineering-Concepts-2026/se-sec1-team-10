@@ -4,15 +4,17 @@ import request from 'supertest';
 import type { User } from '@prisma/client';
 import { createApp } from '../server/app.js';
 import { DuplicateEmailError, type Repository } from '../server/repository.js';
-import type { ExerciseInput, ExerciseRecord, ProfileInput } from '../shared/contracts.js';
+import type { ExerciseInput, ExerciseRecord, MealInput, MealRecord, ProfileInput } from '../shared/contracts.js';
 import { calculateBmi } from '../server/health.js';
 import { calculateExerciseCalories } from '../server/exercise.js';
+import { calculateMealCalories } from '../server/meal.js';
 import { COOKIE_NAME, SESSION_MS, tokenService, verifyPassword } from '../server/security.js';
 
 class MemoryRepository implements Repository {
   users = new Map<string, User>();
   sessions = new Map<string, { id: string; userId: string; expiresAt: Date }>();
   exercises = new Map<string, ExerciseRecord>();
+  meals = new Map<string, MealRecord>();
   async findUserByEmail(email: string) { return [...this.users.values()].find(user => user.email === email) ?? null; }
   async findUserById(id: string) { return this.users.get(id) ?? null; }
   async createUser(data: { email: string; displayName: string; passwordHash: string }) {
@@ -58,7 +60,25 @@ class MemoryRepository implements Repository {
     const current = this.exercises.get(id);
     return !!current && current.userId === userId && this.exercises.delete(id);
   }
-  reset() { this.users.clear(); this.sessions.clear(); this.exercises.clear(); }
+  async listMeals(userId: string, start: Date, end: Date) {
+    return [...this.meals.values()].filter(item => item.userId === userId && item.activityDate >= start.toISOString().slice(0, 10) && item.activityDate < end.toISOString().slice(0, 10));
+  }
+  async createMeal(userId: string, data: MealInput, totalCalories: number) {
+    const now = new Date();
+    const meal: MealRecord = { id: randomUUID(), userId, ...data, imageData: data.imageData ?? null, totalCalories, createdAt: now, updatedAt: now, ingredients: data.ingredients.map(ingredient => ({ id: randomUUID(), ...ingredient })) };
+    this.meals.set(meal.id, meal); return meal;
+  }
+  async updateMeal(id: string, userId: string, data: MealInput, totalCalories: number) {
+    const current = this.meals.get(id);
+    if (!current || current.userId !== userId) return null;
+    const meal: MealRecord = { ...current, ...data, imageData: data.imageData ?? null, totalCalories, updatedAt: new Date(), ingredients: data.ingredients.map(ingredient => ({ id: randomUUID(), ...ingredient })) };
+    this.meals.set(id, meal); return meal;
+  }
+  async deleteMeal(id: string, userId: string) {
+    const current = this.meals.get(id);
+    return !!current && current.userId === userId && this.meals.delete(id);
+  }
+  reset() { this.users.clear(); this.sessions.clear(); this.exercises.clear(); this.meals.clear(); }
 }
 const repository = new MemoryRepository();
 const secret = 'test-only-secret-with-at-least-32-characters';
@@ -215,17 +235,17 @@ describe('exercise calories', () => {
     const created = await request(app).post('/api/exercises').set('Origin', origin).set('Cookie', auth).send(input).expect(201);
     expect(created.body.exercise).toMatchObject({ ...input, weightKg: 70, caloriesBurned: 610 });
 
-    let summary = await request(app).get('/api/exercises/daily?date=2026-09-11&caloriesConsumed=1800').set('Cookie', auth).expect(200);
-    expect(summary.body).toMatchObject({ caloriesConsumed: 1800, caloriesBurned: 610, netCalories: 1190 });
+    let summary = await request(app).get('/api/exercises/daily?date=2026-09-11').set('Cookie', auth).expect(200);
+    expect(summary.body).toMatchObject({ caloriesConsumed: 0, caloriesBurned: 610, netCalories: -610 });
 
     const changed = { activityType: 'walking', durationMinutes: 30, activityDate: '2026-09-11' };
     await request(app).put(`/api/exercises/${created.body.exercise.id}`).set('Origin', origin).set('Cookie', auth).send(changed).expect(200);
-    summary = await request(app).get('/api/exercises/daily?date=2026-09-11&caloriesConsumed=1800').set('Cookie', auth).expect(200);
-    expect(summary.body).toMatchObject({ caloriesBurned: 129, netCalories: 1671 });
+    summary = await request(app).get('/api/exercises/daily?date=2026-09-11').set('Cookie', auth).expect(200);
+    expect(summary.body).toMatchObject({ caloriesBurned: 129, netCalories: -129 });
 
     await request(app).delete(`/api/exercises/${created.body.exercise.id}`).set('Origin', origin).set('Cookie', auth).send({}).expect(204);
-    summary = await request(app).get('/api/exercises/daily?date=2026-09-11&caloriesConsumed=1800').set('Cookie', auth).expect(200);
-    expect(summary.body).toMatchObject({ caloriesBurned: 0, netCalories: 1800, exercises: [] });
+    summary = await request(app).get('/api/exercises/daily?date=2026-09-11').set('Cookie', auth).expect(200);
+    expect(summary.body).toMatchObject({ caloriesBurned: 0, netCalories: 0, exercises: [] });
   });
   it('requires current weight and validates activity data', async () => {
     const auth = await signIn();
@@ -247,5 +267,42 @@ describe('exercise calories', () => {
   it('uses the standard MET calorie formula', () => {
     expect(calculateExerciseCalories('running', 70, 60)).toBe(610);
     expect(() => calculateExerciseCalories('unknown', 70, 60)).toThrow();
+  });
+});
+
+describe('food calories', () => {
+  const meal = { name: 'ข้าวมันไก่', mealType: 'lunch', activityDate: '2026-09-11', ingredients: [
+    { name: 'ข้าวและไก่', carbsGrams: 50, sugarGrams: 4, proteinGrams: 25, fatGrams: 18 },
+  ] };
+  it('creates food, totals its calories, and includes it in the daily net calories', async () => {
+    const auth = await signIn();
+    const created = await request(app).post('/api/meals').set('Origin', origin).set('Cookie', auth).send(meal).expect(201);
+    expect(created.body.meal).toMatchObject({ name: meal.name, totalCalories: 462, ingredients: meal.ingredients });
+    const daily = await request(app).get('/api/meals/daily?date=2026-09-11').set('Cookie', auth).expect(200);
+    expect(daily.body).toMatchObject({ caloriesConsumed: 462 });
+    const exercise = await request(app).get('/api/exercises/daily?date=2026-09-11').set('Cookie', auth).expect(200);
+    expect(exercise.body).toMatchObject({ caloriesConsumed: 462, caloriesBurned: 0, netCalories: 462 });
+  });
+  it('updates and deletes food while recalculating the daily total', async () => {
+    const auth = await signIn();
+    const created = await request(app).post('/api/meals').set('Origin', origin).set('Cookie', auth).send(meal).expect(201);
+    const changed = { ...meal, name: 'สลัดไก่', ingredients: [{ name: 'สลัด', carbsGrams: 10, sugarGrams: 3, proteinGrams: 20, fatGrams: 8 }] };
+    await request(app).put(`/api/meals/${created.body.meal.id}`).set('Origin', origin).set('Cookie', auth).send(changed).expect(200);
+    let daily = await request(app).get('/api/meals/daily?date=2026-09-11').set('Cookie', auth).expect(200);
+    expect(daily.body.caloriesConsumed).toBe(192);
+    await request(app).delete(`/api/meals/${created.body.meal.id}`).set('Origin', origin).set('Cookie', auth).send({}).expect(204);
+    daily = await request(app).get('/api/meals/daily?date=2026-09-11').set('Cookie', auth).expect(200);
+    expect(daily.body).toMatchObject({ caloriesConsumed: 0, meals: [] });
+  });
+  it('validates food input and isolates records between accounts', async () => {
+    const first = await signIn();
+    await request(app).post('/api/meals').set('Origin', origin).set('Cookie', first).send({ ...meal, ingredients: [] }).expect(400);
+    const created = await request(app).post('/api/meals').set('Origin', origin).set('Cookie', first).send(meal).expect(201);
+    const second = await signIn('food-second@example.com');
+    await request(app).delete(`/api/meals/${created.body.meal.id}`).set('Origin', origin).set('Cookie', second).send({}).expect(404);
+    await request(app).get('/api/meals/daily?date=2026-09-11').set('Cookie', second).expect(200).expect({ date: '2026-09-11', meals: [], caloriesConsumed: 0 });
+  });
+  it('uses standard macronutrient energy values without double-counting sugar', () => {
+    expect(calculateMealCalories(meal.ingredients)).toBe(462);
   });
 });
