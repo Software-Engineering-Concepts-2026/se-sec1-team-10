@@ -12,6 +12,15 @@ import { ReminderPanel } from './ReminderPanel';
 import { HealthTrendPanel } from './HealthTrendPanel';
 
 type Feedback = { message: string; error: boolean; fields?: Record<string, string[]> } | null;
+type MobileSection = 'today' | 'diary' | 'progress' | 'account';
+
+function MobileNav({ active, onChange }: { active: MobileSection; onChange: (section: MobileSection) => void }) {
+  const items: { id: MobileSection; icon: string; label: string }[] = [
+    { id: 'today', icon: '⌂', label: 'วันนี้' }, { id: 'diary', icon: '＋', label: 'บันทึก' },
+    { id: 'progress', icon: '◔', label: 'ความคืบหน้า' }, { id: 'account', icon: '☺', label: 'บัญชี' },
+  ];
+  return <nav className="mobile-nav" aria-label="เมนูหลัก">{items.map(item => <button key={item.id} type="button" className={active === item.id ? 'active' : ''} aria-current={active === item.id ? 'page' : undefined} onClick={() => onChange(item.id)}><span aria-hidden="true">{item.icon}</span>{item.label}</button>)}</nav>;
+}
 function FeedbackMessage({ value }: { value: Feedback }) {
   return value ? <div className={`feedback ${value.error ? 'error' : 'success'}`} role={value.error ? 'alert' : 'status'}>{value.message}</div> : null;
 }
@@ -37,6 +46,7 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [bootError, setBootError] = useState(false);
   const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mobileSection, setMobileSection] = useState<MobileSection>('today');
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
 
@@ -129,7 +139,12 @@ export function App() {
           <div className="privacy-note"><span aria-hidden="true">◇</span> ข้อมูลสุขภาพเป็นเรื่องส่วนตัวของคุณ<br /><small>ระบบออกจากเซสชันเมื่อไม่ใช้งาน 30 นาที</small></div>
         </section>
       </div> : <div className="profile-layout">
-        <section className="profile-heading"><span className="eyebrow">MY WELLBEING PROFILE</span><h1>สวัสดี, {user.displayName}</h1><p className="muted">ข้อมูลที่เป็นปัจจุบัน ช่วยให้การคำนวณสุขภาพตรงกับคุณ</p></section>
+        <div className={`mobile-page ${mobileSection === 'today' ? 'is-active' : ''}`}>
+        <section className="profile-heading"><span className="eyebrow">YOUR DAILY BALANCE</span><h1>สวัสดี, {user.displayName} <span>✦</span></h1><p className="muted">วันนี้ดูแลตัวเองได้อีกนิดนะ</p></section>
+        <DashboardPanel user={user} />
+        <button type="button" className="mobile-quick-log" onClick={() => setMobileSection('diary')}>＋ บันทึกอาหารของวันนี้</button>
+        </div>
+        <div className={`mobile-page ${mobileSection === 'account' ? 'is-active' : ''}`}>
         <div className="profile-grid">
           <aside className="card profile-summary"><div className="avatar" aria-hidden="true">{user.displayName.slice(0, 1)}</div><h2>{user.displayName}</h2><p className="email">{user.email}</p><span className="status-chip">บัญชีของคุณ</span><hr /><h3>ข้อมูลล่าสุด</h3><dl><div><dt>อายุ</dt><dd>{user.age === null ? 'ยังไม่ระบุ' : `${user.age} ปี`}</dd></div><div><dt>น้ำหนัก</dt><dd>{user.weightKg === null ? 'ยังไม่ระบุ' : `${user.weightKg} กก.`}</dd></div><div><dt>ส่วนสูง</dt><dd>{user.heightCm === null ? 'ยังไม่ระบุ' : `${user.heightCm} ซม.`}</dd></div><div><dt>BMI</dt><dd>{user.bmi === null ? 'ต้องระบุน้ำหนักและส่วนสูง' : user.bmi.toFixed(1)}</dd></div></dl></aside>
           <section className="card profile-form"><span className="eyebrow">PERSONAL INFORMATION</span><h2>ข้อมูลส่วนตัว</h2><p className="muted">กรอกข้อมูลให้ครบ แล้วบันทึกเมื่อพร้อม</p><FeedbackMessage value={feedback} />
@@ -140,16 +155,10 @@ export function App() {
               <button className="primary" type="submit">{busy ? 'กำลังบันทึก…' : 'บันทึกข้อมูลส่วนตัว →'}</button>
             </fieldset></form>
           </section>
-        </div>
-        <DashboardPanel user={user} />
-        <GoalPanel user={user} onSaved={setUser} />
-        <HealthTrendPanel />
-        <WeeklySummaryPanel />
-        <MealPanel />
-        <FavoriteMealsPanel />
-        <ReminderPanel />
-        <FoodHistoryPanel />
-        <ExercisePanel user={user} />
+        </div></div>
+        <div className={`mobile-page ${mobileSection === 'progress' ? 'is-active' : ''}`}><GoalPanel user={user} onSaved={setUser} /><HealthTrendPanel /><WeeklySummaryPanel /></div>
+        <div className={`mobile-page ${mobileSection === 'diary' ? 'is-active' : ''}`}><MealPanel /><FavoriteMealsPanel /><ReminderPanel /><FoodHistoryPanel /><ExercisePanel user={user} /></div>
+        <MobileNav active={mobileSection} onChange={setMobileSection} />
       </div>}
     </main>
     <footer className="site-footer"><span>LifeBalance © 2026</span><span>พื้นที่เล็ก ๆ สำหรับสุขภาพที่ดีของคุณ</span></footer>
