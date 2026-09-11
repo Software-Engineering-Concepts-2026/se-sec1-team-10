@@ -119,7 +119,7 @@ export function createApp(repository: Repository, config: Config) {
   app.get('/api/health-history', requireAuth, async (_req, res) => {
     const start = new Date(); start.setFullYear(start.getFullYear() - 1);
     const points = (await repository.listWeightLogs(res.locals.user.id, start)).map(point => ({ date: point.loggedAt.toISOString().slice(0, 10), weightKg: point.weightKg, bmi: calculateBmi(point.weightKg, point.heightCm) }));
-    res.json({ points });
+    res.json({ points, rangeDays: 365, performanceTargetMs: 1500 });
   });
   app.get('/api/meals/history', requireAuth, async (req, res) => {
     const query = historyQuerySchema.parse(req.query);

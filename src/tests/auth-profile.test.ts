@@ -318,3 +318,14 @@ describe('food calories', () => {
     expect(weekly.body.days.at(-1)).toMatchObject({ date: '2026-09-11', caloriesConsumed: 462, netCalories: 462 });
   });
 });
+
+describe('dashboard performance', () => {
+  it('returns one year of health history within the 1.5-second target', async () => {
+    const auth = await signIn();
+    await request(app).put('/api/profile').set('Origin', origin).set('Cookie', auth).send(profile).expect(200);
+    const started = performance.now();
+    const response = await request(app).get('/api/health-history').set('Cookie', auth).expect(200);
+    expect(performance.now() - started).toBeLessThan(1500);
+    expect(response.body).toMatchObject({ rangeDays: 365, performanceTargetMs: 1500 });
+  });
+});
