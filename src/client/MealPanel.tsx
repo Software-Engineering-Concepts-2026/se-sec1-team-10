@@ -40,7 +40,10 @@ export function MealPanel() {
     event.preventDefault(); setBusy(true); setMessage(null);
     const body = { name, mealType, activityDate: date, imageData, ingredients };
     try {
-      await api(editingId ? `/meals/${editingId}` : '/meals', body, editingId ? 'PUT' : 'POST');
+      const result = await api<{ meal: PublicMeal }>(editingId ? `/meals/${editingId}` : '/meals', body, editingId ? 'PUT' : 'POST');
+      const favorites = JSON.parse(localStorage.getItem('lifebalance-favorites') ?? '[]') as { name: string; mealType: string; ingredients: IngredientDraft[] }[];
+      if (!favorites.some(item => item.name === result.meal.name)) localStorage.setItem('lifebalance-favorites', JSON.stringify([...favorites, { name: result.meal.name, mealType: result.meal.mealType, ingredients }]));
+      window.dispatchEvent(new Event('favorites-updated'));
       setMessage({ text: editingId ? 'แก้ไขอาหารแล้ว' : 'บันทึกอาหารแล้ว', error: false }); reset(); await load(); window.dispatchEvent(new Event('daily-calories-updated'));
     } catch (error) { setMessage({ text: error instanceof ApiError ? error.message : 'บันทึกอาหารไม่ได้', error: true }); }
     finally { setBusy(false); }

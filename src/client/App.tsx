@@ -7,6 +7,8 @@ import { WeeklySummaryPanel } from './WeeklySummaryPanel';
 import { DashboardPanel } from './DashboardPanel';
 import { GoalPanel } from './GoalPanel';
 import { FoodHistoryPanel } from './FoodHistoryPanel';
+import { FavoriteMealsPanel } from './FavoriteMealsPanel';
+import { ReminderPanel } from './ReminderPanel';
 
 type Feedback = { message: string; error: boolean; fields?: Record<string, string[]> } | null;
 function FeedbackMessage({ value }: { value: Feedback }) {
@@ -142,6 +144,8 @@ export function App() {
         <GoalPanel user={user} onSaved={setUser} />
         <WeeklySummaryPanel />
         <MealPanel />
+        <FavoriteMealsPanel />
+        <ReminderPanel />
         <FoodHistoryPanel />
         <ExercisePanel user={user} />
       </div>}
