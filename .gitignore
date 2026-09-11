@@ -14,6 +14,9 @@ ENV/
 node_modules/
 .next/
 dist/
+.local/
+playwright-report/
+test-results/
 
 # OS Header files
 .DS_Store

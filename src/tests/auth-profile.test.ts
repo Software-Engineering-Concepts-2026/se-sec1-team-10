@@ -1,0 +1,187 @@
+import { randomUUID } from 'node:crypto';
+import { beforeEach, describe, expect, it } from 'vitest';
+import request from 'supertest';
+import type { User } from '@prisma/client';
+import { createApp } from '../server/app.js';
+import { DuplicateEmailError, type Repository } from '../server/repository.js';
+import type { ProfileInput } from '../shared/contracts.js';
+import { calculateBmi } from '../server/health.js';
+import { COOKIE_NAME, SESSION_MS, tokenService, verifyPassword } from '../server/security.js';
+
+class MemoryRepository implements Repository {
+  users = new Map<string, User>();
+  sessions = new Map<string, { id: string; userId: string; expiresAt: Date }>();
+  async findUserByEmail(email: string) { return [...this.users.values()].find(user => user.email === email) ?? null; }
+  async findUserById(id: string) { return this.users.get(id) ?? null; }
+  async createUser(data: { email: string; displayName: string; passwordHash: string }) {
+    // Yield once so the concurrency test exercises the uniqueness check at the storage boundary.
+    await Promise.resolve();
+    if (await this.findUserByEmail(data.email)) throw new DuplicateEmailError();
+    const now = new Date();
+    const user: User = { id: randomUUID(), ...data, age: null, weightKg: null, heightCm: null, createdAt: now, updatedAt: now };
+    this.users.set(user.id, user); return user;
+  }
+  async updateProfile(id: string, data: ProfileInput) {
+    const user = this.users.get(id);
+    if (!user) throw new Error('User not found');
+    const updated = { ...user, ...data, updatedAt: new Date() };
+    this.users.set(id, updated); return updated;
+  }
+  async createSession(userId: string, expiresAt: Date) {
+    const session = { id: randomUUID(), userId, expiresAt };
+    this.sessions.set(session.id, session); return session;
+  }
+  async touchSession(id: string, userId: string, now: Date, expiresAt: Date) {
+    const session = this.sessions.get(id);
+    if (!session || session.userId !== userId || session.expiresAt <= now) return false;
+    session.expiresAt = expiresAt; return true;
+  }
+  async deleteSession(id: string) { this.sessions.delete(id); }
+  reset() { this.users.clear(); this.sessions.clear(); }
+}
+const repository = new MemoryRepository();
+const secret = 'test-only-secret-with-at-least-32-characters';
+const origin = 'http://localhost:5173';
+let date: Date;
+let app: ReturnType<typeof createApp>;
+const account = { displayName: 'ผู้ทดสอบ', email: 'person@example.com', password: 'ValidPassword123!' };
+const profile = { displayName: 'ชื่อใหม่', age: 32, weightKg: 70, heightCm: 175 };
+const post = (path: string, body: unknown) => request(app).post(path).set('Origin', origin).send(body);
+const cookie = (response: request.Response) => (response.headers['set-cookie'] as unknown as string[])[0].split(';')[0];
+async function signIn(email = account.email) {
+  await post('/api/auth/register', { ...account, email }).expect(201);
+  return cookie(await post('/api/auth/login', { email, password: account.password }).expect(200));
+}
+
+beforeEach(async () => {
+  repository.reset();
+  date = new Date();
+  app = createApp(repository, { jwtSecret: secret, appOrigin: origin, now: () => date });
+});
+
+describe('registration and authentication', () => {
+  it('registers, normalizes email, hashes password, and never returns password data', async () => {
+    const result = await post('/api/auth/register', { ...account, email: ' Person@Example.COM ' }).expect(201);
+    expect(result.body.user.email).toBe('person@example.com');
+    expect(result.body.user).not.toHaveProperty('passwordHash');
+    const stored = await repository.findUserByEmail(account.email);
+    expect(stored).not.toBeNull();
+    if (!stored) throw new Error('Expected stored user');
+    expect(stored.passwordHash).not.toBe(account.password);
+    expect(await verifyPassword(account.password, stored.passwordHash)).toBe(true);
+  });
+  it.each([
+    { email: 'invalid', password: account.password, displayName: 'Test' },
+    { ...account, password: 'short' },
+    { ...account, displayName: '  ' },
+    {},
+  ])('rejects invalid or missing registration fields: %j', async body => {
+    await post('/api/auth/register', body).expect(400);
+    expect(repository.users.size).toBe(0);
+  });
+  it('rejects duplicate emails regardless of capitalization, including concurrent registration', async () => {
+    const results = await Promise.all([
+      post('/api/auth/register', account),
+      post('/api/auth/register', { ...account, email: account.email.toUpperCase() }),
+    ]);
+    expect(results.map(r => r.status).sort()).toEqual([201, 409]);
+    expect(repository.users.size).toBe(1);
+  });
+  it('authenticates through an HttpOnly SameSite cookie and restores the profile', async () => {
+    await post('/api/auth/register', account);
+    const login = await post('/api/auth/login', account).expect(200);
+    const cookies = login.headers['set-cookie'].toString();
+    expect(cookies).toContain('HttpOnly');
+    expect(cookies).toContain('SameSite=Lax');
+    expect(cookies).toContain('Max-Age=1800');
+    const me = await request(app).get('/api/auth/me').set('Cookie', cookie(login)).expect(200);
+    expect(me.body.user.email).toBe(account.email);
+    expect(me.headers['cache-control']).toBe('no-store');
+  });
+  it('uses Secure cookies in production', async () => {
+    app = createApp(repository, { jwtSecret: secret, appOrigin: origin, production: true });
+    await post('/api/auth/register', account);
+    const login = await post('/api/auth/login', account).expect(200);
+    expect(login.headers['set-cookie'].toString()).toContain('Secure');
+  });
+  it('returns the same login error for an unknown email and a wrong password', async () => {
+    await post('/api/auth/register', account);
+    const wrong = await post('/api/auth/login', { ...account, password: 'WrongPassword123!' }).expect(401);
+    const missing = await post('/api/auth/login', { ...account, email: 'missing@example.com' }).expect(401);
+    expect(wrong.body).toEqual(missing.body);
+  });
+  it('rejects anonymous reads, updates and tampered JWTs', async () => {
+    await request(app).get('/api/auth/me').expect(401);
+    await request(app).put('/api/profile').set('Origin', origin).send(profile).expect(401);
+    await request(app).get('/api/auth/me').set('Cookie', `${COOKIE_NAME}=tampered`).expect(401);
+  });
+  it('rejects cross-origin and non-JSON mutations', async () => {
+    await request(app).post('/api/auth/register').set('Origin', 'https://other.example').send(account).expect(403);
+    await request(app).post('/api/auth/register').set('Origin', origin).type('form').send(account).expect(403);
+    await request(app).post('/api/auth/register').send(account).expect(403);
+  });
+  it('expires after 30 minutes without activity', async () => {
+    const auth = await signIn();
+    date = new Date(date.getTime() + SESSION_MS);
+    await request(app).get('/api/auth/me').set('Cookie', auth).expect(401);
+  });
+  it('renews the inactivity deadline when the user makes a request', async () => {
+    let auth = await signIn();
+    date = new Date(date.getTime() + 20 * 60 * 1000);
+    auth = cookie(await request(app).get('/api/auth/me').set('Cookie', auth).expect(200));
+    date = new Date(date.getTime() + 20 * 60 * 1000);
+    await request(app).get('/api/auth/me').set('Cookie', auth).expect(200);
+  });
+  it('rejects a signed token when its server-side session has expired', async () => {
+    await signIn();
+    const session = [...repository.sessions.values()][0];
+    session.expiresAt = new Date(date.getTime() - 1);
+    const token = await tokenService(secret).sign(session.userId, session.id, date);
+    await request(app).get('/api/auth/me').set('Cookie', `${COOKIE_NAME}=${token}`).expect(401);
+  });
+  it('logout revokes copied tokens and is idempotent', async () => {
+    const auth = await signIn();
+    await post('/api/auth/logout', {}).set('Cookie', auth).expect(204);
+    await request(app).get('/api/auth/me').set('Cookie', auth).expect(401);
+    await post('/api/auth/logout', {}).expect(204);
+  });
+  it('limits repeated login attempts', async () => {
+    for (let i = 0; i < 20; i++) await post('/api/auth/login', {}).expect(400);
+    await post('/api/auth/login', {}).expect(429);
+  });
+});
+
+describe('personal profile', () => {
+  it('persists edits across a new session and recalculates BMI using current values', async () => {
+    const auth = await signIn();
+    const saved = await request(app).put('/api/profile').set('Origin', origin).set('Cookie', auth).send(profile).expect(200);
+    expect(saved.body.user).toMatchObject({ ...profile, bmi: 22.9 });
+    const login = await post('/api/auth/login', account).expect(200);
+    const me = await request(app).get('/api/auth/me').set('Cookie', cookie(login)).expect(200);
+    expect(me.body.user).toMatchObject({ ...profile, bmi: 22.9 });
+    const changed = await request(app).put('/api/profile').set('Origin', origin).set('Cookie', auth).send({ ...profile, weightKg: 80 }).expect(200);
+    expect(changed.body.user.bmi).toBe(26.1);
+  });
+  it.each([{ ...profile, age: 2.5 }, { ...profile, weightKg: -1 }, { ...profile, heightCm: '175' }, { displayName: 'Name' }])('rejects invalid profile %j', async body => {
+    const auth = await signIn();
+    await request(app).put('/api/profile').set('Origin', origin).set('Cookie', auth).send(body).expect(400);
+    const me = await request(app).get('/api/auth/me').set('Cookie', auth).expect(200);
+    expect(me.body.user.weightKg).toBeNull();
+  });
+  it('isolates accounts and rejects identity injection in profile updates', async () => {
+    const first = await signIn();
+    const second = await signIn('second@example.com');
+    const other = await repository.findUserByEmail('second@example.com');
+    if (!other) throw new Error('Expected second user');
+    await request(app).put('/api/profile').set('Origin', origin).set('Cookie', first).send({ ...profile, id: other.id }).expect(400);
+    await request(app).put('/api/profile').set('Origin', origin).set('Cookie', first).send(profile).expect(200);
+    const me = await request(app).get('/api/auth/me').set('Cookie', second).expect(200);
+    expect(me.body.user.weightKg).toBeNull();
+  });
+  it('handles missing measurements without inventing a BMI', () => {
+    expect(calculateBmi(null, 175)).toBeNull();
+    expect(calculateBmi(70, null)).toBeNull();
+    expect(calculateBmi(70, 0)).toBeNull();
+    expect(calculateBmi(70, 175)).toBe(22.9);
+  });
+});
