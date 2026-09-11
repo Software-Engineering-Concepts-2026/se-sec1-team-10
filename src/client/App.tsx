@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import type { PublicUser } from '../shared/contracts';
 import { api, ApiError } from './api';
+import { ExercisePanel } from './ExercisePanel';
 
 type Feedback = { message: string; error: boolean; fields?: Record<string, string[]> } | null;
 function FeedbackMessage({ value }: { value: Feedback }) {
@@ -132,6 +133,7 @@ export function App() {
             </fieldset></form>
           </section>
         </div>
+        <ExercisePanel user={user} />
       </div>}
     </main>
     <footer className="site-footer"><span>LifeBalance © 2026</span><span>พื้นที่เล็ก ๆ สำหรับสุขภาพที่ดีของคุณ</span></footer>

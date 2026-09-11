@@ -3,10 +3,11 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { ZodError } from 'zod';
-import { loginSchema, profileSchema, registerSchema, type PublicUser } from '../shared/contracts.js';
+import { dailyExerciseQuerySchema, exerciseSchema, loginSchema, profileSchema, registerSchema, type PublicUser } from '../shared/contracts.js';
 import { DuplicateEmailError, type Repository } from './repository.js';
 import { COOKIE_NAME, SESSION_MS, hashPassword, tokenService, verifyPassword } from './security.js';
 import { calculateBmi } from './health.js';
+import { calculateExerciseCalories, dateBounds, publicExercise } from './exercise.js';
 
 type Config = { jwtSecret: string; appOrigin: string; production?: boolean; now?: () => Date };
 
@@ -95,6 +96,42 @@ export function createApp(repository: Repository, config: Config) {
     const data = profileSchema.parse(req.body);
     const user = await repository.updateProfile(res.locals.user.id, data);
     res.json({ user: publicUser(user), message: 'บันทึกข้อมูลส่วนตัวแล้ว' });
+  });
+  app.get('/api/exercises/daily', requireAuth, async (req, res) => {
+    const query = dailyExerciseQuerySchema.parse(req.query);
+    const { start, end } = dateBounds(query.date);
+    const exercises = (await repository.listExercises(res.locals.user.id, start, end)).map(publicExercise);
+    const caloriesBurned = exercises.reduce((total, exercise) => total + exercise.caloriesBurned, 0);
+    res.json({
+      date: query.date, exercises, caloriesConsumed: query.caloriesConsumed,
+      caloriesBurned, netCalories: query.caloriesConsumed - caloriesBurned,
+    });
+  });
+  app.post('/api/exercises', requireAuth, async (req, res) => {
+    const data = exerciseSchema.parse(req.body);
+    const weightKg = res.locals.user.weightKg;
+    if (weightKg === null) {
+      res.status(409).json({ message: 'กรุณาบันทึกน้ำหนักในข้อมูลส่วนตัวก่อนคำนวณการออกกำลังกาย' }); return;
+    }
+    const caloriesBurned = calculateExerciseCalories(data.activityType, weightKg, data.durationMinutes);
+    const exercise = await repository.createExercise(res.locals.user.id, data, weightKg, caloriesBurned);
+    res.status(201).json({ exercise: publicExercise(exercise), message: 'บันทึกการออกกำลังกายแล้ว' });
+  });
+  app.put('/api/exercises/:id', requireAuth, async (req, res) => {
+    const data = exerciseSchema.parse(req.body);
+    const weightKg = res.locals.user.weightKg;
+    if (weightKg === null) {
+      res.status(409).json({ message: 'กรุณาบันทึกน้ำหนักในข้อมูลส่วนตัวก่อนคำนวณการออกกำลังกาย' }); return;
+    }
+    const caloriesBurned = calculateExerciseCalories(data.activityType, weightKg, data.durationMinutes);
+    const exercise = await repository.updateExercise(String(req.params.id), res.locals.user.id, data, weightKg, caloriesBurned);
+    if (!exercise) { res.status(404).json({ message: 'ไม่พบรายการออกกำลังกาย' }); return; }
+    res.json({ exercise: publicExercise(exercise), message: 'แก้ไขการออกกำลังกายแล้ว' });
+  });
+  app.delete('/api/exercises/:id', requireAuth, async (req, res) => {
+    const deleted = await repository.deleteExercise(String(req.params.id), res.locals.user.id);
+    if (!deleted) { res.status(404).json({ message: 'ไม่พบรายการออกกำลังกาย' }); return; }
+    res.status(204).end();
   });
   app.use('/api', (_req, res) => { res.status(404).json({ message: 'ไม่พบ API ที่ร้องขอ' }); });
   const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {

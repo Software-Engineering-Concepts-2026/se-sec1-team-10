@@ -4,13 +4,15 @@ import request from 'supertest';
 import type { User } from '@prisma/client';
 import { createApp } from '../server/app.js';
 import { DuplicateEmailError, type Repository } from '../server/repository.js';
-import type { ProfileInput } from '../shared/contracts.js';
+import type { ExerciseInput, ExerciseRecord, ProfileInput } from '../shared/contracts.js';
 import { calculateBmi } from '../server/health.js';
+import { calculateExerciseCalories } from '../server/exercise.js';
 import { COOKIE_NAME, SESSION_MS, tokenService, verifyPassword } from '../server/security.js';
 
 class MemoryRepository implements Repository {
   users = new Map<string, User>();
   sessions = new Map<string, { id: string; userId: string; expiresAt: Date }>();
+  exercises = new Map<string, ExerciseRecord>();
   async findUserByEmail(email: string) { return [...this.users.values()].find(user => user.email === email) ?? null; }
   async findUserById(id: string) { return this.users.get(id) ?? null; }
   async createUser(data: { email: string; displayName: string; passwordHash: string }) {
@@ -37,7 +39,26 @@ class MemoryRepository implements Repository {
     session.expiresAt = expiresAt; return true;
   }
   async deleteSession(id: string) { this.sessions.delete(id); }
-  reset() { this.users.clear(); this.sessions.clear(); }
+  async listExercises(userId: string, start: Date, end: Date) {
+    return [...this.exercises.values()].filter(item => item.userId === userId &&
+      item.activityDate >= start.toISOString().slice(0, 10) && item.activityDate < end.toISOString().slice(0, 10));
+  }
+  async createExercise(userId: string, data: ExerciseInput, weightKg: number, caloriesBurned: number) {
+    const now = new Date();
+    const exercise: ExerciseRecord = { id: randomUUID(), userId, ...data, weightKg, caloriesBurned, createdAt: now, updatedAt: now };
+    this.exercises.set(exercise.id, exercise); return exercise;
+  }
+  async updateExercise(id: string, userId: string, data: ExerciseInput, weightKg: number, caloriesBurned: number) {
+    const current = this.exercises.get(id);
+    if (!current || current.userId !== userId) return null;
+    const exercise = { ...current, ...data, weightKg, caloriesBurned, updatedAt: new Date() };
+    this.exercises.set(id, exercise); return exercise;
+  }
+  async deleteExercise(id: string, userId: string) {
+    const current = this.exercises.get(id);
+    return !!current && current.userId === userId && this.exercises.delete(id);
+  }
+  reset() { this.users.clear(); this.sessions.clear(); this.exercises.clear(); }
 }
 const repository = new MemoryRepository();
 const secret = 'test-only-secret-with-at-least-32-characters';
@@ -183,5 +204,48 @@ describe('personal profile', () => {
     expect(calculateBmi(70, null)).toBeNull();
     expect(calculateBmi(70, 0)).toBeNull();
     expect(calculateBmi(70, 175)).toBe(22.9);
+  });
+});
+
+describe('exercise calories', () => {
+  it('creates, updates and deletes an activity while recalculating the daily summary', async () => {
+    const auth = await signIn();
+    await request(app).put('/api/profile').set('Origin', origin).set('Cookie', auth).send(profile).expect(200);
+    const input = { activityType: 'running', durationMinutes: 60, activityDate: '2026-09-11' };
+    const created = await request(app).post('/api/exercises').set('Origin', origin).set('Cookie', auth).send(input).expect(201);
+    expect(created.body.exercise).toMatchObject({ ...input, weightKg: 70, caloriesBurned: 610 });
+
+    let summary = await request(app).get('/api/exercises/daily?date=2026-09-11&caloriesConsumed=1800').set('Cookie', auth).expect(200);
+    expect(summary.body).toMatchObject({ caloriesConsumed: 1800, caloriesBurned: 610, netCalories: 1190 });
+
+    const changed = { activityType: 'walking', durationMinutes: 30, activityDate: '2026-09-11' };
+    await request(app).put(`/api/exercises/${created.body.exercise.id}`).set('Origin', origin).set('Cookie', auth).send(changed).expect(200);
+    summary = await request(app).get('/api/exercises/daily?date=2026-09-11&caloriesConsumed=1800').set('Cookie', auth).expect(200);
+    expect(summary.body).toMatchObject({ caloriesBurned: 129, netCalories: 1671 });
+
+    await request(app).delete(`/api/exercises/${created.body.exercise.id}`).set('Origin', origin).set('Cookie', auth).send({}).expect(204);
+    summary = await request(app).get('/api/exercises/daily?date=2026-09-11&caloriesConsumed=1800').set('Cookie', auth).expect(200);
+    expect(summary.body).toMatchObject({ caloriesBurned: 0, netCalories: 1800, exercises: [] });
+  });
+  it('requires current weight and validates activity data', async () => {
+    const auth = await signIn();
+    const valid = { activityType: 'cycling', durationMinutes: 45, activityDate: '2026-09-11' };
+    await request(app).post('/api/exercises').set('Origin', origin).set('Cookie', auth).send(valid).expect(409);
+    await request(app).post('/api/exercises').set('Origin', origin).set('Cookie', auth).send({ ...valid, durationMinutes: 0 }).expect(400);
+    await request(app).post('/api/exercises').set('Origin', origin).set('Cookie', auth).send({ ...valid, activityDate: '2026-02-30' }).expect(400);
+  });
+  it('isolates exercise records between users', async () => {
+    const first = await signIn();
+    await request(app).put('/api/profile').set('Origin', origin).set('Cookie', first).send(profile).expect(200);
+    const created = await request(app).post('/api/exercises').set('Origin', origin).set('Cookie', first)
+      .send({ activityType: 'yoga', durationMinutes: 30, activityDate: '2026-09-11' }).expect(201);
+    const second = await signIn('exercise-second@example.com');
+    await request(app).delete(`/api/exercises/${created.body.exercise.id}`).set('Origin', origin).set('Cookie', second).send({}).expect(404);
+    const summary = await request(app).get('/api/exercises/daily?date=2026-09-11').set('Cookie', second).expect(200);
+    expect(summary.body.exercises).toEqual([]);
+  });
+  it('uses the standard MET calorie formula', () => {
+    expect(calculateExerciseCalories('running', 70, 60)).toBe(610);
+    expect(() => calculateExerciseCalories('unknown', 70, 60)).toThrow();
   });
 });
