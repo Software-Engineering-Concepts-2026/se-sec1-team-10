@@ -15,6 +15,8 @@ model User {
   age          Int?
   weightKg     Float?
   heightCm     Float?
+  targetWeightKg Float?
+  dailyCalorieTarget Int?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   sessions     Session[]

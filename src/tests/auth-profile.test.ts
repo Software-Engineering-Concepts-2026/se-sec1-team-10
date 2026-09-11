@@ -4,7 +4,7 @@ import request from 'supertest';
 import type { User } from '@prisma/client';
 import { createApp } from '../server/app.js';
 import { DuplicateEmailError, type Repository } from '../server/repository.js';
-import type { ExerciseInput, ExerciseRecord, MealInput, MealRecord, ProfileInput } from '../shared/contracts.js';
+import type { ExerciseInput, ExerciseRecord, GoalInput, MealInput, MealRecord, ProfileInput } from '../shared/contracts.js';
 import { calculateBmi } from '../server/health.js';
 import { calculateExerciseCalories } from '../server/exercise.js';
 import { calculateMealCalories } from '../server/meal.js';
@@ -22,7 +22,7 @@ class MemoryRepository implements Repository {
     await Promise.resolve();
     if (await this.findUserByEmail(data.email)) throw new DuplicateEmailError();
     const now = new Date();
-    const user: User = { id: randomUUID(), ...data, age: null, weightKg: null, heightCm: null, createdAt: now, updatedAt: now };
+    const user: User = { id: randomUUID(), ...data, age: null, weightKg: null, heightCm: null, targetWeightKg: null, dailyCalorieTarget: null, createdAt: now, updatedAt: now };
     this.users.set(user.id, user); return user;
   }
   async updateProfile(id: string, data: ProfileInput) {
@@ -31,6 +31,7 @@ class MemoryRepository implements Repository {
     const updated = { ...user, ...data, updatedAt: new Date() };
     this.users.set(id, updated); return updated;
   }
+  async updateGoals(id: string, data: GoalInput) { return this.updateProfile(id, data as ProfileInput); }
   async createSession(userId: string, expiresAt: Date) {
     const session = { id: randomUUID(), userId, expiresAt };
     this.sessions.set(session.id, session); return session;

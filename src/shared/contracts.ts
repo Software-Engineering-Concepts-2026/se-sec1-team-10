@@ -20,7 +20,10 @@ export type PublicUser = {
   id: string; email: string; displayName: string;
   age: number | null; weightKg: number | null; heightCm: number | null;
   bmi: number | null;
+  targetWeightKg?: number | null; dailyCalorieTarget?: number | null;
 };
+export const goalSchema = z.object({ targetWeightKg: z.number().positive().max(500), dailyCalorieTarget: z.number().int().min(1).max(100000) }).strict();
+export type GoalInput = z.infer<typeof goalSchema>;
 
 const activityIds = activityOptions.map(activity => activity.id) as [string, ...string[]];
 export const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'กรุณาระบุวันที่ให้ถูกต้อง').refine(value => {

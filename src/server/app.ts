@@ -3,7 +3,7 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { ZodError } from 'zod';
-import { dailyExerciseQuerySchema, exerciseSchema, loginSchema, mealSchema, profileSchema, registerSchema, type PublicUser } from '../shared/contracts.js';
+import { dailyExerciseQuerySchema, exerciseSchema, goalSchema, loginSchema, mealSchema, profileSchema, registerSchema, type PublicUser } from '../shared/contracts.js';
 import { DuplicateEmailError, type Repository } from './repository.js';
 import { COOKIE_NAME, SESSION_MS, hashPassword, tokenService, verifyPassword } from './security.js';
 import { calculateBmi } from './health.js';
@@ -15,6 +15,7 @@ type Config = { jwtSecret: string; appOrigin: string; production?: boolean; now?
 const publicUser = (user: Omit<PublicUser, 'bmi'>): PublicUser => ({
   id: user.id, email: user.email, displayName: user.displayName,
   age: user.age, weightKg: user.weightKg, heightCm: user.heightCm,
+  targetWeightKg: user.targetWeightKg, dailyCalorieTarget: user.dailyCalorieTarget,
   bmi: calculateBmi(user.weightKg, user.heightCm),
 });
 
@@ -113,6 +114,10 @@ export function createApp(repository: Repository, config: Config) {
     const { start, end } = dateBounds(query.date);
     const meals = (await repository.listMeals(res.locals.user.id, start, end)).map(publicMeal);
     res.json({ date: query.date, meals, caloriesConsumed: meals.reduce((total, meal) => total + meal.totalCalories, 0) });
+  });
+  app.put('/api/goals', requireAuth, async (req, res) => {
+    const user = await repository.updateGoals(res.locals.user.id, goalSchema.parse(req.body));
+    res.json({ user: publicUser(user), message: 'บันทึกเป้าหมายแล้ว' });
   });
   app.get('/api/summary/weekly', requireAuth, async (req, res) => {
     const { date } = dailyExerciseQuerySchema.parse(req.query);

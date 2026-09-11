@@ -1,11 +1,12 @@
 import type { PrismaClient, User } from '@prisma/client';
-import type { ExerciseInput, ExerciseRecord, MealInput, MealRecord, ProfileInput } from '../shared/contracts.js';
+import type { ExerciseInput, ExerciseRecord, GoalInput, MealInput, MealRecord, ProfileInput } from '../shared/contracts.js';
 
 export interface Repository {
   findUserByEmail(email: string): Promise<User | null>;
   findUserById(id: string): Promise<User | null>;
   createUser(data: { email: string; displayName: string; passwordHash: string }): Promise<User>;
   updateProfile(id: string, data: ProfileInput): Promise<User>;
+  updateGoals(id: string, data: GoalInput): Promise<User>;
   createSession(userId: string, expiresAt: Date): Promise<{ id: string }>;
   touchSession(id: string, userId: string, now: Date, expiresAt: Date): Promise<boolean>;
   deleteSession(id: string): Promise<void>;
@@ -44,6 +45,7 @@ export function prismaRepository(db: PrismaClient): Repository {
       }
     },
     updateProfile: (id, data) => db.user.update({ where: { id }, data }),
+    updateGoals: (id, data) => db.user.update({ where: { id }, data }),
     async createSession(userId, expiresAt) {
       // Clean up expired sessions without ending active sessions on other devices.
       await db.session.deleteMany({ where: { userId, expiresAt: { lte: new Date() } } });
