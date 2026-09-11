@@ -4,6 +4,7 @@ import { api, ApiError } from './api';
 import { ExercisePanel } from './ExercisePanel';
 import { MealPanel } from './MealPanel';
 import { WeeklySummaryPanel } from './WeeklySummaryPanel';
+import { DashboardPanel } from './DashboardPanel';
 
 type Feedback = { message: string; error: boolean; fields?: Record<string, string[]> } | null;
 function FeedbackMessage({ value }: { value: Feedback }) {
@@ -135,6 +136,7 @@ export function App() {
             </fieldset></form>
           </section>
         </div>
+        <DashboardPanel user={user} />
         <WeeklySummaryPanel />
         <MealPanel />
         <ExercisePanel user={user} />
