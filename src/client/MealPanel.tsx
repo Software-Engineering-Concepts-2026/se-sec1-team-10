@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import type { MealIngredientRecord, PublicMeal } from '../shared/contracts';
 import { api, ApiError } from './api';
+import type { FavoriteMeal } from './FavoriteMealsPanel';
 
 type IngredientDraft = Omit<MealIngredientRecord, 'id'>;
 type DailyMeals = { date: string; meals: PublicMeal[]; caloriesConsumed: number };
@@ -27,6 +28,16 @@ export function MealPanel() {
   }
   useEffect(() => { void load(date); }, [date]);
   const reset = () => { setName(''); setMealType('breakfast'); setIngredients([emptyIngredient()]); setImageData(null); setEditingId(null); if (fileInput.current) fileInput.current.value = ''; };
+  useEffect(() => {
+    const useFavorite = (event: Event) => {
+      const favorite = (event as CustomEvent<FavoriteMeal>).detail;
+      if (!favorite) return;
+      setName(favorite.name); setMealType(favorite.mealType); setIngredients(favorite.ingredients); setImageData(null); setEditingId(null);
+      setMessage({ text: `เติมข้อมูล ${favorite.name} แล้ว ตรวจสอบและบันทึกได้เลย`, error: false });
+    };
+    window.addEventListener('favorite-selected', useFavorite);
+    return () => window.removeEventListener('favorite-selected', useFavorite);
+  }, []);
   const updateIngredient = (index: number, field: keyof IngredientDraft, value: string) => setIngredients(current => current.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: field === 'name' ? value : Math.max(0, Number(value) || 0) } : item));
   async function chooseImage(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
