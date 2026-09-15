@@ -9,8 +9,15 @@ import { COOKIE_NAME, SESSION_MS, hashPassword, tokenService, verifyPassword } f
 import { calculateBmi } from './health.js';
 import { calculateExerciseCalories, dateBounds, publicExercise } from './exercise.js';
 import { calculateMealCalories, publicMeal } from './meal.js';
+import { analyzeMealImage, analyzeMealRequestSchema, AiRequestError, DailyScanBudget, isAiConfigured, NotFoodError, type AiConfiguration } from './ai.js';
+import { foodSearchQuerySchema, isNutritionConfigured, NutritionRequestError, searchUsdaFoods, type NutritionConfiguration } from './nutrition.js';
 
-type Config = { jwtSecret: string; appOrigin: string; production?: boolean; now?: () => Date };
+export type AppConfig = {
+  jwtSecret: string; appOrigin: string; production?: boolean; now?: () => Date;
+  /** Optional so applications without an AI provider keep the feature disabled. */
+  ai?: AiConfiguration;
+  nutrition?: NutritionConfiguration;
+};
 
 const publicUser = (user: Omit<PublicUser, 'bmi'>): PublicUser => ({
   id: user.id, email: user.email, displayName: user.displayName,
@@ -19,12 +26,13 @@ const publicUser = (user: Omit<PublicUser, 'bmi'>): PublicUser => ({
   bmi: calculateBmi(user.weightKg, user.heightCm),
 });
 
-export function createApp(repository: Repository, config: Config) {
+export function createApp(repository: Repository, config: AppConfig) {
   if (config.jwtSecret.length < 32 || config.jwtSecret.startsWith('replace-this')) {
     throw new Error('JWT_SECRET must be a randomly generated secret of at least 32 characters');
   }
   const origin = new URL(config.appOrigin).origin;
   const now = config.now ?? (() => new Date());
+  const dailyScanBudget = new DailyScanBudget(config.ai?.dailyScanLimit ?? 50);
   const tokens = tokenService(config.jwtSecret);
   const cookieOptions = { httpOnly: true, sameSite: 'lax' as const, secure: !!config.production, path: '/api' };
   const app = express();
@@ -150,6 +158,52 @@ export function createApp(repository: Repository, config: Config) {
     const data = mealSchema.parse(req.body);
     const meal = await repository.createMeal(res.locals.user.id, data, calculateMealCalories(data.ingredients));
     res.status(201).json({ meal: publicMeal(meal), message: 'บันทึกอาหารแล้ว' });
+  });
+  const aiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: 'draft-8', legacyHeaders: false,
+    keyGenerator: (_req, res) => String(res.locals.user?.id ?? 'unauthenticated'),
+    message: { message: 'วิเคราะห์รูปภาพบ่อยเกินไป กรุณารอ 15 นาทีแล้วลองใหม่' },
+  });
+  app.post('/api/meals/analyze', requireAuth, aiLimiter, async (req, res) => {
+    if (!isAiConfigured(config.ai)) {
+      res.status(503).json({ message: 'ยังไม่ได้เปิดใช้การวิเคราะห์รูปภาพอาหาร' }); return;
+    }
+    const { imageData } = analyzeMealRequestSchema.parse(req.body);
+    if (!dailyScanBudget.claim(res.locals.user.id, now())) {
+      res.status(429).json({ message: 'ใช้โควต้าวิเคราะห์รูปภาพครบสำหรับวันนี้แล้ว กรุณาลองใหม่วันพรุ่งนี้' }); return;
+    }
+    try {
+      const analysis = await analyzeMealImage(imageData, config.ai);
+      res.json({ analysis });
+    } catch (error) {
+      if (error instanceof NotFoodError) {
+        res.status(422).json({ error: 'not-food', message: 'ไม่พบอาหารหรือเครื่องดื่มในรูปภาพ กรุณาเลือกรูปอาหารที่ชัดเจน' }); return;
+      }
+      if (error instanceof AiRequestError) {
+        const message = error.status === 504
+          ? 'การวิเคราะห์ใช้เวลานานเกินไป กรุณาลองใหม่'
+          : 'ไม่สามารถวิเคราะห์รูปภาพได้ในขณะนี้ กรุณาลองใหม่';
+        res.status(error.status).json({ message }); return;
+      }
+      throw error;
+    }
+  });
+  app.get('/api/foods/search', requireAuth, async (req, res) => {
+    if (!isNutritionConfigured(config.nutrition)) {
+      res.status(503).json({ message: 'ยังไม่ได้เปิดใช้การค้นหาข้อมูลโภชนาการ' }); return;
+    }
+    const { q } = foodSearchQuerySchema.parse(req.query);
+    try {
+      res.json({ foods: await searchUsdaFoods(q, config.nutrition) });
+    } catch (error) {
+      if (error instanceof NutritionRequestError) {
+        const message = error.status === 504
+          ? 'การค้นหาข้อมูลโภชนาการใช้เวลานานเกินไป กรุณาลองใหม่'
+          : 'ไม่สามารถค้นหาข้อมูลโภชนาการได้ในขณะนี้ กรุณาลองใหม่';
+        res.status(error.status).json({ message }); return;
+      }
+      throw error;
+    }
   });
   app.put('/api/meals/:id', requireAuth, async (req, res) => {
     const data = mealSchema.parse(req.body);

@@ -44,7 +44,7 @@ export function ExercisePanel({ user }: { user: PublicUser }) {
       await api(editingId ? `/exercises/${editingId}` : '/exercises', body, editingId ? 'PUT' : 'POST');
       setEditingId(null); setActivityType(activityOptions[0].id); setDurationMinutes('30');
       setMessage({ text: editingId ? 'แก้ไขกิจกรรมแล้ว' : 'บันทึกกิจกรรมแล้ว', error: false });
-      await loadSummary();
+      await loadSummary(); window.dispatchEvent(new Event('daily-calories-updated'));
     } catch (error) {
       setMessage({ text: error instanceof ApiError ? error.message : 'บันทึกกิจกรรมไม่ได้', error: true });
     } finally { setBusy(false); }
@@ -55,7 +55,7 @@ export function ExercisePanel({ user }: { user: PublicUser }) {
       await api(`/exercises/${id}`, {}, 'DELETE');
       if (editingId === id) setEditingId(null);
       setMessage({ text: 'ลบกิจกรรมแล้ว', error: false });
-      await loadSummary();
+      await loadSummary(); window.dispatchEvent(new Event('daily-calories-updated'));
     } catch (error) {
       setMessage({ text: error instanceof ApiError ? error.message : 'ลบกิจกรรมไม่ได้', error: true });
     } finally { setBusy(false); }

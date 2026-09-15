@@ -16,11 +16,12 @@ type MobileSection = 'today' | 'diary' | 'progress' | 'account';
 
 function MobileNav({ active, onChange }: { active: MobileSection; onChange: (section: MobileSection) => void }) {
   const items: { id: MobileSection; icon: string; label: string }[] = [
-    { id: 'today', icon: '⌂', label: 'วันนี้' }, { id: 'diary', icon: '＋', label: 'บันทึก' },
-    { id: 'progress', icon: '◔', label: 'ความคืบหน้า' }, { id: 'account', icon: '☺', label: 'บัญชี' },
+    { id: 'today', icon: 'home', label: 'วันนี้' }, { id: 'diary', icon: 'plus', label: 'บันทึก' },
+    { id: 'progress', icon: 'chart', label: 'ความคืบหน้า' }, { id: 'account', icon: 'user', label: 'บัญชี' },
   ];
-  return <nav className="mobile-nav" aria-label="เมนูหลัก">{items.map(item => <button key={item.id} type="button" className={active === item.id ? 'active' : ''} aria-current={active === item.id ? 'page' : undefined} onClick={() => onChange(item.id)}><span aria-hidden="true">{item.icon}</span>{item.label}</button>)}</nav>;
+  return <nav className="mobile-nav" aria-label="เมนูหลัก">{items.map(item => <button key={item.id} type="button" className={active === item.id ? 'active' : ''} aria-current={active === item.id ? 'page' : undefined} onClick={() => onChange(item.id)}><span className="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><use href={`#icon-${item.icon}`} /></svg></span>{item.label}</button>)}</nav>;
 }
+function IconSprite() { return <svg aria-hidden="true" width="0" height="0" className="icon-sprite"><symbol id="icon-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10Z" /></symbol><symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol><symbol id="icon-chart" viewBox="0 0 24 24"><path d="M5 19V9m7 10V5m7 14v-7" /></symbol><symbol id="icon-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5" /><path d="M5 20c.7-3.4 3-5 7-5s6.3 1.6 7 5" /></symbol></svg>; }
 function FeedbackMessage({ value }: { value: Feedback }) {
   return value ? <div className={`feedback ${value.error ? 'error' : 'success'}`} role={value.error ? 'alert' : 'status'}>{value.message}</div> : null;
 }
@@ -47,6 +48,7 @@ export function App() {
   const [bootError, setBootError] = useState(false);
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [mobileSection, setMobileSection] = useState<MobileSection>('today');
+  const [diaryView, setDiaryView] = useState<'food' | 'activity' | 'history'>('food');
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
 
@@ -88,7 +90,7 @@ export function App() {
         displayName: values.displayName, age: Number(values.age),
         weightKg: Number(values.weightKg), heightCm: Number(values.heightCm),
       }, 'PUT');
-      setUser(result.user); setFeedback({ error: false, message: 'บันทึกข้อมูลส่วนตัวเรียบร้อยแล้ว' });
+      setUser(result.user); window.dispatchEvent(new Event('profile-updated')); setFeedback({ error: false, message: 'บันทึกข้อมูลส่วนตัวเรียบร้อยแล้ว' });
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) setUser(null);
       setFeedback(asFeedback(error));
@@ -101,7 +103,7 @@ export function App() {
     finally { setBusy(false); }
   }
 
-  return <div className="app-shell">
+  return <div className="app-shell"><IconSprite />
     <header className="topbar">
       <a className="brand" href="/" aria-label="LifeBalance หน้าหลัก"><span className="brand-icon" aria-hidden="true">lb</span>LifeBalance<span className="brand-dot">.</span></a>
       <span className="topbar-note">สุขภาพที่ดี เริ่มจากทุกวัน</span>
@@ -157,7 +159,16 @@ export function App() {
           </section>
         </div></div>
         <div className={`mobile-page ${mobileSection === 'progress' ? 'is-active' : ''}`}><GoalPanel user={user} onSaved={setUser} /><HealthTrendPanel /><WeeklySummaryPanel /></div>
-        <div className={`mobile-page ${mobileSection === 'diary' ? 'is-active' : ''}`}><MealPanel /><FavoriteMealsPanel /><ReminderPanel /><FoodHistoryPanel /><ExercisePanel user={user} /></div>
+        <div className={`mobile-page ${mobileSection === 'diary' ? 'is-active' : ''}`}>
+          <div className="diary-switcher" role="tablist" aria-label="หมวดบันทึก">
+            <button type="button" role="tab" aria-selected={diaryView === 'food'} className={diaryView === 'food' ? 'active' : ''} onClick={() => setDiaryView('food')}>อาหาร</button>
+            <button type="button" role="tab" aria-selected={diaryView === 'activity'} className={diaryView === 'activity' ? 'active' : ''} onClick={() => setDiaryView('activity')}>กิจกรรม</button>
+            <button type="button" role="tab" aria-selected={diaryView === 'history'} className={diaryView === 'history' ? 'active' : ''} onClick={() => setDiaryView('history')}>ประวัติ</button>
+          </div>
+          <div className={`diary-view ${diaryView === 'food' ? 'is-active' : ''}`}><MealPanel userId={user.id} /><FavoriteMealsPanel userId={user.id} /><ReminderPanel /></div>
+          <div className={`diary-view ${diaryView === 'activity' ? 'is-active' : ''}`}><ExercisePanel user={user} /></div>
+          <div className={`diary-view ${diaryView === 'history' ? 'is-active' : ''}`}><FoodHistoryPanel /></div>
+        </div>
         <MobileNav active={mobileSection} onChange={setMobileSection} />
       </div>}
     </main>
