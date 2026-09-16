@@ -26,8 +26,16 @@ const providerEstimateSchema = z.object({
   notes: z.array(z.string().trim().min(1).max(240)).max(4),
 }).strict();
 
+// Some OpenAI-compatible providers return a lone note as a string. Accept only
+// that documented shape and validate the converted value against every bound.
+const normalizedProviderEstimateSchema = z.preprocess(value => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  const record = value as Record<string, unknown>;
+  return typeof record.notes === 'string' ? { ...record, notes: [record.notes] } : value;
+}, providerEstimateSchema);
+
 const providerResponseSchema = z.union([
-  providerEstimateSchema,
+  normalizedProviderEstimateSchema,
   z.object({ error: z.literal('not-food') }).strict(),
 ]);
 
@@ -57,23 +65,6 @@ export function parseDailyScanLimit(value: string | undefined): number {
   const limit = Number(value);
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 50) throw new Error('AI_DAILY_SCAN_LIMIT must be a whole number from 1 to 50');
   return limit;
-}
-
-export class DailyScanBudget {
-  private readonly uses = new Map<string, number>();
-  constructor(private readonly limit: number) {
-    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 50) throw new Error('AI daily scan limit must be a whole number from 1 to 50');
-  }
-
-  claim(userId: string, date: Date): boolean {
-    const day = date.toISOString().slice(0, 10);
-    const key = `${day}:${userId}`;
-    const used = this.uses.get(key) ?? 0;
-    if (used >= this.limit) return false;
-    this.uses.set(key, used + 1);
-    for (const storedKey of this.uses.keys()) if (!storedKey.startsWith(`${day}:`)) this.uses.delete(storedKey);
-    return true;
-  }
 }
 
 function configured(config?: AiConfiguration): config is Required<Pick<AiConfiguration, 'baseUrl' | 'apiKey' | 'model'>> & AiConfiguration {
@@ -133,7 +124,7 @@ export async function analyzeMealImage(imageData: string, config?: AiConfigurati
         max_tokens: 800,
         temperature: 0,
         messages: [
-          { role: 'system', content: 'You estimate food visible in a meal image. If the image does not clearly show food or a drink intended for consumption, return only {"error":"not-food"}. Otherwise return only a JSON object with name, mealType (breakfast|lunch|dinner|snack), ingredients (name, carbsGrams, sugarGrams, proteinGrams, fatGrams), portionDescription, and notes. All human-readable values (name, ingredient names, portionDescription, notes) must be in Thai. Estimates are uncertain: include uncertainty in Thai notes. Do not claim database verification. Use numeric grams and include only visible or clearly likely ingredients.' },
+          { role: 'system', content: 'You estimate food visible in a meal image. Return JSON only, with no Markdown. If the image does not clearly show food or a drink intended for consumption, return exactly {"error":"not-food"}. Otherwise return exactly this shape: {"name":"ชื่ออาหาร","mealType":"lunch","ingredients":[{"name":"ชื่อส่วนผสม","carbsGrams":0,"sugarGrams":0,"proteinGrams":0,"fatGrams":0}],"portionDescription":"คำอธิบายปริมาณ","notes":["หมายเหตุความไม่แน่นอน"]}. notes MUST be an array of 0 to 4 strings, never one string; each note and portionDescription is 1 to 240 characters. name and each ingredient name are 1 to 120 characters. mealType must be exactly breakfast, lunch, dinner, or snack. ingredients must contain 1 to 20 items. Every nutrient value must be a finite JSON number from 0 to 10000. All human-readable values must be in Thai. Estimates are uncertain: include uncertainty in Thai notes. Do not claim database verification. Include only visible or clearly likely ingredients.' },
           { role: 'user', content: [{ type: 'text', text: 'วิเคราะห์ภาพอาหารนี้เพื่อให้ผู้ใช้ตรวจสอบก่อนบันทึก กรุณาตอบตาม JSON ที่กำหนดเท่านั้น' }, { type: 'image_url', image_url: { url: imageData } }] },
         ],
       }),

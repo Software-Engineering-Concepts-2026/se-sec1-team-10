@@ -1,15 +1,16 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { lazy, Suspense, useEffect, useState, type FormEvent } from 'react';
 import type { PublicUser } from '../shared/contracts';
 import { api, ApiError } from './api';
-import { ExercisePanel } from './ExercisePanel';
-import { MealPanel } from './MealPanel';
-import { WeeklySummaryPanel } from './WeeklySummaryPanel';
 import { DashboardPanel } from './DashboardPanel';
-import { GoalPanel } from './GoalPanel';
-import { FoodHistoryPanel } from './FoodHistoryPanel';
-import { FavoriteMealsPanel } from './FavoriteMealsPanel';
-import { ReminderPanel } from './ReminderPanel';
-import { HealthTrendPanel } from './HealthTrendPanel';
+import { ReminderObserver } from './reminders';
+const ExercisePanel = lazy(() => import('./ExercisePanel').then(module => ({ default: module.ExercisePanel })));
+const MealPanel = lazy(() => import('./MealPanel').then(module => ({ default: module.MealPanel })));
+const WeeklySummaryPanel = lazy(() => import('./WeeklySummaryPanel').then(module => ({ default: module.WeeklySummaryPanel })));
+const GoalPanel = lazy(() => import('./GoalPanel').then(module => ({ default: module.GoalPanel })));
+const FoodHistoryPanel = lazy(() => import('./FoodHistoryPanel').then(module => ({ default: module.FoodHistoryPanel })));
+const FavoriteMealsPanel = lazy(() => import('./FavoriteMealsPanel').then(module => ({ default: module.FavoriteMealsPanel })));
+const ReminderPanel = lazy(() => import('./ReminderPanel').then(module => ({ default: module.ReminderPanel })));
+const HealthTrendPanel = lazy(() => import('./HealthTrendPanel').then(module => ({ default: module.HealthTrendPanel })));
 
 type Feedback = { message: string; error: boolean; fields?: Record<string, string[]> } | null;
 type MobileSection = 'today' | 'diary' | 'progress' | 'account';
@@ -48,9 +49,14 @@ export function App() {
   const [bootError, setBootError] = useState(false);
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [mobileSection, setMobileSection] = useState<MobileSection>('today');
+  const [visitedSections, setVisitedSections] = useState<Set<MobileSection>>(() => new Set(['today']));
   const [diaryView, setDiaryView] = useState<'food' | 'activity' | 'history'>('food');
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
+  function navigate(section: MobileSection) {
+    setVisitedSections(current => current.has(section) ? current : new Set(current).add(section));
+    setMobileSection(section);
+  }
 
   async function loadSession() {
     setLoading(true); setBootError(false);
@@ -98,7 +104,7 @@ export function App() {
   }
   async function logout() {
     setBusy(true);
-    try { await api('/auth/logout', {}); setUser(null); setMode('login'); setFeedback(null); }
+    try { await api('/auth/logout', {}); setUser(null); setMode('login'); setFeedback(null); setMobileSection('today'); setVisitedSections(new Set(['today'])); }
     catch (error) { setFeedback(asFeedback(error)); }
     finally { setBusy(false); }
   }
@@ -141,12 +147,13 @@ export function App() {
           <div className="privacy-note"><span aria-hidden="true">◇</span> ข้อมูลสุขภาพเป็นเรื่องส่วนตัวของคุณ<br /><small>ระบบออกจากเซสชันเมื่อไม่ใช้งาน 30 นาที</small></div>
         </section>
       </div> : <div className="profile-layout">
+        <ReminderObserver userId={user.id} />
         <div className={`mobile-page ${mobileSection === 'today' ? 'is-active' : ''}`}>
         <section className="profile-heading"><span className="eyebrow">YOUR DAILY BALANCE</span><h1>สวัสดี, {user.displayName} <span>✦</span></h1><p className="muted">วันนี้ดูแลตัวเองได้อีกนิดนะ</p></section>
         <DashboardPanel user={user} />
-        <button type="button" className="mobile-quick-log" onClick={() => setMobileSection('diary')}>＋ บันทึกอาหารของวันนี้</button>
+        <button type="button" className="mobile-quick-log" onClick={() => navigate('diary')}>＋ บันทึกอาหารของวันนี้</button>
         </div>
-        <div className={`mobile-page ${mobileSection === 'account' ? 'is-active' : ''}`}>
+        {visitedSections.has('account') && <Suspense fallback={<div className={`mobile-page ${mobileSection === 'account' ? 'is-active' : ''} loading`} role="status">กำลังเตรียมพื้นที่…</div>}><div className={`mobile-page ${mobileSection === 'account' ? 'is-active' : ''}`}>
         <div className="profile-grid">
           <aside className="card profile-summary"><div className="avatar" aria-hidden="true">{user.displayName.slice(0, 1)}</div><h2>{user.displayName}</h2><p className="email">{user.email}</p><span className="status-chip">บัญชีของคุณ</span><hr /><h3>ข้อมูลล่าสุด</h3><dl><div><dt>อายุ</dt><dd>{user.age === null ? 'ยังไม่ระบุ' : `${user.age} ปี`}</dd></div><div><dt>น้ำหนัก</dt><dd>{user.weightKg === null ? 'ยังไม่ระบุ' : `${user.weightKg} กก.`}</dd></div><div><dt>ส่วนสูง</dt><dd>{user.heightCm === null ? 'ยังไม่ระบุ' : `${user.heightCm} ซม.`}</dd></div><div><dt>BMI</dt><dd>{user.bmi === null ? 'ต้องระบุน้ำหนักและส่วนสูง' : user.bmi.toFixed(1)}</dd></div></dl></aside>
           <section className="card profile-form"><span className="eyebrow">PERSONAL INFORMATION</span><h2>ข้อมูลส่วนตัว</h2><p className="muted">กรอกข้อมูลให้ครบ แล้วบันทึกเมื่อพร้อม</p><FeedbackMessage value={feedback} />
@@ -157,19 +164,19 @@ export function App() {
               <button className="primary" type="submit">{busy ? 'กำลังบันทึก…' : 'บันทึกข้อมูลส่วนตัว →'}</button>
             </fieldset></form>
           </section>
-        </div></div>
-        <div className={`mobile-page ${mobileSection === 'progress' ? 'is-active' : ''}`}><GoalPanel user={user} onSaved={setUser} /><HealthTrendPanel /><WeeklySummaryPanel /></div>
-        <div className={`mobile-page ${mobileSection === 'diary' ? 'is-active' : ''}`}>
+        </div></div></Suspense>}
+        {visitedSections.has('progress') && <Suspense fallback={<div className={`mobile-page ${mobileSection === 'progress' ? 'is-active' : ''} loading`} role="status">กำลังโหลดความคืบหน้า…</div>}><div className={`mobile-page ${mobileSection === 'progress' ? 'is-active' : ''}`}><GoalPanel user={user} onSaved={setUser} /><HealthTrendPanel /><WeeklySummaryPanel /></div></Suspense>}
+        {visitedSections.has('diary') && <Suspense fallback={<div className={`mobile-page ${mobileSection === 'diary' ? 'is-active' : ''} loading`} role="status">กำลังโหลดบันทึก…</div>}><div className={`mobile-page ${mobileSection === 'diary' ? 'is-active' : ''}`}>
           <div className="diary-switcher" role="tablist" aria-label="หมวดบันทึก">
             <button type="button" role="tab" aria-selected={diaryView === 'food'} className={diaryView === 'food' ? 'active' : ''} onClick={() => setDiaryView('food')}>อาหาร</button>
             <button type="button" role="tab" aria-selected={diaryView === 'activity'} className={diaryView === 'activity' ? 'active' : ''} onClick={() => setDiaryView('activity')}>กิจกรรม</button>
             <button type="button" role="tab" aria-selected={diaryView === 'history'} className={diaryView === 'history' ? 'active' : ''} onClick={() => setDiaryView('history')}>ประวัติ</button>
           </div>
-          <div className={`diary-view ${diaryView === 'food' ? 'is-active' : ''}`}><MealPanel userId={user.id} /><FavoriteMealsPanel userId={user.id} /><ReminderPanel /></div>
+          <div className={`diary-view ${diaryView === 'food' ? 'is-active' : ''}`}><MealPanel userId={user.id} /><FavoriteMealsPanel userId={user.id} /><ReminderPanel userId={user.id} /></div>
           <div className={`diary-view ${diaryView === 'activity' ? 'is-active' : ''}`}><ExercisePanel user={user} /></div>
           <div className={`diary-view ${diaryView === 'history' ? 'is-active' : ''}`}><FoodHistoryPanel /></div>
-        </div>
-        <MobileNav active={mobileSection} onChange={setMobileSection} />
+        </div></Suspense>}
+        <MobileNav active={mobileSection} onChange={navigate} />
       </div>}
     </main>
     <footer className="site-footer"><span>LifeBalance © 2026</span><span>พื้นที่เล็ก ๆ สำหรับสุขภาพที่ดีของคุณ</span></footer>

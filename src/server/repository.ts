@@ -1,4 +1,4 @@
-import type { PrismaClient, User } from '@prisma/client';
+import { Prisma, type PrismaClient, type User } from '@prisma/client';
 import type { ExerciseInput, ExerciseRecord, GoalInput, MealInput, MealRecord, ProfileInput } from '../shared/contracts.js';
 
 export interface Repository {
@@ -20,6 +20,8 @@ export interface Repository {
   createMeal(userId: string, data: MealInput, totalCalories: number): Promise<MealRecord>;
   updateMeal(id: string, userId: string, data: MealInput, totalCalories: number): Promise<MealRecord | null>;
   deleteMeal(id: string, userId: string): Promise<boolean>;
+  /** Atomically reserves one analysis attempt for this user and UTC calendar day. */
+  claimDailyAiScan(userId: string, day: Date, limit: number): Promise<boolean>;
 }
 
 export class DuplicateEmailError extends Error {}
@@ -114,6 +116,18 @@ export function prismaRepository(db: PrismaClient): Repository {
     },
     async deleteMeal(id, userId) {
       return (await db.mealLog.deleteMany({ where: { id, userId } })).count === 1;
+    },
+    async claimDailyAiScan(userId, day, limit) {
+      const quotaDay = new Date(`${day.toISOString().slice(0, 10)}T00:00:00.000Z`);
+      const claimed = await db.$queryRaw<{ scanCount: number }[]>(Prisma.sql`
+        INSERT INTO "AiDailyQuota" ("userId", "day", "scanCount")
+        VALUES (${userId}, ${quotaDay}, 1)
+        ON CONFLICT ("userId", "day") DO UPDATE
+        SET "scanCount" = "AiDailyQuota"."scanCount" + 1
+        WHERE "AiDailyQuota"."scanCount" < ${limit}
+        RETURNING "scanCount"
+      `);
+      return claimed.length === 1;
     },
   };
 }

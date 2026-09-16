@@ -7,6 +7,9 @@ export function calculateMealCalories(ingredients: MealRecord['ingredients'] | {
 export function publicMeal(record: MealRecord): PublicMeal {
   return {
     id: record.id, name: record.name, mealType: record.mealType, imageData: record.imageData ?? null,
-    activityDate: record.activityDate, totalCalories: record.totalCalories, ingredients: record.ingredients,
+    activityDate: record.activityDate, totalCalories: record.totalCalories,
+    ingredients: record.ingredients.map(({ id, name, carbsGrams, sugarGrams, proteinGrams, fatGrams }) => ({
+      id, name, carbsGrams, sugarGrams, proteinGrams, fatGrams,
+    })),
   };
 }

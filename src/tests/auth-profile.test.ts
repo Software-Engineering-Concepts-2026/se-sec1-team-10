@@ -82,6 +82,7 @@ class MemoryRepository implements Repository {
     const current = this.meals.get(id);
     return !!current && current.userId === userId && this.meals.delete(id);
   }
+  async claimDailyAiScan() { return true; }
   reset() { this.users.clear(); this.sessions.clear(); this.exercises.clear(); this.meals.clear(); this.weightLogs = []; }
 }
 const repository = new MemoryRepository();

@@ -24,6 +24,8 @@ LifeBalance ช่วยลดความยุ่งยากจากกา�
 
 ### Running the Application
 
+เครื่องที่เตรียม PostgreSQL แบบพกพาไว้แล้วเปิดด้วย `npm run db:local` และ `npm run dev` ได้ ดู [วิธีเปิดและทดสอบบนเครื่องนี้](docs/local-testing.md) โดยเก็บค่าจริงใน `.env` เดิม ไม่ต้องคัดลอกทับใหม่
+
 1. **ติดตั้ง dependencies:**
     ```bash
     npm install

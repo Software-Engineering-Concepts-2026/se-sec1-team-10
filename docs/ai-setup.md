@@ -18,7 +18,7 @@ NUTRITION_API_KEY=your-data-gov-api-key
 
 Put actual credentials in the root `.env` file and save it in your editor. `.env.example` is a public template and must contain no real key. Restart the API after changing `.env`. `AI_API_KEY` is the university key; `NUTRITION_API_KEY` is a separate optional USDA/data.gov key. Food image estimation works without a USDA key. The two providers are currently separate entry methods: AI results are not automatically matched or verified against USDA.
 
-Daily scan counts are currently in server memory and reset when the server restarts; they are not an account-wide provider token budget. Keep the university's own quota controls enabled.
+Daily scan counts are stored in PostgreSQL per account and UTC calendar day, so they survive API restarts and apply across API processes that share the database. Run the `AiDailyQuota` migration before enabling the feature in another environment. This is an application request cap, not the university provider's token budget; keep the university's own quota controls enabled.
 
 The endpoint must use HTTPS in production. Plain HTTP is accepted only for `localhost`, `127.0.0.1`, or `::1` development endpoints. URLs containing credentials (`user:password@host`) or a fragment (`#...`) are rejected.
 

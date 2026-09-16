@@ -9,7 +9,7 @@ import { COOKIE_NAME, SESSION_MS, hashPassword, tokenService, verifyPassword } f
 import { calculateBmi } from './health.js';
 import { calculateExerciseCalories, dateBounds, publicExercise } from './exercise.js';
 import { calculateMealCalories, publicMeal } from './meal.js';
-import { analyzeMealImage, analyzeMealRequestSchema, AiRequestError, DailyScanBudget, isAiConfigured, NotFoodError, type AiConfiguration } from './ai.js';
+import { analyzeMealImage, analyzeMealRequestSchema, AiRequestError, isAiConfigured, NotFoodError, type AiConfiguration } from './ai.js';
 import { foodSearchQuerySchema, isNutritionConfigured, NutritionRequestError, searchUsdaFoods, type NutritionConfiguration } from './nutrition.js';
 
 export type AppConfig = {
@@ -32,7 +32,6 @@ export function createApp(repository: Repository, config: AppConfig) {
   }
   const origin = new URL(config.appOrigin).origin;
   const now = config.now ?? (() => new Date());
-  const dailyScanBudget = new DailyScanBudget(config.ai?.dailyScanLimit ?? 50);
   const tokens = tokenService(config.jwtSecret);
   const cookieOptions = { httpOnly: true, sameSite: 'lax' as const, secure: !!config.production, path: '/api' };
   const app = express();
@@ -169,7 +168,7 @@ export function createApp(repository: Repository, config: AppConfig) {
       res.status(503).json({ message: 'ยังไม่ได้เปิดใช้การวิเคราะห์รูปภาพอาหาร' }); return;
     }
     const { imageData } = analyzeMealRequestSchema.parse(req.body);
-    if (!dailyScanBudget.claim(res.locals.user.id, now())) {
+    if (!await repository.claimDailyAiScan(res.locals.user.id, now(), config.ai.dailyScanLimit ?? 50)) {
       res.status(429).json({ message: 'ใช้โควต้าวิเคราะห์รูปภาพครบสำหรับวันนี้แล้ว กรุณาลองใหม่วันพรุ่งนี้' }); return;
     }
     try {

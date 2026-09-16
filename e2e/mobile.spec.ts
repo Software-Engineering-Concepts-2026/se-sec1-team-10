@@ -6,6 +6,7 @@ const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
 async function mockApi(page: Page, options: { aiConfigured?: boolean } = {}) {
   let loggedIn = false;
   let meals: unknown[] = [];
+  let nextMealId = 1;
   let analyzeCalls = 0;
   let mealSaveCalls = 0;
   await page.route('**/api/**', async (route: Route) => {
@@ -26,10 +27,25 @@ async function mockApi(page: Page, options: { aiConfigured?: boolean } = {}) {
     if (path === '/api/meals' && method === 'POST') {
       mealSaveCalls += 1;
       const body = request.postDataJSON() as Record<string, unknown>;
-      const meal = { id: `m${mealSaveCalls}`, ...body, totalCalories: 238 };
+      const meal = { id: `m${nextMealId++}`, ...body, totalCalories: 238 };
       meals = [meal];
       return json({ meal }, 201);
     }
+    if (/^\/api\/meals\/[^/]+$/.test(path) && method === 'PUT') {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      const id = path.split('/').at(-1);
+      const current = (meals as Record<string, unknown>[]).find(meal => meal.id === id);
+      if (!current) return json({ message: 'not found' }, 404);
+      const meal = { ...current, ...body, totalCalories: 238 };
+      meals = (meals as Record<string, unknown>[]).map(item => item.id === id ? meal : item);
+      return json({ meal });
+    }
+    if (/^\/api\/meals\/[^/]+$/.test(path) && method === 'DELETE') {
+      const id = path.split('/').at(-1);
+      meals = (meals as Record<string, unknown>[]).filter(meal => meal.id !== id);
+      return route.fulfill({ status: 204 });
+    }
+    if (path === '/api/foods/search' && method === 'GET') return json({ foods: [{ fdcId: 123, name: 'Rice', dataType: 'Foundation', nutrientsPer100g: { caloriesKcal: 130, carbsGrams: 28, proteinGrams: 3, fatGrams: 0.3, sugarGrams: 0.1 }, source: 'usda-fdc', url: 'https://fdc.nal.usda.gov/food-details/123/nutrients' }] });
     if (path === '/api/exercises/daily' && method === 'GET') return json({ date: url.searchParams.get('date'), exercises: [], caloriesConsumed: meals.length * 238, caloriesBurned: 0, netCalories: meals.length * 238 });
     if (path === '/api/summary/weekly' && method === 'GET') return json({ startDate: '2026-09-08', endDate: '2026-09-14', days: [], caloriesConsumed: 0, caloriesBurned: 0 });
     if (path === '/api/health-history' && method === 'GET') return json({ points: [], rangeDays: 365, performanceTargetMs: 1500 });
@@ -50,6 +66,34 @@ async function login(page: Page) {
 }
 
 test.describe('mobile navigation and food logging', () => {
+  test('opts into account-scoped reminders and delivers a due notification once', async ({ page }) => {
+    await page.addInitScript(() => {
+      const calls: unknown[] = [];
+      Object.assign(window, { notificationCalls: calls });
+      class FakeNotification {
+        static permission = 'granted';
+        static async requestPermission() { return 'granted'; }
+      }
+      Object.defineProperty(window, 'Notification', { value: FakeNotification, configurable: true });
+      const registration = { showNotification: async (title: string, options: unknown) => { calls.push({ title, options }); } };
+      Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { register: async () => registration, ready: Promise.resolve(registration) } });
+      if (!localStorage.getItem('lifebalance-reminders:u1')) localStorage.setItem('lifebalance-reminders:u1', 'malformed');
+    });
+    await mockApi(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await login(page);
+    await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+    const time = await page.evaluate(() => new Date().toTimeString().slice(0, 5));
+    await page.getByLabel('มื้อที่ 1', { exact: true }).fill(time);
+    await page.getByRole('button', { name: 'เปิดแจ้งเตือนมื้ออาหาร', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'ปิดแจ้งเตือนมื้ออาหาร' })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => (window as unknown as { notificationCalls: unknown[] }).notificationCalls.length)).toBe(1);
+    await page.getByRole('button', { name: 'วันนี้', exact: true }).click();
+    await page.evaluate(() => window.dispatchEvent(new Event('reminder-settings-changed')));
+    expect(await page.evaluate(() => (window as unknown as { notificationCalls: unknown[] }).notificationCalls.length)).toBe(1);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('lifebalance-reminders:u1')!).enabled)).toBe(true);
+    expect(await page.evaluate(() => localStorage.getItem('lifebalance-reminders:u2'))).toBeNull();
+  });
   test('switches every mobile tab without horizontal overflow at 390px', async ({ page }) => {
     await mockApi(page, { aiConfigured: true });
     await page.setViewportSize({ width: 390, height: 844 });
@@ -120,5 +164,46 @@ test.describe('mobile navigation and food logging', () => {
     const bounds = await page.locator('.profile-layout').boundingBox();
     expect(bounds!.width).toBeLessThanOrEqual(480);
     await page.screenshot({ path: 'test-results/desktop-same-app.png', fullPage: true });
+  });
+
+  test('searches USDA food, applies a 200g portion, and marks the source', async ({ page }) => {
+    await mockApi(page, { aiConfigured: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await login(page);
+    await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+    await page.getByText('ค้นหาจากฐานข้อมูลอาหาร').click();
+    const foodSearch = page.getByRole('region', { name: 'ค้นหาอาหารสำเร็จรูป' });
+    await foodSearch.getByLabel('ค้นหาอาหาร').fill('rice');
+    await foodSearch.getByLabel('ปริมาณ (ก.)').fill('200');
+    await page.getByRole('button', { name: 'ค้นหา', exact: true }).click();
+    await page.getByRole('button', { name: /Rice/ }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'USDA' })).toBeVisible();
+    await expect(page.getByLabel('ชื่ออาหาร')).toHaveValue('Rice');
+    await expect(page.getByLabel('carbsGrams 1')).toHaveValue('56');
+  });
+
+  test('edits, deletes, and finds a saved meal in history', async ({ page }) => {
+    await mockApi(page, { aiConfigured: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await login(page);
+    await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+    await page.getByRole('button', { name: 'กรอกสารอาหารเอง' }).click();
+    await page.getByLabel('ชื่ออาหาร').fill('มื้อทดสอบ');
+    await page.getByLabel('ชื่อส่วนประกอบ 1', { exact: true }).fill('ข้าว');
+    await page.getByLabel('carbsGrams 1', { exact: true }).fill('50');
+    await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
+    await expect(page.getByText('มื้อทดสอบ')).toBeVisible();
+    await page.getByRole('button', { name: 'แก้ไข', exact: true }).click();
+    await page.getByLabel('ชื่ออาหาร').fill('มื้อแก้ไข');
+    await page.getByRole('button', { name: 'บันทึกการแก้ไข', exact: true }).click();
+    await expect(page.getByText('มื้อแก้ไข')).toBeVisible();
+    await page.getByRole('tab', { name: 'ประวัติ', exact: true }).click();
+    await expect(page.locator('.history-panel').getByText('มื้อแก้ไข')).toBeVisible();
+    await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+    await page.getByRole('tab', { name: 'อาหาร', exact: true }).click();
+    await page.getByRole('button', { name: 'ลบ', exact: true }).click();
+    await expect(page.getByText('ยังไม่มีรายการอาหารในวันนี้')).toBeVisible();
+    await page.getByRole('tab', { name: 'ประวัติ', exact: true }).click();
+    await expect(page.getByText('ไม่พบรายการในช่วงวันที่เลือก')).toBeVisible();
   });
 });

@@ -23,6 +23,16 @@ model User {
   exerciseLogs ExerciseLog[]
   mealLogs     MealLog[]
   weightLogs   WeightLog[]
+  aiDailyQuotas AiDailyQuota[]
+}
+
+model AiDailyQuota {
+  userId    String
+  day       DateTime @db.Date
+  scanCount Int      @default(0)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, day])
 }
 
 model WeightLog {

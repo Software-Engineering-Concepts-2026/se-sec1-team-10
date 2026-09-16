@@ -15,9 +15,12 @@
     "typecheck": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test --workers=1",
+    "test:e2e:live": "node --env-file=.env node_modules/@playwright/test/cli.js test --config=playwright.live.config.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
-    "db:dev": "prisma migrate dev"
+    "db:dev": "prisma migrate dev",
+    "db:local": "node scripts/local-db.mjs start",
+    "db:local:stop": "node scripts/local-db.mjs stop"
   },
   "dependencies": {
     "@prisma/client": "6.12.0",

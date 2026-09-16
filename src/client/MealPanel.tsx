@@ -90,7 +90,11 @@ export function MealPanel({ userId }: { userId: string }) {
   }
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setMessage(null);
-    const body = { name, mealType, activityDate: date, imageData, ingredients };
+    const body = { name, mealType, activityDate: date, imageData,
+      ingredients: ingredients.map(({ name, carbsGrams, sugarGrams, proteinGrams, fatGrams }) => ({
+        name, carbsGrams, sugarGrams, proteinGrams, fatGrams,
+      })),
+    };
     try {
       const result = await api<{ meal: PublicMeal }>(editingId ? `/meals/${editingId}` : '/meals', body, editingId ? 'PUT' : 'POST');
       rememberFavorite(userId, { name: result.meal.name, mealType: result.meal.mealType as FavoriteMeal['mealType'], ingredients });

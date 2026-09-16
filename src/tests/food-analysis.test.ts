@@ -10,6 +10,7 @@ class MemoryRepository implements Repository {
   users = new Map<string, User>();
   sessions = new Map<string, { id: string; userId: string; expiresAt: Date }>();
   meals = new Map<string, MealRecord>();
+  aiQuotas = new Map<string, number>();
   async findUserByEmail(email: string) { return [...this.users.values()].find(user => user.email === email) ?? null; }
   async findUserById(id: string) { return this.users.get(id) ?? null; }
   async createUser(data: { email: string; displayName: string; passwordHash: string }) {
@@ -31,6 +32,13 @@ class MemoryRepository implements Repository {
   async createMeal(userId: string, data: MealInput, totalCalories: number) { const meal: MealRecord = { id: randomUUID(), userId, ...data, imageData: data.imageData ?? null, totalCalories, createdAt: new Date(), updatedAt: new Date(), ingredients: data.ingredients.map(ingredient => ({ id: randomUUID(), ...ingredient })) }; this.meals.set(meal.id, meal); return meal; }
   async updateMeal(): Promise<MealRecord | null> { return null; }
   async deleteMeal() { return false; }
+  async claimDailyAiScan(userId: string, day: Date, limit: number) {
+    const key = `${userId}:${day.toISOString().slice(0, 10)}`;
+    const used = this.aiQuotas.get(key) ?? 0;
+    if (used >= limit) return false;
+    this.aiQuotas.set(key, used + 1);
+    return true;
+  }
 }
 
 const origin = 'http://localhost:5173';
@@ -89,6 +97,16 @@ describe('food image analysis', () => {
     const result = await request(app).post('/api/meals/analyze').set('Origin', origin).set('Cookie', auth).send({ imageData });
     expect(result.status).toBe(422);
     expect(result.body).toMatchObject({ error: 'not-food' });
+  });
+
+  it('normalizes a valid single provider note into the notes array', async () => {
+    app = createApp(repository, { jwtSecret: secret, appOrigin: origin, ai: {
+      baseUrl: 'https://provider.test/v1/chat/completions', apiKey: 'secret', model: 'food',
+      fetch: async () => providerResponse({ ...validEstimate, notes: 'ประเมินจากภาพ' }),
+    } });
+    const auth = await signIn();
+    const result = await request(app).post('/api/meals/analyze').set('Origin', origin).set('Cookie', auth).send({ imageData }).expect(200);
+    expect(result.body.analysis.notes).toContain('ประเมินจากภาพ');
   });
 
   it('enforces the configured daily scan budget per account', async () => {
