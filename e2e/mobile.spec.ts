@@ -82,7 +82,8 @@ test.describe('mobile navigation and food logging', () => {
     await mockApi(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await login(page);
-    await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+    await page.getByRole('button', { name: 'บัญชี', exact: true }).click();
+    await page.getByRole('button', { name: 'แจ้งเตือนมื้ออาหาร' }).click();
     const time = await page.evaluate(() => new Date().toTimeString().slice(0, 5));
     await page.getByLabel('มื้อที่ 1', { exact: true }).fill(time);
     await page.getByRole('button', { name: 'เปิดแจ้งเตือนมื้ออาหาร', exact: true }).click();
@@ -129,12 +130,18 @@ test.describe('mobile navigation and food logging', () => {
     await expect(page.getByText('ค่าประมาณจาก AI')).toBeVisible();
     expect(mock.analyzeCalls).toBe(1);
     expect(mock.mealSaveCalls).toBe(0);
+    await page.getByLabel('ปริมาณส่วนประกอบ 1').fill('50');
+    await page.getByRole('button', { name: 'บันทึกข้อมูล' }).click();
+    await expect(page.getByRole('alert')).toContainText('กรุณากดคำนวณสารอาหารใหม่');
+    expect(mock.mealSaveCalls).toBe(0);
+    await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
+    await expect(page.getByText('คำนวณสารอาหารใหม่แล้ว ตรวจสอบผลรวมก่อนบันทึก')).toBeVisible();
     await page.getByRole('button', { name: 'บันทึกข้อมูล' }).click();
     await expect(page.getByText('บันทึกอาหารแล้ว')).toBeVisible();
     expect(mock.mealSaveCalls).toBe(1);
     await page.getByRole('button', { name: 'วันนี้', exact: true }).click();
     await expect(page.locator('.energy-ring strong')).toHaveText('238');
-    await expect(page.locator('.macro-summary')).toContainText('50');
+    await expect(page.locator('.macro-summary')).toContainText('25');
   });
 
   test('shows a usable fallback when analysis is unavailable', async ({ page }) => {
@@ -147,9 +154,7 @@ test.describe('mobile navigation and food logging', () => {
     await expect(page.getByRole('alert')).toContainText('คุณยังกรอกข้อมูลเองแล้วบันทึกได้');
     await page.getByLabel('ชื่ออาหาร').fill('อาหารกรอกเอง');
     await expect(page.getByLabel('ชื่ออาหาร')).toHaveValue('อาหารกรอกเอง');
-    await page.getByRole('button', { name: 'กรอกสารอาหารเอง' }).click();
-    await page.getByLabel('ชื่อส่วนประกอบ 1', { exact: true }).fill('ข้าว');
-    await page.getByLabel('carbsGrams 1', { exact: true }).fill('50');
+    await page.getByRole('button', { name: 'เพิ่มรายการเอง' }).click();
     await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
     await expect(page.getByText('บันทึกอาหารแล้ว')).toBeVisible();
     expect(mock.mealSaveCalls).toBe(1);
@@ -179,7 +184,7 @@ test.describe('mobile navigation and food logging', () => {
     await page.getByRole('button', { name: /Rice/ }).click();
     await expect(page.getByRole('status').filter({ hasText: 'USDA' })).toBeVisible();
     await expect(page.getByLabel('ชื่ออาหาร')).toHaveValue('Rice');
-    await expect(page.getByLabel('carbsGrams 1')).toHaveValue('56');
+    await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('200');
   });
 
   test('edits, deletes, and finds a saved meal in history', async ({ page }) => {
@@ -187,10 +192,12 @@ test.describe('mobile navigation and food logging', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await login(page);
     await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
-    await page.getByRole('button', { name: 'กรอกสารอาหารเอง' }).click();
+    await page.getByText('ค้นหาจากฐานข้อมูลอาหาร').click();
+    const foodSearch = page.getByRole('region', { name: 'ค้นหาอาหารสำเร็จรูป' });
+    await foodSearch.getByLabel('ค้นหาอาหาร').fill('rice');
+    await page.getByRole('button', { name: 'ค้นหา', exact: true }).click();
+    await page.getByRole('button', { name: /Rice/ }).click();
     await page.getByLabel('ชื่ออาหาร').fill('มื้อทดสอบ');
-    await page.getByLabel('ชื่อส่วนประกอบ 1', { exact: true }).fill('ข้าว');
-    await page.getByLabel('carbsGrams 1', { exact: true }).fill('50');
     await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
     await expect(page.getByText('มื้อทดสอบ')).toBeVisible();
     await page.getByRole('button', { name: 'แก้ไข', exact: true }).click();

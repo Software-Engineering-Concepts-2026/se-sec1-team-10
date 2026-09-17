@@ -176,6 +176,15 @@ dl div { display: flex; justify-content: space-between; padding-top: 18px; font-
 .source-note { display: grid; gap: 3px; padding: 11px 13px; margin: -8px 0 18px; border-radius: 13px; background: #edf6ff; color: #4b6980; font-size: 11px; }
 .source-note strong { color: #37617e; }
 .trend-scroll { overflow-x: auto; }
+.settings-menu { display: grid; gap: 9px; margin-top: 16px; }
+.settings-menu .secondary { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 15px 14px; text-align: left; background: #fffaf7; }
+.settings-menu span { font-size: 22px; line-height: 1; }
+.settings-detail { margin-top: 16px; padding-top: 4px; }
+.settings-detail .goal-panel, .settings-detail .reminder-panel { margin-top: 0; padding: 0; box-shadow: none; background: transparent; }
+.portion-row { grid-template-columns: minmax(0, 1.2fr) minmax(96px, .7fr) minmax(0, 1fr) auto; align-items: end; }
+.portion-row strong, .portion-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.portion-row label { display: grid; gap: 4px; font-size: 10px; color: #718071; }
+.portion-row input { width: 100%; padding: 9px; border: 1px solid #dfe6d9; border-radius: 8px; background: #fff; }
 @media (max-width: 520px) {
   .app-shell, .profile-layout, .mobile-page, .card, .topbar { min-width: 0; max-width: 100%; }
   .topbar { gap: 8px; }
@@ -192,6 +201,9 @@ dl div { display: flex; justify-content: space-between; padding-top: 18px; font-
   .ingredient-row { gap: 5px; padding: 8px; }
   .ingredient-row label input { padding-left: 5px; padding-right: 16px; }
 }
+.portion-row { grid-template-columns: 1fr 100px; }
+.portion-row > strong { grid-column: 1 / -1; }
+.portion-row > span { font-size: 11px; }
 .meal-actions { flex-direction: column; align-items: stretch; }
 .meal-actions .primary, .meal-actions .secondary { width: 100%; }
 .ingredient-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }

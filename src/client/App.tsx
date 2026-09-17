@@ -51,6 +51,7 @@ export function App() {
   const [mobileSection, setMobileSection] = useState<MobileSection>('today');
   const [visitedSections, setVisitedSections] = useState<Set<MobileSection>>(() => new Set(['today']));
   const [diaryView, setDiaryView] = useState<'food' | 'activity' | 'history'>('food');
+  const [settingsView, setSettingsView] = useState<'profile' | 'goals' | 'reminders' | null>(null);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
   function navigate(section: MobileSection) {
@@ -104,7 +105,7 @@ export function App() {
   }
   async function logout() {
     setBusy(true);
-    try { await api('/auth/logout', {}); setUser(null); setMode('login'); setFeedback(null); setMobileSection('today'); setVisitedSections(new Set(['today'])); }
+    try { await api('/auth/logout', {}); setUser(null); setMode('login'); setFeedback(null); setMobileSection('today'); setVisitedSections(new Set(['today'])); setSettingsView(null); }
     catch (error) { setFeedback(asFeedback(error)); }
     finally { setBusy(false); }
   }
@@ -156,23 +157,31 @@ export function App() {
         {visitedSections.has('account') && <Suspense fallback={<div className={`mobile-page ${mobileSection === 'account' ? 'is-active' : ''} loading`} role="status">กำลังเตรียมพื้นที่…</div>}><div className={`mobile-page ${mobileSection === 'account' ? 'is-active' : ''}`}>
         <div className="profile-grid">
           <aside className="card profile-summary"><div className="avatar" aria-hidden="true">{user.displayName.slice(0, 1)}</div><h2>{user.displayName}</h2><p className="email">{user.email}</p><span className="status-chip">บัญชีของคุณ</span><hr /><h3>ข้อมูลล่าสุด</h3><dl><div><dt>อายุ</dt><dd>{user.age === null ? 'ยังไม่ระบุ' : `${user.age} ปี`}</dd></div><div><dt>น้ำหนัก</dt><dd>{user.weightKg === null ? 'ยังไม่ระบุ' : `${user.weightKg} กก.`}</dd></div><div><dt>ส่วนสูง</dt><dd>{user.heightCm === null ? 'ยังไม่ระบุ' : `${user.heightCm} ซม.`}</dd></div><div><dt>BMI</dt><dd>{user.bmi === null ? 'ต้องระบุน้ำหนักและส่วนสูง' : user.bmi.toFixed(1)}</dd></div></dl></aside>
-          <section className="card profile-form"><span className="eyebrow">PERSONAL INFORMATION</span><h2>ข้อมูลส่วนตัว</h2><p className="muted">กรอกข้อมูลให้ครบ แล้วบันทึกเมื่อพร้อม</p><FeedbackMessage value={feedback} />
+          <section className="card profile-form"><span className="eyebrow">SETTINGS</span><h2>ตั้งค่า</h2><p className="muted">เลือกหัวข้อที่ต้องการแก้ไข</p>
+            <div className="settings-menu" aria-label="หัวข้อตั้งค่า">
+              <button type="button" className="secondary" onClick={() => setSettingsView(current => current === 'profile' ? null : 'profile')}>ข้อมูลส่วนตัว <span>›</span></button>
+              <button type="button" className="secondary" onClick={() => setSettingsView(current => current === 'goals' ? null : 'goals')}>เป้าหมายสุขภาพ <span>›</span></button>
+              <button type="button" className="secondary" onClick={() => setSettingsView(current => current === 'reminders' ? null : 'reminders')}>แจ้งเตือนมื้ออาหาร <span>›</span></button>
+            </div>
+            {settingsView === 'profile' && <div className="settings-detail"><h3>ข้อมูลส่วนตัว</h3><p className="muted">กรอกข้อมูลให้ครบ แล้วบันทึกเมื่อพร้อม</p><FeedbackMessage value={feedback} />
             <form onSubmit={saveProfile}><fieldset disabled={busy}>
               <Field name="displayName" label="ชื่อที่ใช้แสดง" defaultValue={user.displayName} maxLength={80} autoComplete="nickname" error={feedback?.fields?.displayName} />
               <Field name="age" label="อายุ (ปี)" type="number" min={1} max={120} step="1" defaultValue={user.age ?? ''} error={feedback?.fields?.age} />
               <div className="field-row"><Field name="weightKg" label="น้ำหนัก (กก.)" type="number" min={0.1} max={500} step="0.1" defaultValue={user.weightKg ?? ''} error={feedback?.fields?.weightKg} /><Field name="heightCm" label="ส่วนสูง (ซม.)" type="number" min={30} max={250} step="0.1" defaultValue={user.heightCm ?? ''} error={feedback?.fields?.heightCm} /></div>
               <button className="primary" type="submit">{busy ? 'กำลังบันทึก…' : 'บันทึกข้อมูลส่วนตัว →'}</button>
-            </fieldset></form>
+            </fieldset></form></div>}
+            {settingsView === 'goals' && <div className="settings-detail"><GoalPanel user={user} onSaved={setUser} /></div>}
+            {settingsView === 'reminders' && <div className="settings-detail"><ReminderPanel userId={user.id} /></div>}
           </section>
         </div></div></Suspense>}
-        {visitedSections.has('progress') && <Suspense fallback={<div className={`mobile-page ${mobileSection === 'progress' ? 'is-active' : ''} loading`} role="status">กำลังโหลดความคืบหน้า…</div>}><div className={`mobile-page ${mobileSection === 'progress' ? 'is-active' : ''}`}><GoalPanel user={user} onSaved={setUser} /><HealthTrendPanel /><WeeklySummaryPanel /></div></Suspense>}
+        {visitedSections.has('progress') && <Suspense fallback={<div className={`mobile-page ${mobileSection === 'progress' ? 'is-active' : ''} loading`} role="status">กำลังโหลดความคืบหน้า…</div>}><div className={`mobile-page ${mobileSection === 'progress' ? 'is-active' : ''}`}><section className="profile-heading"><span className="eyebrow">YOUR PROGRESS</span><h1>ความคืบหน้าของคุณ</h1><p className="muted">ติดตามแนวโน้มและผลลัพธ์จากเป้าหมายที่ตั้งไว้</p></section><HealthTrendPanel /><WeeklySummaryPanel /></div></Suspense>}
         {visitedSections.has('diary') && <Suspense fallback={<div className={`mobile-page ${mobileSection === 'diary' ? 'is-active' : ''} loading`} role="status">กำลังโหลดบันทึก…</div>}><div className={`mobile-page ${mobileSection === 'diary' ? 'is-active' : ''}`}>
           <div className="diary-switcher" role="tablist" aria-label="หมวดบันทึก">
             <button type="button" role="tab" aria-selected={diaryView === 'food'} className={diaryView === 'food' ? 'active' : ''} onClick={() => setDiaryView('food')}>อาหาร</button>
             <button type="button" role="tab" aria-selected={diaryView === 'activity'} className={diaryView === 'activity' ? 'active' : ''} onClick={() => setDiaryView('activity')}>กิจกรรม</button>
             <button type="button" role="tab" aria-selected={diaryView === 'history'} className={diaryView === 'history' ? 'active' : ''} onClick={() => setDiaryView('history')}>ประวัติ</button>
           </div>
-          <div className={`diary-view ${diaryView === 'food' ? 'is-active' : ''}`}><MealPanel userId={user.id} /><FavoriteMealsPanel userId={user.id} /><ReminderPanel userId={user.id} /></div>
+          <div className={`diary-view ${diaryView === 'food' ? 'is-active' : ''}`}><MealPanel userId={user.id} /><FavoriteMealsPanel userId={user.id} /></div>
           <div className={`diary-view ${diaryView === 'activity' ? 'is-active' : ''}`}><ExercisePanel user={user} /></div>
           <div className={`diary-view ${diaryView === 'history' ? 'is-active' : ''}`}><FoodHistoryPanel /></div>
         </div></Suspense>}
