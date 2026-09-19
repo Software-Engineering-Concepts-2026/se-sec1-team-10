@@ -51,15 +51,22 @@ API (Express + TypeScript)
 
 | ตำแหน่ง | มีอะไรอยู่ | เหมาะกับงานแบบใด |
 | --- | --- | --- |
-| `src/client/App.tsx` | โครงแอป, การล็อกอิน, การสลับ 4 หน้า, การตั้งค่าบัญชี | ประกอบหน้าใหม่หรือเปลี่ยนการนำทาง |
+| `src/client/App.tsx` | โครงแอป, การล็อกอิน, การสลับ 4 หน้า และ session | ประกอบหน้าใหม่หรือเปลี่ยนการนำทาง |
+| `src/client/AccountPanel.tsx` | หน้าบัญชี, โปรไฟล์, เมนูตั้งค่า, เป้าหมาย และแจ้งเตือน | งานบัญชีและตั้งค่า |
 | `src/client/*Panel.tsx` | ฟีเจอร์แต่ละส่วนของหน้าจอ | พัฒนาฟีเจอร์ UI แยกตาม panel |
-| `src/client/MealPanel.tsx` | ถ่าย/เลือกรูป, วิเคราะห์อาหาร, แก้ปริมาณ/ลบส่วนประกอบ, บันทึกมื้อ | งานบันทึกอาหารและ UX ของ AI |
-| `src/client/styles.css` | รูปลักษณ์ของเว็บแบบ mobile-first | ปรับ UI และ responsive layout |
+| `src/client/MealPanel.tsx` | ถ่าย/เลือกรูป, วิเคราะห์อาหาร และ orchestration การบันทึกมื้อ | งานบันทึกอาหารและ UX ของ AI |
+| `src/client/MealIngredientEditor.tsx`, `MealList.tsx`, `mealHelpers.ts` | UI ส่วนประกอบ, รายการที่บันทึก และกฎคำนวณสารอาหารบริสุทธิ์ | แก้ UI/คำนวณอาหารโดยไม่แตะ flow อื่น |
+| `src/client/styles.css`, `src/client/styles/` | entry point โหลด `base.css` → `panels.css` → `mobile-overrides.css` | ปรับ UI โดยคงลำดับ import; ไฟล์ overrides ยังใช้ร่วมกันทั้งแอป |
+| `src/client/FormFeedback.tsx` | ช่องกรอกข้อมูลและข้อความตอบกลับที่บัญชี/ล็อกอินใช้ร่วมกัน | ปรับฟอร์มร่วมโดยตรวจทั้งสองหน้า |
 | `src/client/api.ts` | ฟังก์ชันเรียก API จากหน้าเว็บ | เพิ่มหรือปรับ client API |
-| `src/server/app.ts` | สร้าง Express app และรวม routes | เพิ่ม middleware หรือ register route |
-| `src/server/meal.ts` | คำนวณแคลอรีและแปลงข้อมูลอาหาร; routes อยู่ใน `app.ts` | งาน backend เกี่ยวกับอาหาร |
-| `src/server/exercise.ts` | คำนวณแคลอรีกิจกรรม, แปลงข้อมูล, ช่วงวันที่; routes อยู่ใน `app.ts` | งาน backend กิจกรรม |
-| `src/server/health.ts` | คำนวณ BMI; routes เป้าหมาย/ประวัติ/สรุปอยู่ใน `app.ts` | งานสุขภาพและการคำนวณ |
+| `src/server/app.ts` | สร้าง Express app, security middleware และ error handler | เพิ่ม middleware หรือเปลี่ยนการประกอบแอป |
+| `src/server/routes/account.ts` | ลงทะเบียน auth, profile และ goals routes | งานบัญชีและตั้งค่า |
+| `src/server/routes/meals.ts` | ลงทะเบียน meal, AI analysis และ nutrition-search routes | งานอาหาร, AI และโภชนาการ |
+| `src/server/routes/activity.ts` | ลงทะเบียน exercise, health history และ weekly-summary routes | งานกิจกรรมและสุขภาพ |
+| `src/server/routes/context.ts` | session middleware และ dependency context ที่ route groups ใช้ร่วมกัน | แก้ session behavior โดยตรวจทุก route group |
+| `src/server/meal.ts` | คำนวณแคลอรีและแปลงข้อมูลอาหาร; routes อยู่ใน `routes/meals.ts` | งาน backend เกี่ยวกับอาหาร |
+| `src/server/exercise.ts` | คำนวณแคลอรีกิจกรรม, แปลงข้อมูล, ช่วงวันที่; routes อยู่ใน `routes/activity.ts` | งาน backend กิจกรรม |
+| `src/server/health.ts` | คำนวณ BMI; เป้าหมายอยู่ใน `routes/account.ts`, ประวัติ/สรุปอยู่ใน `routes/activity.ts` | งานสุขภาพและการคำนวณ |
 | `src/server/ai.ts`, `nutrition.ts` | เชื่อม AI มหาวิทยาลัยและ USDA | งาน integration ภายนอก |
 | `src/server/repository.ts` | การอ่าน/เขียนฐานข้อมูลผ่าน Prisma | เปลี่ยนรูปแบบข้อมูลหรือ query |
 | `src/shared/contracts.ts` | ชนิดข้อมูลร่วมระหว่าง frontend/backend | เปลี่ยน payload หรือ response API |
@@ -74,7 +81,7 @@ API (Express + TypeScript)
 | วันนี้ | สรุปแคลอรีที่กิน, เผาผลาญ, Net Calories และ BMI ของวันนี้ | `DashboardPanel.tsx` |
 | บันทึก | บันทึกอาหาร, รายการโปรด, กิจกรรม, ประวัติอาหาร | `MealPanel.tsx`, `FavoriteMealsPanel.tsx`, `ExercisePanel.tsx`, `FoodHistoryPanel.tsx` |
 | ความคืบหน้า | กราฟสุขภาพและสรุปรายสัปดาห์ | `HealthTrendPanel.tsx`, `WeeklySummaryPanel.tsx` |
-| บัญชี | ดูข้อมูลย่อ และกดเปิดหัวข้อตั้งค่าข้อมูลส่วนตัว เป้าหมาย และแจ้งเตือน | `App.tsx`, `GoalPanel.tsx`, `ReminderPanel.tsx` |
+| บัญชี | ดูข้อมูลย่อ และกดเปิดหัวข้อตั้งค่าข้อมูลส่วนตัว เป้าหมาย และแจ้งเตือน | `AccountPanel.tsx`, `GoalPanel.tsx`, `ReminderPanel.tsx` |
 
 ### กติกา UX ที่ต้องรักษา
 

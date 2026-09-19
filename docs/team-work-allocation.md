@@ -11,7 +11,7 @@
 | ผู้รับผิดชอบที่เสนอ | สาขาส่วนตัว | ขอบเขต | ชุดงานแรก |
 | --- | --- | --- | --- |
 | ชยากร / Chayakorn05 | `feature/Chayakorn05` ที่มีอยู่ | อาหาร, AI, โภชนาการ และประสานการรวมงาน | A: แก้ปริมาณและการคำนวณอาหารให้ถูกต้องเมื่อบันทึก/เปิดแก้ |
-| จิตตินี / JJ08039 | เสนอ `feature/JJ08039` | สมัคร/ล็อกอิน, โปรไฟล์, เป้าหมาย, แจ้งเตือน | B: แยกหน้าบัญชีออกจากโครงแอป และตรวจ flow ตั้งค่า |
+| จิตตินี / JJ08039 | เสนอ `feature/JJ08039` | สมัคร/ล็อกอิน, โปรไฟล์, เป้าหมาย, แจ้งเตือน | B: ตรวจ flow ตั้งค่าและพัฒนาต่อจาก AccountPanel ที่แยกแล้ว |
 | ภัทรพล / Pattarapol01 | เสนอ `feature/Pattarapol01` | กิจกรรม, วันนี้, กราฟและสรุปผล | C: ตรวจยอดรวมและกราฟจากข้อมูลจริง |
 
 เลือกให้ชยากรดูแลงานอาหารตามบริบทที่เคยรับ #8 ไว้ สมาชิกควรตกลงขอบเขตนี้ร่วมกันก่อนเริ่ม ไม่ได้อ้างว่าเป็น assignee ปัจจุบันบน GitHub
@@ -32,9 +32,9 @@
 
 ## B — บัญชีและตั้งค่า: จิตตินี
 
-ไฟล์หลัก: ส่วนบัญชีใน `src/client/App.tsx`, `GoalPanel.tsx`, `ReminderPanel.tsx`, `reminders.ts`; งาน API ใช้ส่วน auth/profile/goals ใน `src/server/app.ts` โดยประสานผู้ดูแลไฟล์ร่วม
+ไฟล์หลัก: `src/client/AccountPanel.tsx`, `GoalPanel.tsx`, `ReminderPanel.tsx`, `reminders.ts`; งาน API ใช้ `src/server/routes/account.ts` ส่วนล็อกอินและ session หน้าจอยังอยู่ใน `App.tsx` ให้ประสานเมื่อจำเป็นต้องแก้
 
-1. เสนอแยกหน้าบัญชีเป็น `AccountPanel.tsx` ให้ `App.tsx` เหลือการประกอบหน้าและ session เป็นหลัก ทำทีละขั้นโดยรักษาพฤติกรรมเดิม
+1. ใช้ `AccountPanel.tsx` ที่แยกแล้วเป็นจุดเริ่มงานบัญชี โดยคงสถานะกำลังบันทึกร่วมกับ `App.tsx` เพื่อไม่ให้ออกจากระบบพร้อมกับบันทึกโปรไฟล์
 2. ตรวจสมัคร/ล็อกอิน/ออกจากระบบ และโปรไฟล์ที่กรอกไม่ครบหรือค่าผิดช่วง
 3. ตรวจหัวข้อตั้งค่าที่กดเปิด–ปิด การบันทึกเป้าหมาย และข้อมูลหลัง refresh
 4. ทดสอบการอนุญาต/ปฏิเสธแจ้งเตือนบนมือถือจริง พร้อมข้อความอธิบายข้อจำกัด การแจ้งเตือนขณะปิดแอปเป็นงานเพิ่มเติมที่ต้องตกลงก่อน
@@ -43,7 +43,7 @@
 
 ## C — กิจกรรมและความคืบหน้า: ภัทรพล
 
-ไฟล์หลัก: `src/client/ExercisePanel.tsx`, `DashboardPanel.tsx`, `HealthTrendPanel.tsx`, `WeeklySummaryPanel.tsx`, `src/server/exercise.ts`, `health.ts`, `src/shared/activities.ts`; API สรุปผลอยู่ใน `src/server/app.ts`
+ไฟล์หลัก: `src/client/ExercisePanel.tsx`, `DashboardPanel.tsx`, `HealthTrendPanel.tsx`, `WeeklySummaryPanel.tsx`, `src/server/exercise.ts`, `health.ts`, `src/shared/activities.ts`; API กิจกรรมและสรุปผลอยู่ใน `src/server/routes/activity.ts`
 
 1. เตรียมข้อมูลทดสอบอาหารและกิจกรรมที่ทราบยอดรวม แล้วตรวจหน้า Today และกราฟให้ตรงกัน
 2. ตรวจเพิ่ม/แก้/ลบกิจกรรม ว่ายอดพลังงานและสรุปผลอัปเดต
@@ -57,9 +57,27 @@
 | ไฟล์ร่วม | วิธีประสาน |
 | --- | --- |
 | `src/client/App.tsx`, `styles.css` | แจ้งช่วงที่จะปรับก่อน มีผู้แก้ทีละคน แยก CSS เฉพาะ panel เมื่อจำเป็น |
-| `src/server/app.ts` | routes ส่วนใหญ่ยังรวมอยู่ที่นี่ แจ้ง endpoint และช่วงโค้ดที่จะเปลี่ยน; ยังไม่จำเป็นต้อง refactor ทั้งไฟล์ก่อนเริ่มงาน |
+| `src/server/app.ts`, `src/server/routes/context.ts` | การประกอบระบบและ session ที่ทุก API ใช้ร่วมกัน; routes รายฟีเจอร์แยกแล้ว ให้ A ดูแล `routes/meals.ts`, B ดูแล `routes/account.ts`, C ดูแล `routes/activity.ts` |
 | `src/server/repository.ts`, `src/shared/contracts.ts`, `prisma/` | ตกลงชื่อ field/หน่วย/payload ก่อน โดยให้ชยากรประสานชุดแก้ปริมาณอาหารเป็นลำดับแรก |
 | `e2e/mobile.spec.ts` และ test fixtures | แยกไฟล์ test ตามฟีเจอร์ได้ แต่ตกลง fixture ร่วมเพื่อไม่ให้ข้อมูลจำลองขัดกับ API จริง |
+
+## โครงสร้างหลังการจัดระเบียบ (20 กันยายน 2026)
+
+การจัดไฟล์รอบนี้คง API, payload, ข้อความผิดพลาด และลำดับ middleware เดิม เพื่อให้สมาชิกแก้คนละส่วนได้โดย conflict น้อยลง
+
+| เจ้าของงาน | ไฟล์หลักหลังจัดระเบียบ | ขอบเขตที่ควรแก้ |
+| --- | --- | --- |
+| B — บัญชีและตั้งค่า | `src/client/AccountPanel.tsx` | โปรไฟล์, เมนูตั้งค่า, เป้าหมาย และการแจ้งเตือน; `App.tsx` เหลือ session/navigation |
+| A — อาหารและ AI | `src/client/MealPanel.tsx`, `MealIngredientEditor.tsx`, `MealList.tsx`, `mealHelpers.ts` | orchestration ของมื้อ, UI ส่วนประกอบ/รายการ, และกฎคำนวณบริสุทธิ์ตามลำดับ |
+| ทุกคน | `src/client/styles.css` และ `src/client/styles/` | entry point นำ CSS แบบเรียงลำดับ: `base.css`, `panels.css`, `mobile-overrides.css`; รักษาลำดับ import ไว้เสมอ |
+| API ร่วม | `src/server/app.ts`, `src/server/routes/` | `app.ts` ประกอบ Express, middleware และ error handler; routes แยกเป็น `account.ts`, `meals.ts`, `activity.ts` และใช้ `context.ts` สำหรับ session/dependencies |
+
+### ข้อบกพร่องที่ยังทราบ
+
+- ปริมาณส่วนประกอบยังไม่ได้บันทึกใน payload ของมื้ออาหาร เมื่อเปิดแก้จึงกลับเป็นค่าเริ่มต้น 100 กรัม
+- ผลจาก AI ยังไม่มีน้ำหนักหรือหลักฐานว่าค่าสารอาหารเป็นต่อ 100 กรัม แต่ UI ใช้ฐานดังกล่าวเพื่อให้ปรับปริมาณได้
+
+สองข้อนี้เป็นงาน A ที่ต้องออกแบบ payload/schema และทดสอบการบันทึก-อ่านกลับ ไม่ได้แก้ใน refactor รอบนี้
 
 การจัดผู้ประสานงานไม่ได้หมายความว่าคนนั้นต้องเขียนทุกไฟล์ร่วม สมาชิกแต่ละคนยังรับผิดชอบ test และเอกสารของงานที่ตัวเองทำ
 
