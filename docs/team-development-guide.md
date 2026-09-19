@@ -2,6 +2,8 @@
 
 เอกสารนี้อธิบายว่าโค้ดของ LifeBalance อยู่ส่วนไหน ใครสามารถรับงานใดได้บ้าง และต้องทดสอบอะไรก่อนส่งงานต่อให้ทีม จุดประสงค์คือให้สมาชิกเริ่มพัฒนาได้โดยไม่ต้องไล่อ่านทุกไฟล์ก่อน
 
+การแบ่งงานสามคน ข้อบกพร่องที่ควรแก้ก่อน และแนวทาง branch ส่วนตัวล่าสุด ดู [แผนแบ่งงานทีม](team-work-allocation.md)
+
 ## ภาพรวมระบบ
 
 LifeBalance เป็นเว็บแอปสำหรับมือถือ ใช้บันทึกอาหารและกิจกรรม ดูพลังงานสุทธิ ติดตามแนวโน้มสุขภาพ และตั้งเป้าหมายส่วนบุคคล
@@ -55,9 +57,9 @@ API (Express + TypeScript)
 | `src/client/styles.css` | รูปลักษณ์ของเว็บแบบ mobile-first | ปรับ UI และ responsive layout |
 | `src/client/api.ts` | ฟังก์ชันเรียก API จากหน้าเว็บ | เพิ่มหรือปรับ client API |
 | `src/server/app.ts` | สร้าง Express app และรวม routes | เพิ่ม middleware หรือ register route |
-| `src/server/meal.ts` | API อาหาร, ประวัติ, AI analysis | งาน backend เกี่ยวกับอาหาร |
-| `src/server/exercise.ts` | API บันทึกกิจกรรม | งาน backend กิจกรรม |
-| `src/server/health.ts` | เป้าหมาย, น้ำหนัก, แนวโน้ม, สรุปรายสัปดาห์ | งานเป้าหมายและความคืบหน้า |
+| `src/server/meal.ts` | คำนวณแคลอรีและแปลงข้อมูลอาหาร; routes อยู่ใน `app.ts` | งาน backend เกี่ยวกับอาหาร |
+| `src/server/exercise.ts` | คำนวณแคลอรีกิจกรรม, แปลงข้อมูล, ช่วงวันที่; routes อยู่ใน `app.ts` | งาน backend กิจกรรม |
+| `src/server/health.ts` | คำนวณ BMI; routes เป้าหมาย/ประวัติ/สรุปอยู่ใน `app.ts` | งานสุขภาพและการคำนวณ |
 | `src/server/ai.ts`, `nutrition.ts` | เชื่อม AI มหาวิทยาลัยและ USDA | งาน integration ภายนอก |
 | `src/server/repository.ts` | การอ่าน/เขียนฐานข้อมูลผ่าน Prisma | เปลี่ยนรูปแบบข้อมูลหรือ query |
 | `src/shared/contracts.ts` | ชนิดข้อมูลร่วมระหว่าง frontend/backend | เปลี่ยน payload หรือ response API |
@@ -97,7 +99,7 @@ API (Express + TypeScript)
 ## วิธีทำงานด้วย Git
 
 1. อัปเดต branch ที่ใช้เป็นฐานตามที่ทีมตกลง
-2. สร้าง branch งานของตัวเอง เช่น `feature/meal-history-filter` หรือ `fix/mobile-overflow`
+2. ใช้ branch ส่วนตัวที่ทีมตกลง เก็บงานเดิมก่อนเปลี่ยนฐาน อ่านข้อแตกต่างระหว่างฐานร่วมกับ branch ที่มีเฉพาะงานตัวเองใน [แผนแบ่งงาน](team-work-allocation.md)
 3. ทำงานให้เป็นชุดเล็ก ๆ และ commit ที่อธิบายผลลัพธ์ เช่น `feat: add meal history filter`
 4. ก่อนส่งงาน รันอย่างน้อย
 

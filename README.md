@@ -98,6 +98,8 @@ Key architectural decisions and diagrams are documented in the `/docs/architectu
 
 เริ่มอ่าน [คู่มือเริ่มพัฒนา LifeBalance สำหรับทีม](./docs/team-development-guide.md) เพื่อดูตำแหน่งของโค้ด หน้าจอที่มีอยู่ วิธีเปิดระบบ และเช็กลิสต์ก่อนส่งงาน
 
+ดู [แผนแบ่งงานสามคนและจุดที่ควรแก้ก่อน](./docs/team-work-allocation.md) สำหรับขอบเขตไฟล์ เกณฑ์ส่งงาน และข้อเสนอการใช้ branch ส่วนตัว
+
 ## 👥 Requirements
 
 User personas and key scenarios that drive our development are located in the `/docs/requirements` directory.
