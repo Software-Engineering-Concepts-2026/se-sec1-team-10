@@ -66,6 +66,19 @@ async function login(page: Page) {
 }
 
 test.describe('mobile navigation and food logging', () => {
+  test('opens account profile details only when requested', async ({ page }) => {
+    await mockApi(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await login(page);
+    await page.getByRole('button', { name: 'บัญชี', exact: true }).click();
+
+    await expect(page.getByText('ข้อมูลล่าสุด', { exact: true })).not.toBeVisible();
+    await page.getByRole('button', { name: 'ดูข้อมูลโปรไฟล์', exact: true }).click();
+    await expect(page.getByText('ข้อมูลล่าสุด', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'ซ่อนข้อมูลโปรไฟล์', exact: true }).click();
+    await expect(page.getByText('ข้อมูลล่าสุด', { exact: true })).not.toBeVisible();
+  });
+
   test('opts into account-scoped reminders and delivers a due notification once', async ({ page }) => {
     await page.addInitScript(() => {
       const calls: unknown[] = [];

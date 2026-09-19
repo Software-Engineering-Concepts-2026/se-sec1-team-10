@@ -52,6 +52,7 @@ export function App() {
   const [visitedSections, setVisitedSections] = useState<Set<MobileSection>>(() => new Set(['today']));
   const [diaryView, setDiaryView] = useState<'food' | 'activity' | 'history'>('food');
   const [settingsView, setSettingsView] = useState<'profile' | 'goals' | 'reminders' | null>(null);
+  const [profileExpanded, setProfileExpanded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
   function navigate(section: MobileSection) {
@@ -105,7 +106,7 @@ export function App() {
   }
   async function logout() {
     setBusy(true);
-    try { await api('/auth/logout', {}); setUser(null); setMode('login'); setFeedback(null); setMobileSection('today'); setVisitedSections(new Set(['today'])); setSettingsView(null); }
+    try { await api('/auth/logout', {}); setUser(null); setMode('login'); setFeedback(null); setMobileSection('today'); setVisitedSections(new Set(['today'])); setSettingsView(null); setProfileExpanded(false); }
     catch (error) { setFeedback(asFeedback(error)); }
     finally { setBusy(false); }
   }
@@ -156,7 +157,20 @@ export function App() {
         </div>
         {visitedSections.has('account') && <Suspense fallback={<div className={`mobile-page ${mobileSection === 'account' ? 'is-active' : ''} loading`} role="status">กำลังเตรียมพื้นที่…</div>}><div className={`mobile-page ${mobileSection === 'account' ? 'is-active' : ''}`}>
         <div className="profile-grid">
-          <aside className="card profile-summary"><div className="avatar" aria-hidden="true">{user.displayName.slice(0, 1)}</div><h2>{user.displayName}</h2><p className="email">{user.email}</p><span className="status-chip">บัญชีของคุณ</span><hr /><h3>ข้อมูลล่าสุด</h3><dl><div><dt>อายุ</dt><dd>{user.age === null ? 'ยังไม่ระบุ' : `${user.age} ปี`}</dd></div><div><dt>น้ำหนัก</dt><dd>{user.weightKg === null ? 'ยังไม่ระบุ' : `${user.weightKg} กก.`}</dd></div><div><dt>ส่วนสูง</dt><dd>{user.heightCm === null ? 'ยังไม่ระบุ' : `${user.heightCm} ซม.`}</dd></div><div><dt>BMI</dt><dd>{user.bmi === null ? 'ต้องระบุน้ำหนักและส่วนสูง' : user.bmi.toFixed(1)}</dd></div></dl></aside>
+          <aside className="card profile-summary">
+            <div className="avatar" aria-hidden="true">{user.displayName.slice(0, 1)}</div>
+            <h2>{user.displayName}</h2>
+            <p className="email">{user.email}</p>
+            <button type="button" className="secondary profile-toggle" aria-expanded={profileExpanded} onClick={() => setProfileExpanded(current => !current)}>
+              {profileExpanded ? 'ซ่อนข้อมูลโปรไฟล์' : 'ดูข้อมูลโปรไฟล์'} <span aria-hidden="true">{profileExpanded ? '⌃' : '›'}</span>
+            </button>
+            {profileExpanded && <>
+              <span className="status-chip">บัญชีของคุณ</span>
+              <hr />
+              <h3>ข้อมูลล่าสุด</h3>
+              <dl><div><dt>อายุ</dt><dd>{user.age === null ? 'ยังไม่ระบุ' : `${user.age} ปี`}</dd></div><div><dt>น้ำหนัก</dt><dd>{user.weightKg === null ? 'ยังไม่ระบุ' : `${user.weightKg} กก.`}</dd></div><div><dt>ส่วนสูง</dt><dd>{user.heightCm === null ? 'ยังไม่ระบุ' : `${user.heightCm} ซม.`}</dd></div><div><dt>BMI</dt><dd>{user.bmi === null ? 'ต้องระบุน้ำหนักและส่วนสูง' : user.bmi.toFixed(1)}</dd></div></dl>
+            </>}
+          </aside>
           <section className="card profile-form"><span className="eyebrow">SETTINGS</span><h2>ตั้งค่า</h2><p className="muted">เลือกหัวข้อที่ต้องการแก้ไข</p>
             <div className="settings-menu" aria-label="หัวข้อตั้งค่า">
               <button type="button" className="secondary" onClick={() => setSettingsView(current => current === 'profile' ? null : 'profile')}>ข้อมูลส่วนตัว <span>›</span></button>

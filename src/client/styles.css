@@ -181,6 +181,8 @@ dl div { display: flex; justify-content: space-between; padding-top: 18px; font-
 .settings-menu span { font-size: 22px; line-height: 1; }
 .settings-detail { margin-top: 16px; padding-top: 4px; }
 .settings-detail .goal-panel, .settings-detail .reminder-panel { margin-top: 0; padding: 0; box-shadow: none; background: transparent; }
+.profile-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 16px; padding: 13px 14px; text-align: left; background: #fffaf7; }
+.profile-toggle span { font-size: 22px; line-height: 1; }
 .portion-row { grid-template-columns: minmax(0, 1.2fr) minmax(96px, .7fr) minmax(0, 1fr) auto; align-items: end; }
 .portion-row strong, .portion-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .portion-row label { display: grid; gap: 4px; font-size: 10px; color: #718071; }
