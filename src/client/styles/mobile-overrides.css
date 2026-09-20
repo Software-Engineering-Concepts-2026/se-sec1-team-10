@@ -995,7 +995,6 @@
 .ingredient-card-heading > strong:first-child { overflow-wrap: anywhere; }
 .ingredient-calories { white-space: nowrap; color: var(--accent, #3867d6); }
 .ingredient-nutrients { line-height: 1.45; }
-.ingredient-row .replace-ingredient,
 .ingredient-row .remove-ingredient { min-height: 2.5rem; }
 .add-ingredient { width: 100%; margin-top: 0.75rem; }
 @media (min-width: 600px) {

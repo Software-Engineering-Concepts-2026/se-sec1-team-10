@@ -1,5 +1,4 @@
 import type { IngredientDraft } from "./mealHelpers";
-import type { FoodSearchResult } from "./FoodSearchPanel";
 
 const nutrient = (value: number | null | undefined) => value == null ? "ไม่ทราบ" : `${value}g`;
 const scaled = (item: IngredientDraft) => {
@@ -15,14 +14,12 @@ const totalNutrient = (items: IngredientDraft[], key: "carbsGrams" | "proteinGra
   return values.some((value) => value == null) ? null : Math.round(values.reduce<number>((sum, value) => sum + (value as number), 0) * 10) / 10;
 };
 
-export function MealIngredientEditor({ ingredients, analysis, needsRecalculation, onQuantityChange, onRemove, onReplace: _onReplace, onReplaceRequest, onAdd, onRecalculate }: {
+export function MealIngredientEditor({ ingredients, analysis, needsRecalculation, onQuantityChange, onRemove, onAdd, onRecalculate }: {
   ingredients: IngredientDraft[];
   analysis: { portionDescription: string; notes: string[] } | null;
   needsRecalculation: boolean;
   onQuantityChange: (index: number, amount: string) => void;
   onRemove: (index: number) => void;
-  onReplace: (index: number, food: FoodSearchResult) => void;
-  onReplaceRequest?: (index: number) => void;
   onAdd?: () => void;
   onRecalculate: () => void;
 }) {
@@ -51,7 +48,6 @@ export function MealIngredientEditor({ ingredients, analysis, needsRecalculation
         <span className="ingredient-nutrients" aria-label={`สารอาหารส่วนประกอบ ${index + 1}`}>{value.caloriesKcal == null ? "พลังงานไม่ทราบ" : `${value.caloriesKcal} kcal`} · C {nutrient(value.carbsGrams)} · น้ำตาล {nutrient(value.sugarGrams)} · P {nutrient(value.proteinGrams)} · F {nutrient(value.fatGrams)}</span>
         <small>อ้างอิง {ingredient.referenceAmount} {ingredient.referenceUnit === "serving" ? "ส่วน" : "กรัม"}</small>
         <button className="remove-ingredient" type="button" onClick={() => onRemove(index)}>ลบ</button>
-        {onReplaceRequest ? <button className="secondary replace-ingredient" type="button" onClick={() => onReplaceRequest(index)}>เลือกอาหารทดแทน</button> : <small className="replace-hint">เลือกอาหารทดแทนจากช่องค้นหาอาหารด้านบน</small>}
       </article>;
     })}
     {ingredients.length === 0 && <p className="empty-state">ลบส่วนประกอบแล้ว กรุณาเพิ่มรายการจากฐานข้อมูลก่อนบันทึก</p>}
