@@ -11,7 +11,7 @@ function valid(value: unknown): value is FavoriteMeal {
       typeof ingredient.amount === 'number' && Number.isFinite(ingredient.amount) && ingredient.amount > 0 && ingredient.amount <= 100000 &&
       typeof ingredient.referenceAmount === 'number' && Number.isFinite(ingredient.referenceAmount) && ingredient.referenceAmount > 0 && ingredient.referenceAmount <= 100000 &&
       ['g', 'serving'].includes(ingredient.unit) && ingredient.unit === ingredient.referenceUnit &&
-      ['usda-fdc', 'ai-estimate', 'legacy'].includes(ingredient.source) && ingredient.referenceNutrients && typeof ingredient.referenceNutrients === 'object');
+      ['usda-fdc', 'ai-estimate', 'legacy', 'manual'].includes(ingredient.source) && ingredient.referenceNutrients && typeof ingredient.referenceNutrients === 'object');
 }
 function normalize(value: unknown): FavoriteMeal | null {
   if (valid(value)) return value;

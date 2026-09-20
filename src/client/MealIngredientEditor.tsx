@@ -1,3 +1,4 @@
+import { useState, type FormEvent } from "react";
 import type { IngredientDraft } from "./mealHelpers";
 
 const nutrient = (value: number | null | undefined) => value == null ? "ไม่ทราบ" : `${value}g`;
@@ -14,15 +15,30 @@ const totalNutrient = (items: IngredientDraft[], key: "carbsGrams" | "proteinGra
   return values.some((value) => value == null) ? null : Math.round(values.reduce<number>((sum, value) => sum + (value as number), 0) * 10) / 10;
 };
 
-export function MealIngredientEditor({ ingredients, analysis, needsRecalculation, onQuantityChange, onRemove, onAdd, onRecalculate }: {
+export function MealIngredientEditor({ ingredients, analysis, needsRecalculation, onQuantityChange, onRemove, onAdd, onAddManual, onRecalculate }: {
   ingredients: IngredientDraft[];
   analysis: { portionDescription: string; notes: string[] } | null;
   needsRecalculation: boolean;
   onQuantityChange: (index: number, amount: string) => void;
   onRemove: (index: number) => void;
   onAdd?: () => void;
+  onAddManual?: (ingredient: { name: string; amount: number; unit: "g"; referenceAmount: 100; referenceUnit: "g"; source: "manual"; referenceNutrients: { caloriesKcal: number; carbsGrams: number; sugarGrams: number; proteinGrams: number; fatGrams: number } }) => void;
   onRecalculate: () => void;
 }) {
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manual, setManual] = useState({ name: "", amount: "", caloriesKcal: "", carbsGrams: "", sugarGrams: "", proteinGrams: "", fatGrams: "" });
+  const [manualError, setManualError] = useState("");
+  const openManual = () => { setManualOpen(true); onAdd?.(); };
+  const addManual = (event: FormEvent) => {
+    event.preventDefault();
+    const values = { name: manual.name.trim(), amount: Number(manual.amount), caloriesKcal: Number(manual.caloriesKcal), carbsGrams: Number(manual.carbsGrams), sugarGrams: Number(manual.sugarGrams), proteinGrams: Number(manual.proteinGrams), fatGrams: Number(manual.fatGrams) };
+    const nutrientKeys = ["caloriesKcal", "carbsGrams", "sugarGrams", "proteinGrams", "fatGrams"] as const;
+    if (!values.name) { setManualError("กรุณากรอกชื่อส่วนประกอบ"); return; }
+    if (!Number.isFinite(values.amount) || values.amount <= 0) { setManualError("กรุณาระบุปริมาณเป็นกรัมมากกว่า 0"); return; }
+    if (nutrientKeys.some((key) => !Number.isFinite(values[key]) || values[key] < 0)) { setManualError("กรุณากรอกสารอาหารทุกช่องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป"); return; }
+    onAddManual?.({ name: values.name, amount: values.amount, unit: "g", referenceAmount: 100, referenceUnit: "g", source: "manual", referenceNutrients: { caloriesKcal: values.caloriesKcal, carbsGrams: values.carbsGrams, sugarGrams: values.sugarGrams, proteinGrams: values.proteinGrams, fatGrams: values.fatGrams } });
+    setManual({ name: "", amount: "", caloriesKcal: "", carbsGrams: "", sugarGrams: "", proteinGrams: "", fatGrams: "" }); setManualError(""); setManualOpen(false);
+  };
   if (!analysis && ingredients.length === 0) return null;
   const totalCalories = calories(ingredients);
   return <>
@@ -51,7 +67,8 @@ export function MealIngredientEditor({ ingredients, analysis, needsRecalculation
       </article>;
     })}
     {ingredients.length === 0 && <p className="empty-state">ลบส่วนประกอบแล้ว กรุณาเพิ่มรายการจากฐานข้อมูลก่อนบันทึก</p>}
-    {onAdd && <button className="secondary add-ingredient" type="button" onClick={onAdd}>เพิ่มส่วนประกอบ</button>}
+    {onAdd && <button className="secondary add-ingredient" type="button" onClick={openManual}>เพิ่มส่วนประกอบ</button>}
+    {manualOpen && <form className="manual-ingredient-form" onSubmit={addManual} noValidate><div className="manual-ingredient-heading"><h3>เพิ่มส่วนประกอบเอง</h3><button className="text-button" type="button" onClick={() => { setManualOpen(false); setManualError(""); }}>ยกเลิก</button></div><p>กรอกสารอาหารต่อ 100 กรัมให้ครบ ระบบจะไม่เติมค่าแทนให้</p><label>ชื่อส่วนประกอบ<input value={manual.name} onChange={(event) => setManual((current) => ({ ...current, name: event.target.value }))} required /></label><label>ปริมาณ (ก.)<input type="number" min="0.01" step="any" value={manual.amount} onChange={(event) => setManual((current) => ({ ...current, amount: event.target.value }))} required /></label><div className="manual-nutrient-grid">{([["พลังงาน (kcal)", "caloriesKcal"], ["คาร์โบไฮเดรต (g)", "carbsGrams"], ["น้ำตาล (g)", "sugarGrams"], ["โปรตีน (g)", "proteinGrams"], ["ไขมัน (g)", "fatGrams"]] as const).map(([label, key]) => <label key={key}>{label}<input type="number" min="0" step="any" value={manual[key]} onChange={(event) => setManual((current) => ({ ...current, [key]: event.target.value }))} required /></label>)}</div>{manualError && <p className="feedback error" role="alert">{manualError}</p>}<button className="primary" type="submit">เพิ่มส่วนประกอบ</button></form>}
     {needsRecalculation && <p className="feedback" role="status">ข้อมูลเปลี่ยนแล้ว กรุณาคำนวณสารอาหารใหม่</p>}
     <button className="secondary manual-entry-button" type="button" onClick={onRecalculate} disabled={!ingredients.length}>คำนวณสารอาหารใหม่</button>
   </>;

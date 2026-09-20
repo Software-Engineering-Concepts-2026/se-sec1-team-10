@@ -146,6 +146,13 @@ export function MealPanel({ userId }: { userId: string }) {
     setFoodSearchOpen(false);
     setNeedsRecalculation(true);
   }
+  function addManualIngredient(ingredient: IngredientDraft) {
+    setIngredients((current) => [...current.filter((item) => item.name), ingredient]);
+    setShowManualFields(true);
+    setFoodSource(null);
+    setFoodSearchOpen(false);
+    setNeedsRecalculation(true);
+  }
   async function compressImage(file: File): Promise<string> {
     const source = await new Promise<HTMLImageElement>((resolve, reject) => {
       const image = new Image();
@@ -436,7 +443,8 @@ export function MealPanel({ userId }: { userId: string }) {
             needsRecalculation={needsRecalculation}
             onQuantityChange={changeQuantity}
             onRemove={removeIngredient}
-            onAdd={() => { setFoodTarget(null); setFoodSearchOpen(true); }}
+            onAdd={() => { setFoodTarget(null); setFoodSearchOpen(false); }}
+            onAddManual={addManualIngredient}
             onRecalculate={recalculate}
           />
           {foodSearchOpen && (

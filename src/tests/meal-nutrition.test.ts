@@ -26,4 +26,9 @@ describe('meal reference nutrition', () => {
     expect(legacy).toMatchObject({ amount: 1, unit: 'serving', referenceAmount: 1, referenceUnit: 'serving', source: 'legacy' });
     expect(calculateMeal(meal([legacy])).totalCalories).toBe(75);
   });
+  it('accepts complete manual 100 g basis and rejects missing manual nutrients', () => {
+    const manual = { ...usda200, source: 'manual', amount: 75, referenceAmount: 100 };
+    expect(calculateMeal(meal([manual])).ingredients[0].caloriesKcal).toBe(90);
+    expect(() => meal([{ ...manual, referenceNutrients: { ...manual.referenceNutrients, fatGrams: null } }])).toThrow(/กรอกเอง/);
+  });
 });

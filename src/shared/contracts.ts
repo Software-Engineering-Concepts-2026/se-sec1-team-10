@@ -50,7 +50,7 @@ const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 const nutrientValue = z.number().finite('สารอาหารต้องเป็นตัวเลข').min(0, 'ต้องไม่น้อยกว่า 0').max(10000, 'จำนวนมากเกินไป');
 const nullableNutrientValue = nutrientValue.nullable();
 export const foodUnitSchema = z.enum(['g', 'serving']);
-export const ingredientSourceSchema = z.enum(['usda-fdc', 'ai-estimate', 'legacy']);
+export const ingredientSourceSchema = z.enum(['usda-fdc', 'ai-estimate', 'legacy', 'manual']);
 export const referenceNutrientsSchema = z.object({
   caloriesKcal: nullableNutrientValue,
   carbsGrams: nullableNutrientValue,
@@ -66,7 +66,7 @@ export const mealIngredientSchema = z.object({
   referenceUnit: foodUnitSchema,
   source: ingredientSourceSchema,
   referenceNutrients: referenceNutrientsSchema,
-}).strip().refine(value => value.unit === value.referenceUnit, 'หน่วยปริมาณต้องตรงกับหน่วยอ้างอิง');
+}).strip().refine(value => value.unit === value.referenceUnit, 'หน่วยปริมาณต้องตรงกับหน่วยอ้างอิง').refine(value => value.source !== 'manual' || (value.unit === 'g' && value.referenceAmount === 100 && value.referenceUnit === 'g' && Object.values(value.referenceNutrients).every(nutrient => nutrient !== null)), 'ข้อมูลที่กรอกเองต้องระบุสารอาหารต่อ 100 กรัมให้ครบ');
 // Compatibility for an already deployed client. It represents one saved serving,
 // never a guessed 100 g reference.
 const legacyMealIngredientSchema = z.object({
