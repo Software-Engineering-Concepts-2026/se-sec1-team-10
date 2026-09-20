@@ -1,28 +1,288 @@
-...
-</main>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    const form = document.getElementById("foodEditForm");
+    <title>แก้ไขข้อมูลอาหาร - LifeBalance</title>
 
-    form.addEventListener("submit", function (event) {
-        event.preventDefault();
+    <link rel="stylesheet" href="Jittinee_FoodEditingPage.css">
+</head>
 
-        const fields = form.querySelectorAll("input, textarea");
+<body>
 
-        for (const field of fields) {
-            if (field.value.trim() === "") {
-                alert("Please fill in all fields.");
-                field.focus();
-                return;
-            }
-        }
+<div class="app">
 
-        alert("Registration successful! (This is a prototype)");
-    });
-});
-</script>
+    <!-- Header -->
+    <header class="app-header">
 
-<script src="scripts/food-edit.js"></script>
+        <button class="back-button" type="button" onclick="history.back()">
+            ←
+        </button>
+
+        <h1>แก้ไขข้อมูลอาหาร</h1>
+
+        <button class="more-button" type="button">
+            ⋮
+        </button>
+
+    </header>
+
+
+    <main class="content">
+
+        <!-- รูปอาหาร -->
+        <section class="food-image-section">
+
+            <div class="food-image">
+                <img id="foodImage" src="" alt="รูปอาหาร">
+                <span id="imagePlaceholder">🍛</span>
+            </div>
+
+            <input
+    type="file"
+    id="imageInput"
+    accept="image/*"
+    hidden
+            >
+
+            <button
+                type="button"
+                class="image-button"
+                onclick="document.getElementById('imageInput').click()"
+            >
+            📷 แก้ไขรูปภาพ
+            </button>
+
+        </section>
+
+
+        <!-- Form -->
+        <form id="foodEditForm">
+
+            <!-- ชื่ออาหาร -->
+            <div class="form-group">
+
+                <label for="foodName">
+                    ชื่ออาหาร
+                </label>
+
+                <input
+                    type="text"
+                    id="foodName"
+                    name="foodName"
+                    value="ข้าวกะเพราไก่"
+                    placeholder="ชื่ออาหาร"
+                    required
+                >
+
+            </div>
+
+
+            <!-- ปริมาณ -->
+            <div class="form-group">
+
+                <label>
+                    ปริมาณอาหาร
+                </label>
+
+                <div class="quantity-row">
+
+                    <input
+                        type="number"
+                        id="quantity"
+                        name="quantity"
+                        value="1"
+                        min="0"
+                        step="0.1"
+                    >
+
+                    <select id="unit" name="unit">
+
+                        <option value="จาน">จาน</option>
+                        <option value="กรัม">กรัม</option>
+                        <option value="ชิ้น">ชิ้น</option>
+                        <option value="ถ้วย">ถ้วย</option>
+                        <option value="มิลลิลิตร">มล.</option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+
+            <!-- แคลอรี -->
+            <div class="form-group">
+
+                <label for="calories">
+                    พลังงาน
+                </label>
+
+                <div class="input-with-unit">
+
+                    <input
+                        type="number"
+                        id="calories"
+                        name="calories"
+                        value="450"
+                        min="0"
+                        step="1"
+                        required
+                    >
+
+                    <span>kcal</span>
+
+                </div>
+
+            </div>
+
+
+           <!-- สารอาหาร -->
+<div class="nutrition-section">
+
+    <h2>สารอาหาร</h2>
+
+    <div class="nutrition-grid">
+
+        <!-- คาร์บ -->
+        <div class="nutrition-item carbs">
+            <label for="carbs">คาร์บ</label>
+
+            <div class="input-with-unit">
+                <input
+                    type="number"
+                    id="carbs"
+                    name="carbs"
+                    value="55"
+                    min="0"
+                    step="0.1"
+                >
+                <span>กรัม</span>
+            </div>
+        </div>
+
+
+        <!-- โปรตีน -->
+        <div class="nutrition-item protein">
+            <label for="protein">โปรตีน</label>
+
+            <div class="input-with-unit">
+                <input
+                    type="number"
+                    id="protein"
+                    name="protein"
+                    value="25"
+                    min="0"
+                    step="0.1"
+                >
+                <span>กรัม</span>
+            </div>
+        </div>
+
+
+        <!-- ไขมัน -->
+        <div class="nutrition-item fat">
+            <label for="fat">ไขมัน</label>
+
+            <div class="input-with-unit">
+                <input
+                    type="number"
+                    id="fat"
+                    name="fat"
+                    value="15"
+                    min="0"
+                    step="0.1"
+                >
+                <span>กรัม</span>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+
+            <!-- มื้ออาหาร -->
+            <div class="form-group">
+
+                <label>
+                    มื้ออาหาร
+                </label>
+
+                <div class="meal-options">
+
+                    <button
+                        type="button"
+                        class="meal-button active"
+                        onclick="selectMeal(this)"
+                    >
+                        เช้า
+                    </button>
+
+                    <button
+                        type="button"
+                        class="meal-button"
+                        onclick="selectMeal(this)"
+                    >
+                        กลางวัน
+                    </button>
+
+                    <button
+                        type="button"
+                        class="meal-button"
+                        onclick="selectMeal(this)"
+                    >
+                        เย็น
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- หมายเหตุ -->
+            <div class="form-group">
+
+                <label for="note">
+                    หมายเหตุ
+                </label>
+
+                <textarea
+                    id="note"
+                    name="note"
+                    placeholder="เพิ่มรายละเอียดเกี่ยวกับอาหาร..."
+                ></textarea>
+
+            </div>
+
+
+            <!-- Save -->
+            <button
+                type="submit"
+                class="save-button"
+            >
+                บันทึกการแก้ไข
+            </button>
+
+        </form>
+
+
+        <!-- Delete -->
+        <button
+            type="button"
+            class="delete-button"
+            onclick="deleteFood()"
+        >
+            🗑️ ลบรายการอาหาร
+        </button>
+
+    </main>
+
+</div>
+
+
+<script src="foodEdit.js"></script>
+
 </body>
 </html>
