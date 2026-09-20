@@ -33,6 +33,9 @@ export function MealList({
                 }{" "}
                 · {meal.totalCalories} kcal
               </span>
+              <small>
+                {meal.ingredients.map((ingredient) => `${ingredient.name} ${ingredient.amount} ${ingredient.unit === "serving" ? "ส่วน" : "ก."}`).join(" · ")}
+              </small>
             </div>
             <div className="row-actions">
               <button type="button" onClick={() => onEdit(meal)}>

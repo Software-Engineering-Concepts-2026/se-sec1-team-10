@@ -63,14 +63,24 @@ model MealLog {
 }
 
 model MealIngredient {
-  id           String  @id @default(uuid())
-  mealLogId    String
-  name         String
-  carbsGrams   Float
-  sugarGrams   Float
-  proteinGrams Float
-  fatGrams     Float
-  mealLog      MealLog @relation(fields: [mealLogId], references: [id], onDelete: Cascade)
+  id                    String  @id @default(uuid())
+  mealLogId             String
+  name                  String
+  carbsGrams            Float
+  sugarGrams            Float
+  proteinGrams          Float
+  fatGrams              Float
+  amount                Float   @default(1)
+  unit                  String  @default("serving")
+  referenceAmount       Float   @default(1)
+  referenceUnit         String  @default("serving")
+  source                String  @default("legacy")
+  referenceCaloriesKcal Float?
+  referenceCarbsGrams   Float?
+  referenceSugarGrams   Float?
+  referenceProteinGrams Float?
+  referenceFatGrams     Float?
+  mealLog               MealLog @relation(fields: [mealLogId], references: [id], onDelete: Cascade)
 
   @@index([mealLogId])
 }

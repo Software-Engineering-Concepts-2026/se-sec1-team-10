@@ -12,7 +12,7 @@ import {
   isAiConfigured,
   NotFoodError,
 } from "../ai.js";
-import { calculateMealCalories, publicMeal } from "../meal.js";
+import { calculateMeal, publicMeal } from "../meal.js";
 import {
   foodSearchQuerySchema,
   isNutritionConfigured,
@@ -54,11 +54,8 @@ export function registerMealRoutes(
   });
   app.post("/api/meals", requireAuth, async (req, res) => {
     const data = mealSchema.parse(req.body);
-    const meal = await repository.createMeal(
-      res.locals.user.id,
-      data,
-      calculateMealCalories(data.ingredients),
-    );
+    const calculated = calculateMeal(data);
+    const meal = await repository.createMeal(res.locals.user.id, data, calculated.totalCalories);
     res
       .status(201)
       .json({ meal: publicMeal(meal), message: "บันทึกอาหารแล้ว" });
@@ -146,12 +143,8 @@ export function registerMealRoutes(
   });
   app.put("/api/meals/:id", requireAuth, async (req, res) => {
     const data = mealSchema.parse(req.body);
-    const meal = await repository.updateMeal(
-      String(req.params.id),
-      res.locals.user.id,
-      data,
-      calculateMealCalories(data.ingredients),
-    );
+    const calculated = calculateMeal(data);
+    const meal = await repository.updateMeal(String(req.params.id), res.locals.user.id, data, calculated.totalCalories);
     if (!meal) {
       res.status(404).json({ message: "ไม่พบรายการอาหาร" });
       return;

@@ -16,7 +16,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('real PostgreSQL application lif
     const first = request.agent(app);
     const other = request.agent(app);
     const date = new Date().toISOString().slice(0, 10);
-    const meal = { name: 'ข้าวทดสอบ', mealType: 'lunch', activityDate: date, ingredients: [{ name: 'ข้าว', carbsGrams: 50, sugarGrams: 2, proteinGrams: 5, fatGrams: 2 }] };
+    const meal = { name: 'ข้าวทดสอบ', mealType: 'lunch', activityDate: date, ingredients: [{ name: 'ข้าว', amount: 200, unit: 'g', referenceAmount: 100, referenceUnit: 'g', source: 'usda-fdc', referenceNutrients: { caloriesKcal: 119, carbsGrams: 25, sugarGrams: 1, proteinGrams: 2.5, fatGrams: 1 } }] };
     try {
       for (const [index, agent] of [first, other].entries()) {
         const credentials = { email: emails[index], password: 'IntegrationPassword123!' };
@@ -27,7 +27,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('real PostgreSQL application lif
       await first.put('/api/goals').set('Origin', config.appOrigin).send({ targetWeightKg: 65, dailyCalorieTarget: 2000 }).expect(200);
       const saved = await first.post('/api/meals').set('Origin', config.appOrigin).send(meal).expect(201);
       expect(saved.body.meal.totalCalories).toBe(238);
-      expect(Object.keys(saved.body.meal.ingredients[0]).sort()).toEqual(['id', 'name', 'carbsGrams', 'sugarGrams', 'proteinGrams', 'fatGrams'].sort());
+      expect(saved.body.meal.ingredients[0]).toMatchObject({ amount: 200, unit: 'g', referenceAmount: 100, referenceUnit: 'g', caloriesKcal: 238, carbsGrams: 50, source: 'usda-fdc' });
       const mealId = saved.body.meal.id;
       const exerciseInput = { activityType: 'walking', durationMinutes: 30, activityDate: date };
       const exercise = await first.post('/api/exercises').set('Origin', config.appOrigin).send(exerciseInput).expect(201);
@@ -42,15 +42,15 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)('real PostgreSQL application lif
       const profile = await restarted.get('/api/auth/me').set('Cookie', cookie).expect(200);
       expect(profile.body.user.dailyCalorieTarget).toBe(2000);
       expect((await restarted.get(`/api/meals/daily?date=${date}`).set('Cookie', cookie).expect(200)).body.caloriesConsumed).toBe(238);
-      const updated = { ...meal, ingredients: [{ ...meal.ingredients[0], carbsGrams: 60 }] };
+      const updated = { ...meal, ingredients: [{ ...meal.ingredients[0], amount: 100 }] };
       await restarted.put(`/api/meals/${mealId}`).set('Cookie', cookie).set('Origin', config.appOrigin).send(updated).expect(200);
       await restarted.put(`/api/exercises/${exerciseId}`).set('Cookie', cookie).set('Origin', config.appOrigin).send({ ...exerciseInput, durationMinutes: 45 }).expect(200);
       const daily = await restarted.get(`/api/exercises/daily?date=${date}`).set('Cookie', cookie).expect(200);
-      expect(daily.body.caloriesConsumed).toBe(278);
-      expect(daily.body.netCalories).toBe(278 - daily.body.caloriesBurned);
+      expect(daily.body.caloriesConsumed).toBe(119);
+      expect(daily.body.netCalories).toBe(119 - daily.body.caloriesBurned);
       expect(daily.body.caloriesBurned).toBeGreaterThan(exercise.body.exercise.caloriesBurned);
       expect((await restarted.get(`/api/meals/history?from=${date}&to=${date}`).set('Cookie', cookie).expect(200)).body.meals).toHaveLength(1);
-      expect((await restarted.get(`/api/summary/weekly?date=${date}`).set('Cookie', cookie).expect(200)).body.caloriesConsumed).toBe(278);
+      expect((await restarted.get(`/api/summary/weekly?date=${date}`).set('Cookie', cookie).expect(200)).body.caloriesConsumed).toBe(119);
       expect((await restarted.get('/api/health-history').set('Cookie', cookie).expect(200)).body.points).toHaveLength(1);
       await restarted.delete(`/api/meals/${mealId}`).set('Cookie', cookie).set('Origin', config.appOrigin).send({}).expect(204);
       await restarted.delete(`/api/exercises/${exerciseId}`).set('Cookie', cookie).set('Origin', config.appOrigin).send({}).expect(204);

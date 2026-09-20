@@ -31,8 +31,8 @@ export function DashboardPanel({ user }: { user: PublicUser }) {
   const remaining = target ? target - (data?.daily.netCalories ?? 0) : null;
   const progress = target ? Math.max(0, Math.min(100, (data?.daily.netCalories ?? 0) / target * 100)) : 0;
   const macros = (data?.meals ?? []).flatMap(meal => meal.ingredients).reduce((total, ingredient) => ({
-    carbs: total.carbs + ingredient.carbsGrams, protein: total.protein + ingredient.proteinGrams,
-    fat: total.fat + ingredient.fatGrams,
+    carbs: total.carbs + (ingredient.carbsGrams ?? 0), protein: total.protein + (ingredient.proteinGrams ?? 0),
+    fat: total.fat + (ingredient.fatGrams ?? 0),
   }), { carbs: 0, protein: 0, fat: 0 });
   return <section className="card dashboard-panel" aria-labelledby="dashboard-title">
     <div className="exercise-heading"><div><span className="eyebrow">TODAY'S BALANCE</span><h2 id="dashboard-title">พลังงานของคุณ</h2></div><label className="compact-field">วันที่<input type="date" value={date} onChange={e => { if (e.target.value) setDate(e.target.value); }} /></label></div>

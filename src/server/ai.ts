@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { mealIngredientSchema } from '../shared/contracts.js';
 
 const MAX_IMAGE_DATA_CHARS = 300_000;
 const MAX_PROVIDER_RESPONSE_CHARS = 32_000;
@@ -10,13 +11,7 @@ export const analyzeMealRequestSchema = z.object({
     .max(MAX_IMAGE_DATA_CHARS, 'รูปภาพมีขนาดใหญ่เกินไป'),
 }).strict();
 
-const estimateIngredientSchema = z.object({
-  name: z.string().trim().min(1).max(120),
-  carbsGrams: z.number().finite().min(0).max(10_000),
-  sugarGrams: z.number().finite().min(0).max(10_000),
-  proteinGrams: z.number().finite().min(0).max(10_000),
-  fatGrams: z.number().finite().min(0).max(10_000),
-}).strict();
+const estimateIngredientSchema = mealIngredientSchema;
 
 const providerEstimateSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -124,7 +119,7 @@ export async function analyzeMealImage(imageData: string, config?: AiConfigurati
         max_tokens: 800,
         temperature: 0,
         messages: [
-          { role: 'system', content: 'You estimate food visible in a meal image. Return JSON only, with no Markdown. If the image does not clearly show food or a drink intended for consumption, return exactly {"error":"not-food"}. Otherwise return exactly this shape: {"name":"ชื่ออาหาร","mealType":"lunch","ingredients":[{"name":"ชื่อส่วนผสม","carbsGrams":0,"sugarGrams":0,"proteinGrams":0,"fatGrams":0}],"portionDescription":"คำอธิบายปริมาณ","notes":["หมายเหตุความไม่แน่นอน"]}. notes MUST be an array of 0 to 4 strings, never one string; each note and portionDescription is 1 to 240 characters. name and each ingredient name are 1 to 120 characters. mealType must be exactly breakfast, lunch, dinner, or snack. ingredients must contain 1 to 20 items. Every nutrient value must be a finite JSON number from 0 to 10000. All human-readable values must be in Thai. Estimates are uncertain: include uncertainty in Thai notes. Do not claim database verification. Include only visible or clearly likely ingredients.' },
+          { role: 'system', content: 'You estimate food visible in a meal image. Return JSON only, with no Markdown. If the image does not clearly show food or a drink intended for consumption, return exactly {"error":"not-food"}. Otherwise return exactly this shape: {"name":"ชื่ออาหาร","mealType":"lunch","ingredients":[{"name":"ชื่อส่วนผสม","amount":1,"unit":"serving","referenceAmount":1,"referenceUnit":"serving","source":"ai-estimate","referenceNutrients":{"caloriesKcal":0,"carbsGrams":0,"sugarGrams":0,"proteinGrams":0,"fatGrams":0}}],"portionDescription":"คำอธิบายปริมาณ","notes":["หมายเหตุความไม่แน่นอน"]}. Every ingredient must give a known amount and matching unit g or serving. Use serving 1/1 when grams are unknown; never invent 100 grams. Nutrients are for the reference amount and may be null when unknown. notes MUST be an array of 0 to 4 strings. All human-readable values must be in Thai. Estimates are uncertain: include uncertainty in Thai notes. Do not claim database verification. Include only visible or clearly likely ingredients.' },
           { role: 'user', content: [{ type: 'text', text: 'วิเคราะห์ภาพอาหารนี้เพื่อให้ผู้ใช้ตรวจสอบก่อนบันทึก กรุณาตอบตาม JSON ที่กำหนดเท่านั้น' }, { type: 'image_url', image_url: { url: imageData } }] },
         ],
       }),
