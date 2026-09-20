@@ -396,10 +396,6 @@ export function MealPanel({ userId }: { userId: string }) {
               </div>
             )}
           </div>
-          <details className="food-search-details" open={foodSearchOpen} onToggle={(event) => setFoodSearchOpen(event.currentTarget.open)}>
-            <summary>ค้นหาจากฐานข้อมูลอาหาร</summary>
-            <FoodSearchPanel onSelect={applyFood} initialAmount={foodTarget === null ? undefined : ingredients[foodTarget]?.unit === 'g' ? ingredients[foodTarget].amount : undefined} />
-          </details>
           <div className="meal-top-row">
             <label className="compact-field">
               มื้ออาหาร
@@ -443,6 +439,15 @@ export function MealPanel({ userId }: { userId: string }) {
             onAdd={() => { setFoodTarget(null); setFoodSearchOpen(true); }}
             onRecalculate={recalculate}
           />
+          {foodSearchOpen && (
+            <section className="food-search-inline" aria-labelledby="add-food-title">
+              <div className="food-search-inline-heading">
+                <h3 id="add-food-title">เพิ่มส่วนประกอบจากฐานข้อมูล</h3>
+                <button className="text-button" type="button" onClick={() => setFoodSearchOpen(false)}>ปิด</button>
+              </div>
+              <FoodSearchPanel onSelect={applyFood} />
+            </section>
+          )}
           {(showManualFields || analysis) && (
             <div className="meal-actions">
               <button className="primary" type="submit">
