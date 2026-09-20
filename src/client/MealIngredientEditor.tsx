@@ -46,7 +46,7 @@ export function MealIngredientEditor({ ingredients, analysis, needsRecalculation
       const serving = ingredient.unit === "serving";
       return <article className="ingredient-row portion-row" key={`${ingredient.name}-${index}`}>
         <div className="ingredient-card-heading"><strong>{ingredient.name || `ส่วนประกอบ ${index + 1}`}</strong><strong className="ingredient-calories">{value.caloriesKcal == null ? "ไม่ทราบ" : `${value.caloriesKcal} kcal`}</strong></div>
-        <small className="ingredient-source">{ingredient.source === "legacy" ? "ส่วนเดิม · ไม่ทราบน้ำหนัก" : ingredient.source === "usda-fdc" ? "USDA FoodData Central" : "ค่าประมาณจาก AI"}</small>
+        <small className="ingredient-source">{ingredient.source === "legacy" ? "ส่วนเดิม · ไม่ทราบน้ำหนัก" : ingredient.source === "usda-fdc" ? "USDA FoodData Central" : "ค่าประมาณจาก AI · ปริมาณเป็นกรัม"}</small>
         <label>{serving ? "ปริมาณ (ส่วน)" : "ปริมาณ (ก.)"}<input aria-label={`ปริมาณส่วนประกอบ ${index + 1}`} type="number" min="0.01" max="10000" step="any" value={ingredient.amount} onChange={(event) => onQuantityChange(index, event.target.value)} required /></label>
         <span className="ingredient-nutrients" aria-label={`สารอาหารส่วนประกอบ ${index + 1}`}>{value.caloriesKcal == null ? "พลังงานไม่ทราบ" : `${value.caloriesKcal} kcal`} · C {nutrient(value.carbsGrams)} · น้ำตาล {nutrient(value.sugarGrams)} · P {nutrient(value.proteinGrams)} · F {nutrient(value.fatGrams)}</span>
         <small>อ้างอิง {ingredient.referenceAmount} {ingredient.referenceUnit === "serving" ? "ส่วน" : "กรัม"}</small>

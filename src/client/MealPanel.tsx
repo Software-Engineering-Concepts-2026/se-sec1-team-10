@@ -148,7 +148,8 @@ export function MealPanel({ userId }: { userId: string }) {
   }
   function replaceFood(index: number, food: FoodSearchResult) {
     const referenceNutrients = { caloriesKcal: food.nutrientsPer100g.caloriesKcal ?? null, carbsGrams: food.nutrientsPer100g.carbsGrams ?? null, sugarGrams: food.nutrientsPer100g.sugarGrams ?? null, proteinGrams: food.nutrientsPer100g.proteinGrams ?? null, fatGrams: food.nutrientsPer100g.fatGrams ?? null };
-    setIngredients(current => current.map((item, itemIndex) => itemIndex === index ? { name: food.name.slice(0, 120), amount: item.unit === 'g' ? item.amount : 1, unit: 'g', referenceAmount: 100, referenceUnit: 'g', source: 'usda-fdc', referenceNutrients } : item));
+    if (ingredients[index]?.unit !== 'g') { setMessage({ text: 'รายการเดิมไม่ทราบน้ำหนัก กรุณาระบุกรัมในช่องค้นหาก่อนเลือกอาหารทดแทน', error: true }); return; }
+    setIngredients(current => current.map((item, itemIndex) => itemIndex === index ? { name: food.name.slice(0, 120), amount: item.amount, unit: 'g', referenceAmount: 100, referenceUnit: 'g', source: 'usda-fdc', referenceNutrients } : item));
     setNeedsRecalculation(true);
   }
   async function compressImage(file: File): Promise<string> {

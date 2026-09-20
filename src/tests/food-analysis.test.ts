@@ -54,7 +54,7 @@ async function signIn() {
   return cookie(await request(app).post('/api/auth/login').set('Origin', origin).send(account).expect(200));
 }
 const providerResponse = (payload: unknown) => new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(payload) } }] }), { status: 200, headers: { 'content-type': 'application/json' } });
-const validEstimate = { name: 'Chicken rice', mealType: 'lunch', ingredients: [{ name: 'Rice', amount: 1, unit: 'serving', referenceAmount: 1, referenceUnit: 'serving', source: 'ai-estimate', referenceNutrients: { caloriesKcal: 238, carbsGrams: 50, sugarGrams: 1, proteinGrams: 5, fatGrams: 2 } }], portionDescription: 'One plate', notes: ['Estimate only'] };
+const validEstimate = { name: 'Chicken rice', mealType: 'lunch', ingredients: [{ name: 'Rice', amount: 200, unit: 'g', referenceAmount: 200, referenceUnit: 'g', source: 'ai-estimate', referenceNutrients: { caloriesKcal: 238, carbsGrams: 50, sugarGrams: 1, proteinGrams: 5, fatGrams: 2 } }], portionDescription: 'One plate', notes: ['Estimate only'] };
 
 beforeEach(() => {
   repository = new MemoryRepository();
@@ -107,6 +107,15 @@ describe('food image analysis', () => {
     const auth = await signIn();
     const result = await request(app).post('/api/meals/analyze').set('Origin', origin).set('Cookie', auth).send({ imageData }).expect(200);
     expect(result.body.analysis.notes).toContain('ประเมินจากภาพ');
+  });
+
+  it('rejects an AI ingredient expressed as a serving rather than editable grams', async () => {
+    app = createApp(repository, { jwtSecret: secret, appOrigin: origin, ai: {
+      baseUrl: 'https://provider.test/v1/chat/completions', apiKey: 'secret', model: 'food',
+      fetch: async () => providerResponse({ ...validEstimate, ingredients: [{ ...validEstimate.ingredients[0], amount: 1, unit: 'serving', referenceAmount: 1, referenceUnit: 'serving' }] }),
+    } });
+    const auth = await signIn();
+    await request(app).post('/api/meals/analyze').set('Origin', origin).set('Cookie', auth).send({ imageData }).expect(502);
   });
 
   it('enforces the configured daily scan budget per account', async () => {
