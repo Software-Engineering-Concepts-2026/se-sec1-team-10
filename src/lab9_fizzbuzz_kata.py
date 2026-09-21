@@ -1,15 +1,9 @@
 """A fresh FizzBuzz kata used to preserve Lab 9 TDD evidence."""
 
+_RULES = ((3, "Fizz"), (5, "Buzz"))
+
 
 def fizzbuzz_kata(number: int) -> str:
-    """Return the first FizzBuzz kata rule that applies."""
-    if number % 15 == 0:
-        return "FizzBuzz"
-
-    if number % 3 == 0:
-        return "Fizz"
-
-    if number % 5 == 0:
-        return "Buzz"
-
-    return str(number)
+    """Return the concatenated labels for applicable kata rules."""
+    labels = "".join(label for divisor, label in _RULES if number % divisor == 0)
+    return labels or str(number)
