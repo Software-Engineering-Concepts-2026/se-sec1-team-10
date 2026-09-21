@@ -18,8 +18,13 @@ def validate_email(email):
     if email.count("@") != 1:
         return False
 
-    local, domain = email.split("@")
-    if not local or not domain or "." not in domain:
+    local_part, domain_part = email.split("@")
+    if not local_part or not domain_part:
         return False
 
-    return len(domain.rsplit(".", 1)[1]) >= 2
+    return _has_valid_tld(domain_part)
+
+
+def _has_valid_tld(domain):
+    """Return whether a non-empty domain has a dot and a two-character TLD."""
+    return "." in domain and len(domain.rsplit(".", 1)[1]) >= 2
