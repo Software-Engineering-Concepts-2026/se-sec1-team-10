@@ -205,3 +205,23 @@ index.html และ chayakorn_Food Logging_prototype.html มี CSS/JavaScript
 เปิดทั้ง 2 หน้า ตรวจสอบ UI, JavaScript และ Browser Console ว่ายังทำงานปกติและไม่มี Error
 ## AI Workflow:
 Explain → AI เสนอแนวทาง → ทีมตรวจสอบ Codebase → เลือกวิธี Refactor → Apply → Test
+
+---
+
+# Lab 9 — Testing and CI (draft for student review)
+
+> สถานะ: เนื้อหาส่วนนี้เป็นร่างทางเทคนิคที่ต้องให้สมาชิกผู้ส่งงานตรวจ แก้เป็นประสบการณ์ของตนเอง และตอบคำถาม Post-quiz ตามใบงานก่อนส่ง ไม่ได้อ้างว่าเป็น reflection ส่วนบุคคลที่เสร็จแล้ว
+
+## B1. Apply — Test design plan
+
+แผนทดสอบของ `calculate_net_calories` แบ่ง input เป็น valid non-negative values และ invalid negative values ใช้ขอบเขต `0` กับค่าที่ต่ำกว่า 0 เล็กน้อย (`-0.01`) เพื่อให้เห็นจุดเปลี่ยนของเงื่อนไข การทดสอบครอบคลุมกรณีปกติ, ศูนย์, ค่าทศนิยม และ negative input ทั้งสองตำแหน่ง รายละเอียด decision table อยู่ที่ `docs/testing/lab9-test-plan.md`.
+
+## B2. Connect — Property-based testing
+
+ใช้ Hypothesis สร้างอย่างน้อย 150 ตัวอย่างต่อ property สำหรับ FizzBuzz 4 กลุ่ม: multiple of 15, multiple of 3 only, multiple of 5 only และเลขอื่นที่คืนเป็นข้อความ การทดลองกับ mutant ของเงื่อนไข `% 15` ให้ counterexample ที่ย่อลงเป็น `15`; บันทึกคำสั่งและผลอยู่ใน `docs/saboteur-journal.md`.
+
+## B3. Reflect — CI and honest limits
+
+workflow `Tests` ติดตั้ง dependency จาก `requirements-test.txt` แล้วบังคับ pytest coverage ขั้นต่ำ 90% เมื่อเปิด pull request หรือ push เข้า `main`. ผลรันปัจจุบันคือ 24 tests ผ่าน และ statement/branch coverage 100% สำหรับ module ใน scope.
+
+หลักฐาน TDD เดิมมี RED commit `8b7d2f0` แต่ commit ถัดไปรวม implementation กับ tests จึงไม่ควรอ้างว่าเป็น Red-Green-Refactor ครบวงจร ยังคงมี cycle ใหม่สำหรับ boolean input ที่แยก Red (`53bbcd2`) และ Green (`17d8d1c`) ไว้ให้ตรวจสอบได้ ส่วนการบังคับ branch protection ต้องตั้งจากหน้า GitHub โดย repository administrator.

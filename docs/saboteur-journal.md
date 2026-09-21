@@ -2,7 +2,7 @@
 
 ## Bug ที่ตั้งใจสร้าง
 
-ทดลองแก้เงื่อนไขใน `fizzbuzz.py` จาก
+สร้างสำเนาชั่วคราวของ `src/fizzbuzz.py` นอก repository แล้วแก้เงื่อนไขจาก
 
 `number % 15 == 0`
 
@@ -10,14 +10,35 @@
 
 `number % 15 != 0`
 
-เพื่อจำลองการเกิด Bug ในระบบ
+เป็นเงื่อนไขที่ผิด เพื่อจำลองการเกิด Bug โดยไม่ได้แก้หรือ commit production code
 
 ## ผลการทดสอบ
 
-เมื่อรัน Unit Test พบว่า Test ไม่ผ่าน และสามารถตรวจจับ Bug ที่ตั้งใจสร้างได้
+รัน assertion ต่อสำเนา mutant ด้วย input `15`:
 
-หลังจากแก้โค้ดกลับเป็นเงื่อนไขเดิมแล้ว ทดสอบอีกครั้งและ Test ผ่านทั้งหมด
+```powershell
+python -c "... assert fizzbuzz(15) == 'FizzBuzz'"
+```
+
+ผลจริง: `AssertionError` เพราะ mutant คืนค่า `'15'` แทน `'FizzBuzz'`.
+
+สำหรับหลักฐานการย่อกรณีทดสอบ (shrinking) ใช้ Hypothesis สร้างเฉพาะ multiple ของ 15 ในช่วง 15–990 ให้กับ mutant เดียวกัน:
+
+```text
+Failed example: number=15
+assert '15' == 'FizzBuzz'
+```
+
+Hypothesis ย่อไปที่ `15` ซึ่งเป็นกรณีเล็กสุดของ partition นี้ที่ทำให้ assertion ล้มเหลว
+
+ลบสำเนาชั่วคราวแล้วรันชุดจริงอีกครั้ง:
+
+```powershell
+python -m pytest src/tests -v --cov=src --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=90
+```
+
+ผลจริง: `24 passed`, statement/branch coverage `100%`.
 
 ## สรุป
 
-Test ที่เขียนไว้สามารถตรวจจับ Bug ที่เกิดจากการแก้เงื่อนไขของ FizzBuzz ได้
+Test ที่เขียนไว้สามารถตรวจจับ Bug ที่เกิดจากการแก้เงื่อนไขของ FizzBuzz ได้ โดย mutation อยู่ในสำเนาชั่วคราวเท่านั้น
