@@ -3,6 +3,9 @@
 
 def fizzbuzz_kata(number: int) -> str:
     """Return the first FizzBuzz kata rule that applies."""
+    if number % 15 == 0:
+        return "FizzBuzz"
+
     if number % 3 == 0:
         return "Fizz"
 
