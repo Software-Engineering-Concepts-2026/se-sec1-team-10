@@ -57,7 +57,7 @@ This branch adds one new, honest cycle for the boolean-input contract:
 
 ```powershell
 python -m pip install -r requirements-test.txt
-python -m pytest src/tests -v --cov=src --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=90
+python -m pytest src/tests -v --cov=src.fizzbuzz --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=90
 ```
 
 The GitHub Actions workflow runs the same command on pull requests and pushes to `main`. Branch protection that requires the `Tests` check is a GitHub repository setting and must be enabled by a repository administrator.

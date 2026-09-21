@@ -34,7 +34,7 @@ Hypothesis ย่อไปที่ `15` ซึ่งเป็นกรณีเ
 ลบสำเนาชั่วคราวแล้วรันชุดจริงอีกครั้ง:
 
 ```powershell
-python -m pytest src/tests -v --cov=src --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=90
+python -m pytest src/tests -v --cov=src.fizzbuzz --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=90
 ```
 
 ผลจริง: `24 passed`, statement/branch coverage `100%`.

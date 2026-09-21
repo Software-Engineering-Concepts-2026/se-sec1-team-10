@@ -3,7 +3,7 @@ from src.fizzbuzz import fizzbuzz
 
 
 @settings(max_examples=150)
-@given(st.integers(min_value=1, max_value=66).map(lambda factor: factor * 15))
+@given(st.integers(min_value=1, max_value=1_000).map(lambda factor: factor * 15))
 def test_multiples_of_fifteen_are_fizzbuzz(number):
     assert fizzbuzz(number) == "FizzBuzz"
 
