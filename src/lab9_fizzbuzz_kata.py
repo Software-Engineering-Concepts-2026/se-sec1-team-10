@@ -2,5 +2,8 @@
 
 
 def fizzbuzz_kata(number: int) -> str:
-    """Return ordinary kata inputs as decimal text."""
+    """Return the first FizzBuzz kata rule that applies."""
+    if number % 3 == 0:
+        return "Fizz"
+
     return str(number)
