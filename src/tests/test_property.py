@@ -1,16 +1,37 @@
-from hypothesis import given, strategies as st
+from hypothesis import given, settings, strategies as st
 from src.fizzbuzz import fizzbuzz
 
 
-@given(st.integers(min_value=1, max_value=1000))
-def test_fizzbuzz_property(number):
-    result = fizzbuzz(number)
+@settings(max_examples=150)
+@given(st.integers(min_value=1, max_value=1_000).map(lambda factor: factor * 15))
+def test_multiples_of_fifteen_are_fizzbuzz(number):
+    assert fizzbuzz(number) == "FizzBuzz"
 
-    if number % 15 == 0:
-        assert result == "FizzBuzz"
-    elif number % 5 == 0:
-        assert result == "Buzz"
-    elif number % 3 == 0:
-        assert result == "Fizz"
-    else:
-        assert result == str(number)
+
+@settings(max_examples=150)
+@given(
+    st.tuples(st.integers(min_value=0, max_value=65), st.sampled_from([1, 2, 3, 4]))
+    .map(lambda parts: (parts[0] * 5 + parts[1]) * 3)
+)
+def test_multiples_of_three_only_are_fizz(number):
+    assert fizzbuzz(number) == "Fizz"
+
+
+@settings(max_examples=150)
+@given(
+    st.tuples(st.integers(min_value=0, max_value=110), st.sampled_from([1, 2]))
+    .map(lambda parts: (parts[0] * 3 + parts[1]) * 5)
+)
+def test_multiples_of_five_only_are_buzz(number):
+    assert fizzbuzz(number) == "Buzz"
+
+
+@settings(max_examples=150)
+@given(
+    st.tuples(
+        st.integers(min_value=0, max_value=66),
+        st.sampled_from([1, 2, 4, 7, 8, 11, 13, 14]),
+    ).map(lambda parts: parts[0] * 15 + parts[1])
+)
+def test_other_positive_integers_are_returned_as_text(number):
+    assert fizzbuzz(number) == str(number)
