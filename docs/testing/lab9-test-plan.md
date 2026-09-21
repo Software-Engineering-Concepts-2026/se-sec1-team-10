@@ -36,7 +36,7 @@ Example tests cover valid addresses, no or multiple `@` signs, empty local/domai
 
 1. Constructed addresses with non-empty local/domain labels and a two-or-more-character TLD are valid.
 2. Strings with anything other than exactly one `@` are invalid.
-3. A constructed valid ASCII address remains valid after its local and domain components are split and reassembled.
+3. Shortening a generated valid address's TLD to one character makes it invalid, exercising the TLD boundary through a transformation.
 
 ## Unit-test design: `calculate_net_calories`
 

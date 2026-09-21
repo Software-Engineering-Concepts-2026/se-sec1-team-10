@@ -218,7 +218,7 @@ Explain → AI เสนอแนวทาง → ทีมตรวจสอบ
 
 ## B2. Connect — Property-based testing
 
-ใช้ Hypothesis สร้างอย่างน้อย 150 ตัวอย่างต่อ property สำหรับ FizzBuzz 4 กลุ่ม และ 125 ตัวอย่างต่อ property สำหรับ email 3 กลุ่ม: valid constructed address, invalid number of `@`, และ valid address round trip. การทดลองกับ email mutant ที่ยอมรับ TLD 1 ตัวอักษรให้ Hypothesis ย่อ counterexample เป็น `0@0.A`; บันทึกคำสั่งและผลอยู่ใน `docs/saboteur-journal.md`.
+ใช้ Hypothesis สร้างอย่างน้อย 150 ตัวอย่างต่อ property สำหรับ FizzBuzz 4 กลุ่ม และ 125 ตัวอย่างต่อ property สำหรับ email 3 กลุ่ม: valid constructed address, invalid number of `@`, และการตัด TLD ของ valid address ให้เหลือ 1 ตัวอักษรต้อง invalid. การทดลองกับ email mutant ที่ยอมรับ TLD 1 ตัวอักษรให้ Hypothesis ย่อ counterexample เป็น `0@0.A`; บันทึกคำสั่งและผลอยู่ใน `docs/saboteur-journal.md`.
 
 ## B3. Reflect — CI and honest limits
 

@@ -94,10 +94,11 @@ def test_strings_without_exactly_one_at_sign_are_invalid(email):
     domain=st.from_regex(r"[A-Za-z0-9]{1,12}", fullmatch=True),
     tld=st.from_regex(r"[A-Za-z]{2,6}", fullmatch=True),
 )
-def test_valid_email_round_trip_preserves_validity(local, domain, tld):
+def test_shortening_a_valid_tld_to_one_character_makes_email_invalid(
+    local, domain, tld
+):
     email = f"{local}@{domain}.{tld}"
-    local_part, domain_part = email.split("@", 1)
-    reassembled = f"{local_part}@{domain_part}"
+    shortened_tld_email = f"{local}@{domain}.{tld[0]}"
 
     assert validate_email(email) is True
-    assert validate_email(reassembled) is True
+    assert validate_email(shortened_tld_email) is False
