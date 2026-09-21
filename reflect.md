@@ -208,20 +208,18 @@ Explain → AI เสนอแนวทาง → ทีมตรวจสอบ
 
 ---
 
-# Lab 9 — Testing and CI (draft for student review)
+# Lab 9 — Testing and CI
 
-> สถานะ: เนื้อหาส่วนนี้เป็นร่างทางเทคนิคที่ต้องให้สมาชิกผู้ส่งงานตรวจ แก้เป็นประสบการณ์ของตนเอง และตอบคำถาม Post-quiz ตามใบงานก่อนส่ง ไม่ได้อ้างว่าเป็น reflection ส่วนบุคคลที่เสร็จแล้ว
+## B1. Apply — Unit-test plan
 
-## B1. Apply — Test design plan
+ออกแบบ unit test จาก equivalence partition และ boundary value ก่อนเขียน test. สำหรับ `calculate_discount` แบ่ง input ที่ถูกต้องและไม่ถูกต้อง โดยตรวจ boundary ของ amount ที่ `0` และ percentage ที่ `0` กับ `100`; decision table ระบุทุกกรณีที่ต้อง raise `ValueError`. สำหรับ `validate_email` ตรวจ exactly-one `@`, local/domain ที่ไม่ว่าง, dot ใน domain และ TLD อย่างน้อยสองตัวอักษร. แผนและตัวอย่าง test อยู่ที่ `docs/testing/lab9-test-plan.md`. จากงานนี้เห็นว่าการระบุ expected result และขอบเขตก่อนช่วยให้ test ครอบคลุมกรณีปกติและกรณีขอบเขตชัดเจนขึ้น.
 
-แผนทดสอบครอบคลุม `calculate_net_calories` และ chapter exercises ที่เพิ่มใน `src/lab9_exercises.py`: `calculate_discount` แบ่ง valid/invalid partitions, boundary `0` และ `100`, และมี decision table 4 rules. `validate_email` ทดสอบ exactly-one `@`, non-empty parts, dot ใน domain และ TLD อย่างน้อย 2 ตัวอักษร. รายละเอียดอยู่ที่ `docs/testing/lab9-test-plan.md`.
+## B2. Connect — TDD
 
-## B2. Connect — Property-based testing
+ทำ FizzBuzz kata ใหม่ใน `src/lab9_fizzbuzz_kata.py` แยกจาก `src/fizzbuzz.py` เพื่อให้ประวัติ TDD ตรวจสอบได้โดยไม่อ้างย้อนหลังกับงานเดิม. แต่ละรอบเริ่มจาก test ที่ fail แล้วเพิ่ม code เท่าที่ทำให้ผ่าน: ordinary values, Fizz, Buzz และ FizzBuzz. หลัง test ผ่าน 9 กรณี จึง refactor เป็น tuple ของกฎและ join labels โดยผลลัพธ์เดิมยังผ่าน. Commit และผลของแต่ละ RED/GREEN อยู่ใน test plan. จากงานนี้เห็นว่า RED ทำให้รู้ว่ากฎที่ยังขาดคืออะไร ส่วน GREEN ทำให้เพิ่มโค้ดทีละส่วนและตรวจผลได้ทันที.
 
-ใช้ Hypothesis สร้างอย่างน้อย 150 ตัวอย่างต่อ property สำหรับ FizzBuzz 4 กลุ่ม และ 125 ตัวอย่างต่อ property สำหรับ email 3 กลุ่ม: valid constructed address, invalid number of `@`, และการตัด TLD ของ valid address ให้เหลือ 1 ตัวอักษรต้อง invalid. การทดลองกับ email mutant ที่ยอมรับ TLD 1 ตัวอักษรให้ Hypothesis ย่อ counterexample เป็น `0@0.A`; บันทึกคำสั่งและผลอยู่ใน `docs/saboteur-journal.md`.
+## B3. Reflect — Property-based testing
 
-## B3. Reflect — CI and honest limits
+ใช้ Hypothesis ทดสอบ FizzBuzz ด้วย generated input อย่างน้อย 150 ตัวอย่างต่อ property: multiple ของ 15 เป็น `FizzBuzz`, multiple ของ 3 หรือ 5 ที่ไม่ซ้ำกันเป็น `Fizz` หรือ `Buzz`, และจำนวนอื่นคืนค่าเป็นข้อความ. สำหรับ email ใช้ 125 ตัวอย่างต่อ property เพื่อตรวจ address ที่สร้างตามรูปแบบ, จำนวน `@` ที่ไม่เท่ากับหนึ่ง, และการย่อ TLD เหลือหนึ่งตัวอักษร. จากงานนี้เห็นว่า property test ช่วยตรวจรูปแบบของ input ได้กว้างกว่า example test; ตัวอย่าง email mutant ถูกย่อเป็น `0@0.A` ซึ่งชี้ให้เห็น boundary ของ TLD ได้ตรงจุด.
 
-workflow `Tests` ติดตั้ง dependency จาก `requirements-test.txt` แล้วบังคับ pytest coverage ขั้นต่ำ 90% เมื่อเปิด pull request หรือ push เข้า `main`. Coverage วัดเฉพาะ `src.fizzbuzz`, `src.lab9_exercises` และ `services/stats-service/app.py`; ผลรันสุดท้ายต้องตรวจสอบโดยผู้ส่งงานก่อน submit.
-
-หลักฐาน TDD เดิมมี RED commit `8b7d2f0` แต่ commit ถัดไปรวม implementation กับ tests จึงไม่ควรอ้างว่าเป็น Red-Green-Refactor ครบวงจร. Chapter exercises มี cycle ใหม่ที่ตรวจได้: Red (`5deff1a`), Green (`fff2a57`) และ refactor (`f0b71f9`). ส่วนการบังคับ branch protection ต้องตั้งจากหน้า GitHub โดย repository administrator.
+workflow `Tests` ติดตั้ง dependency จาก `requirements-test.txt` และบังคับ coverage ขั้นต่ำ 90% เมื่อเปิด pull request หรือ push เข้า `main`. การตั้ง branch protection ต้องทำโดย repository administrator; บัญชีที่ใช้กับงานนี้ไม่มีสิทธิ์ admin จึงไม่อ้างว่าได้เปิดใช้งานแล้ว.

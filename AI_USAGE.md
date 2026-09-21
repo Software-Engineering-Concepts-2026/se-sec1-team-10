@@ -18,4 +18,4 @@
 
 ## Lab 9 follow-up (2026-09-21)
 
-AI assistance in this follow-up produced the chapter-exercise test structure, implementation draft, property-test ideas, CI coverage command, and draft documentation. The branch contains machine-run evidence for the test results stated in `docs/testing/lab9-test-plan.md` and `docs/saboteur-journal.md`. The Lab 9 reflection is explicitly marked as a draft: the submitting student must review it, add only their own experience where required, and verify all statements before submission. This follow-up does not verify or claim any human-contribution percentage.
+AI assistance in this follow-up produced the chapter-exercise test structure, implementation draft, property-test ideas, CI coverage command, the fresh separate FizzBuzz kata, and documentation wording. The branch contains machine-run evidence for the test results stated in `docs/testing/lab9-test-plan.md` and `docs/saboteur-journal.md`. The Lab 9 reflection records technical observations from this repository and does not claim unverifiable personal actions or any human-contribution percentage.

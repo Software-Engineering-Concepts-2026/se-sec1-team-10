@@ -10,6 +10,7 @@ from src.lab9_fizzbuzz_kata import fizzbuzz_kata
     [
         (1, "1"),
         (2, "2"),
+        (7, "7"),
     ],
 )
 def test_ordinary_numbers_are_returned_as_text(number, expected):

@@ -2,7 +2,7 @@
 
 ## Scope
 
-This plan covers the Lab 9 production modules in this repository: `calculate_net_calories` in the Stats Service, FizzBuzz, and the chapter exercises in `src/lab9_exercises.py`. Coverage is measured only for these production modules, never for tests or temporary mutation files.
+This plan covers the Lab 9 production modules in this repository: `calculate_net_calories` in the Stats Service, the existing `src.fizzbuzz` module, the chapter exercises in `src/lab9_exercises.py`, and a fresh, explicitly separate FizzBuzz kata in `src/lab9_fizzbuzz_kata.py`. The kata is TDD evidence; it does not replace the existing FizzBuzz module. Coverage is measured only for these production modules, never for tests or temporary mutation files.
 
 ## Unit-test design: `calculate_discount`
 
@@ -75,7 +75,25 @@ Example tests cover 1, 2, 3, 5, 7, 9, 15, and 30. Property tests use Hypothesis 
 
 FizzBuzz now explicitly accepts integers only. `bool` is rejected even though Python treats it as a subtype of `int`; that avoids treating `True` as the number 1. This is a new Lab 9 input contract, not a retrospective claim that the original kata required it.
 
-## TDD evidence and limitation
+## Fresh FizzBuzz kata: examples and TDD evidence
+
+The fresh kata's separate test module has ten final example cases: ordinary values `1`, `2`, and `7`; Fizz values `3`, `6`, and `9`; Buzz values `5` and `10`; and combined values `15` and `30`.
+
+Each focused command used the repository runtime:
+
+```powershell
+C:/Users/chaya/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe -m pytest src/tests/test_lab9_fizzbuzz_kata.py -q
+```
+
+| Cycle | Red commit and observed result | Green commit and observed result |
+| --- | --- | --- |
+| ordinary values | `bd34d6f`: collection failed with `ModuleNotFoundError` for `src.lab9_fizzbuzz_kata` | `4f83d61`: `2 passed` |
+| Fizz | `a1c67da`: `3 failed, 2 passed`; `3` returned `"3"` | `7551549`: `5 passed` |
+| Buzz | `8d0eb23`: `2 failed, 5 passed`; `5` returned `"5"` | `6d69cad`: `7 passed` |
+| FizzBuzz | `3754c1a`: `2 failed, 7 passed`; `15` returned `"Fizz"` | `38bb4e0`: `9 passed` |
+| refactor | — | `53200e3`: replaced ordered conditionals with the `_RULES` tuple and label joining; `9 passed` |
+
+## Earlier TDD evidence and limitation
 
 The historical first RED commit is `8b7d2f0`, but the next historical commit `37a6286` combined implementation and several tests. That earlier sequence does not prove a complete Red-Green-Refactor cycle.
 
@@ -103,7 +121,7 @@ Temporary, uncommitted mutants were executed and removed before the final run. A
 
 ```powershell
 python -m pip install -r requirements-test.txt
-python -m pytest src/tests -v --cov=src.fizzbuzz --cov=src.lab9_exercises --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=90
+C:/Users/chaya/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe -m pytest src/tests -v --cov=src.fizzbuzz --cov=src.lab9_fizzbuzz_kata --cov=src.lab9_exercises --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=90
 ```
 
 The GitHub Actions workflow runs the same command on pull requests and pushes to `main`. Branch protection that requires the `Tests` check is a GitHub repository setting and must be enabled by a repository administrator.
