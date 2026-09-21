@@ -96,6 +96,8 @@ def test_strings_without_exactly_one_at_sign_are_invalid(email):
 )
 def test_valid_email_round_trip_preserves_validity(local, domain, tld):
     email = f"{local}@{domain}.{tld}"
+    local_part, domain_part = email.split("@", 1)
+    reassembled = f"{local_part}@{domain_part}"
 
     assert validate_email(email) is True
-    assert validate_email("".join(email)) is True
+    assert validate_email(reassembled) is True

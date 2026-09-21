@@ -214,14 +214,14 @@ Explain → AI เสนอแนวทาง → ทีมตรวจสอบ
 
 ## B1. Apply — Test design plan
 
-แผนทดสอบของ `calculate_net_calories` แบ่ง input เป็น valid non-negative values และ invalid negative values ใช้ขอบเขต `0` กับค่าที่ต่ำกว่า 0 เล็กน้อย (`-0.01`) เพื่อให้เห็นจุดเปลี่ยนของเงื่อนไข การทดสอบครอบคลุมกรณีปกติ, ศูนย์, ค่าทศนิยม และ negative input ทั้งสองตำแหน่ง รายละเอียด decision table อยู่ที่ `docs/testing/lab9-test-plan.md`.
+แผนทดสอบครอบคลุม `calculate_net_calories` และ chapter exercises ที่เพิ่มใน `src/lab9_exercises.py`: `calculate_discount` แบ่ง valid/invalid partitions, boundary `0` และ `100`, และมี decision table 4 rules. `validate_email` ทดสอบ exactly-one `@`, non-empty parts, dot ใน domain และ TLD อย่างน้อย 2 ตัวอักษร. รายละเอียดอยู่ที่ `docs/testing/lab9-test-plan.md`.
 
 ## B2. Connect — Property-based testing
 
-ใช้ Hypothesis สร้างอย่างน้อย 150 ตัวอย่างต่อ property สำหรับ FizzBuzz 4 กลุ่ม: multiple of 15, multiple of 3 only, multiple of 5 only และเลขอื่นที่คืนเป็นข้อความ การทดลองกับ mutant ของเงื่อนไข `% 15` ให้ counterexample ที่ย่อลงเป็น `15`; บันทึกคำสั่งและผลอยู่ใน `docs/saboteur-journal.md`.
+ใช้ Hypothesis สร้างอย่างน้อย 150 ตัวอย่างต่อ property สำหรับ FizzBuzz 4 กลุ่ม และ 125 ตัวอย่างต่อ property สำหรับ email 3 กลุ่ม: valid constructed address, invalid number of `@`, และ valid address round trip. การทดลองกับ email mutant ที่ยอมรับ TLD 1 ตัวอักษรให้ Hypothesis ย่อ counterexample เป็น `0@0.A`; บันทึกคำสั่งและผลอยู่ใน `docs/saboteur-journal.md`.
 
 ## B3. Reflect — CI and honest limits
 
-workflow `Tests` ติดตั้ง dependency จาก `requirements-test.txt` แล้วบังคับ pytest coverage ขั้นต่ำ 90% เมื่อเปิด pull request หรือ push เข้า `main`. ผลรันปัจจุบันคือ 24 tests ผ่าน และ statement/branch coverage 100% สำหรับ module ใน scope.
+workflow `Tests` ติดตั้ง dependency จาก `requirements-test.txt` แล้วบังคับ pytest coverage ขั้นต่ำ 90% เมื่อเปิด pull request หรือ push เข้า `main`. Coverage วัดเฉพาะ `src.fizzbuzz`, `src.lab9_exercises` และ `services/stats-service/app.py`; ผลรันสุดท้ายต้องตรวจสอบโดยผู้ส่งงานก่อน submit.
 
-หลักฐาน TDD เดิมมี RED commit `8b7d2f0` แต่ commit ถัดไปรวม implementation กับ tests จึงไม่ควรอ้างว่าเป็น Red-Green-Refactor ครบวงจร ยังคงมี cycle ใหม่สำหรับ boolean input ที่แยก Red (`53bbcd2`) และ Green (`17d8d1c`) ไว้ให้ตรวจสอบได้ ส่วนการบังคับ branch protection ต้องตั้งจากหน้า GitHub โดย repository administrator.
+หลักฐาน TDD เดิมมี RED commit `8b7d2f0` แต่ commit ถัดไปรวม implementation กับ tests จึงไม่ควรอ้างว่าเป็น Red-Green-Refactor ครบวงจร. Chapter exercises มี cycle ใหม่ที่ตรวจได้: Red (`5deff1a`), Green (`fff2a57`) และ refactor (`f0b71f9`). ส่วนการบังคับ branch protection ต้องตั้งจากหน้า GitHub โดย repository administrator.

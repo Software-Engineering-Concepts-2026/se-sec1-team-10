@@ -26,4 +26,4 @@ jobs:
 
       - name: Run tests and enforce coverage
         run: |
-          python -m pytest src/tests -v --cov=src.fizzbuzz --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=90
+          python -m pytest src/tests -v --cov=src.fizzbuzz --cov=src.lab9_exercises --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=90

@@ -2,7 +2,41 @@
 
 ## Scope
 
-This plan covers the Lab 9 artefacts in this repository: `calculate_net_calories` in the Stats Service and the FizzBuzz exercise.  The lecture's separate `calculate_discount` and email-validation exercises are not present in this project and are therefore not represented as completed work here.  They remain a chapter-exercise gap if the instructor requires every standalone lecture exercise in the same repository.
+This plan covers the Lab 9 production modules in this repository: `calculate_net_calories` in the Stats Service, FizzBuzz, and the chapter exercises in `src/lab9_exercises.py`. Coverage is measured only for these production modules, never for tests or temporary mutation files.
+
+## Unit-test design: `calculate_discount`
+
+`calculate_discount(amount, percentage)` returns `amount * (100 - percentage) / 100`. `amount` must be at least `0`; `percentage` must be from `0` through `100`, inclusive. Invalid inputs raise `ValueError`.
+
+| Inputs | Equivalence partition / boundary | Expected result |
+| --- | --- | --- |
+| `100`, `0` | percentage lower boundary | `100` |
+| `100`, `100` | percentage upper boundary | `0` |
+| `0`, `25` | amount lower boundary | `0` |
+| `80`, `25` | ordinary valid partition | `60` |
+| `19.99`, `15` | fractional valid partition | `16.9915` |
+| `-0.01`, `0` | amount immediately below boundary | `ValueError` |
+| `100`, `-0.01` | percentage immediately below boundary | `ValueError` |
+| `100`, `100.01` | percentage immediately above boundary | `ValueError` |
+
+### Discount decision table
+
+| Rule | `amount < 0` | `percentage < 0` | `percentage > 100` | Action |
+| --- | --- | --- | --- | --- |
+| 1 | no | no | no | calculate discounted amount |
+| 2 | yes | either | either | raise `ValueError` |
+| 3 | no | yes | no | raise `ValueError` |
+| 4 | no | no | yes | raise `ValueError` |
+
+## Email validation examples and properties
+
+`validate_email` implements the deliberately small exercise specification: exactly one `@`; non-empty local and domain parts; a dot in the domain; and a top-level domain of at least two characters. It does not claim to implement the full email-address standard.
+
+Example tests cover valid addresses, no or multiple `@` signs, empty local/domain parts, a missing dot, and empty or one-character TLDs. Three Hypothesis properties each use 125 generated examples:
+
+1. Constructed addresses with non-empty local/domain labels and a two-or-more-character TLD are valid.
+2. Strings with anything other than exactly one `@` are invalid.
+3. A constructed valid ASCII address remains valid after its local and domain components are split and reassembled.
 
 ## Unit-test design: `calculate_net_calories`
 
@@ -53,11 +87,23 @@ This branch adds one new, honest cycle for the boolean-input contract:
 | Green | `17d8d1c` | the minimal input guard was added; the same command passed 9 tests. |
 | Refactor | current Lab 9 test/documentation commit | tests were grouped into parameterized partitions and documented without changing the resulting behavior. |
 
+The chapter exercises have their own complete, reviewable cycle:
+
+| Stage | Commit | Evidence |
+| --- | --- | --- |
+| Red | `5deff1a` | `pytest src/tests/test_lab9_chapter_exercises.py -q` failed at collection with `ModuleNotFoundError: No module named 'src.lab9_exercises'`. |
+| Green | `fff2a57` | minimal discount and email implementations made the focused suite pass: `22 passed`. |
+| Refactor | `f0b71f9` | email TLD validation was extracted into a named helper; the full suite remained green. |
+
+## Saboteur and shrinking evidence
+
+Temporary, uncommitted mutants were executed and removed before the final run. A discount mutant changed subtraction to addition, and the test for `(80, 25)` failed because it returned `100.0` rather than `60`. An email mutant accepted one-character TLDs; Hypothesis found and shrank the failing case to `0@0.A`. Neither mutant file is part of the branch.
+
 ## Local and CI command
 
 ```powershell
 python -m pip install -r requirements-test.txt
-python -m pytest src/tests -v --cov=src.fizzbuzz --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=90
+python -m pytest src/tests -v --cov=src.fizzbuzz --cov=src.lab9_exercises --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=90
 ```
 
 The GitHub Actions workflow runs the same command on pull requests and pushes to `main`. Branch protection that requires the `Tests` check is a GitHub repository setting and must be enabled by a repository administrator.
