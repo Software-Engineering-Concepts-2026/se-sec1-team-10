@@ -1,4 +1,7 @@
 def fizzbuzz(number):
+    if isinstance(number, bool) or not isinstance(number, int):
+        raise TypeError("number must be an integer")
+
     if number % 15 == 0:
         return "FizzBuzz"
 
