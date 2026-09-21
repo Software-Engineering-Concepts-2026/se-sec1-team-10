@@ -62,6 +62,23 @@ beforeEach(() => {
 });
 
 describe('food image analysis', () => {
+  it('estimates a named component, preserves requested grams, and shares the daily quota', async () => {
+    let calls = 0;
+    const fetch: typeof globalThis.fetch = async (_url, options) => {
+      calls++;
+      const sent = JSON.parse(String(options?.body));
+      expect(sent.messages.at(-1).content).toBe(JSON.stringify({ name: 'ข้าวสวย', amount: 100 }));
+      return providerResponse(validEstimate);
+    };
+    app = createApp(repository, { jwtSecret: secret, appOrigin: origin, ai: { baseUrl: 'https://provider.test/v1', apiKey: 'secret', model: 'food', fetch, dailyScanLimit: 1 } });
+    await request(app).post('/api/foods/estimate').set('Origin', origin).send({ name: 'ข้าวสวย', amount: 100 }).expect(401);
+    const auth = await signIn();
+    await request(app).post('/api/foods/estimate').set('Origin', origin).set('Cookie', auth).send({ name: 'ข้าวสวย', amount: 0 }).expect(400);
+    const response = await request(app).post('/api/foods/estimate').set('Origin', origin).set('Cookie', auth).send({ name: 'ข้าวสวย', amount: 100 }).expect(200);
+    expect(response.body.ingredient).toMatchObject({ name: 'ข้าวสวย', amount: 100, referenceAmount: 200, unit: 'g', source: 'ai-estimate' });
+    await request(app).post('/api/foods/estimate').set('Origin', origin).set('Cookie', auth).send({ name: 'ข้าวสวย', amount: 100 }).expect(429);
+    expect(calls).toBe(1);
+  });
   it('returns 503 when the optional AI service is not configured', async () => {
     const auth = await signIn();
     const response = await request(app).post('/api/meals/analyze').set('Origin', origin).set('Cookie', auth).send({ imageData });

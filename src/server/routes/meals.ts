@@ -7,6 +7,8 @@ import {
 } from "../../shared/contracts.js";
 import {
   analyzeMealImage,
+  estimateIngredient,
+  ingredientRequestSchema,
   analyzeMealRequestSchema,
   AiRequestError,
   isAiConfigured,
@@ -117,6 +119,26 @@ export function registerMealRoutes(
         return;
       }
       throw error;
+    }
+  });
+  app.post('/api/foods/estimate', requireAuth, aiLimiter, async (req, res) => {
+    const input = ingredientRequestSchema.parse(req.body);
+    if (!isAiConfigured(config.ai)) {
+      res.status(503).json({ message: 'ยังไม่ได้ตั้งค่า AI สำหรับประมาณสารอาหาร กรุณาค้นหาจากฐานข้อมูลอาหาร' });
+      return;
+    }
+    if (!(await repository.claimDailyAiScan(res.locals.user.id, now(), config.ai.dailyScanLimit ?? 50))) {
+      res.status(429).json({ message: 'ใช้โควตา AI วันนี้ครบแล้ว กรุณาลองใหม่วันพรุ่งนี้' });
+      return;
+    }
+    try {
+      res.json({ ingredient: await estimateIngredient(input, config.ai) });
+    } catch (error) {
+      if (error instanceof NotFoodError) {
+        res.status(422).json({ message: 'ไม่รู้จักส่วนประกอบนี้ กรุณาระบุชื่ออาหารและวิธีปรุงให้ชัดเจน' });
+      } else if (error instanceof AiRequestError) {
+        res.status(error.status).json({ message: 'ประมาณสารอาหารไม่สำเร็จ ข้อมูลที่กรอกยังอยู่ กรุณาลองใหม่หรือค้นหาจากฐานข้อมูล' });
+      } else throw error;
     }
   });
   app.get("/api/foods/search", requireAuth, async (req, res) => {

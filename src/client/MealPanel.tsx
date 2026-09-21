@@ -5,7 +5,7 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from "react";
-import type { MealIngredientRecord, PublicMeal } from "../shared/contracts";
+import { mealSchema, type PublicMeal } from "../shared/contracts";
 import { api, ApiError } from "./api";
 import type { FavoriteMeal } from "./FavoriteMealsPanel";
 import { rememberFavorite } from "./favorites";
@@ -13,7 +13,6 @@ import { FoodSearchPanel, type FoodSearchResult } from "./FoodSearchPanel";
 import { MealIngredientEditor } from "./MealIngredientEditor";
 import { MealList } from "./MealList";
 import {
-  emptyIngredient,
   localDate,
   mealOptions,
   type IngredientDraft,
@@ -38,9 +37,8 @@ export function MealPanel({ userId }: { userId: string }) {
   const [meals, setMeals] = useState<DailyMeals | null>(null);
   const [name, setName] = useState("");
   const [mealType, setMealType] = useState("breakfast");
-  const [ingredients, setIngredients] = useState<IngredientDraft[]>([
-    emptyIngredient(),
-  ]);
+  const [ingredients, setIngredients] = useState<IngredientDraft[]>([]);
+  const [estimatingIngredient, setEstimatingIngredient] = useState(false);
   const [imageData, setImageData] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -79,7 +77,7 @@ export function MealPanel({ userId }: { userId: string }) {
   const reset = () => {
     setName("");
     setMealType("breakfast");
-    setIngredients([emptyIngredient()]);
+    setIngredients([]);
     setImageData(null);
     setAnalysis(null);
     setFoodSource(null);
@@ -129,6 +127,11 @@ export function MealPanel({ userId }: { userId: string }) {
     setNeedsRecalculation(true);
   }
   function recalculate() {
+    const valid = mealSchema.safeParse({ name: name || 'มื้ออาหาร', mealType, activityDate: date, ingredients });
+    if (!valid.success || ingredients.some(item => Object.values(item.referenceNutrients).some(value => value === null))) {
+      setMessage({ text: 'กรุณาเพิ่มส่วนประกอบที่มีข้อมูลครบ และระบุกรัมมากกว่า 0 ก่อนคำนวณ', error: true });
+      return;
+    }
     setNeedsRecalculation(false);
     setMessage({
       text: "คำนวณสารอาหารใหม่แล้ว ตรวจสอบผลรวมก่อนบันทึก",
@@ -139,7 +142,6 @@ export function MealPanel({ userId }: { userId: string }) {
     const referenceNutrients = { caloriesKcal: food.nutrientsPer100g.caloriesKcal ?? null, carbsGrams: food.nutrientsPer100g.carbsGrams ?? null, sugarGrams: food.nutrientsPer100g.sugarGrams ?? null, proteinGrams: food.nutrientsPer100g.proteinGrams ?? null, fatGrams: food.nutrientsPer100g.fatGrams ?? null };
     setFoodSource("usda-fdc");
     setShowManualFields(true);
-    setEditingId(null);
     const next = { name: food.name.slice(0, 120), amount: quantityGrams, unit: "g" as const, referenceAmount: 100, referenceUnit: "g" as const, source: "usda-fdc" as const, referenceNutrients };
     setIngredients(current => foodTarget === null ? [...current.filter(item => item.name), next] : current.map((item, index) => index === foodTarget ? next : item));
     setFoodTarget(null);
@@ -239,6 +241,7 @@ export function MealPanel({ userId }: { userId: string }) {
   }
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy || estimatingIngredient || !ingredients.length) return;
     if (needsRecalculation) {
       setMessage({
         text: "ข้อมูลเปลี่ยนแล้ว กรุณากดคำนวณสารอาหารใหม่ก่อนบันทึก",
@@ -443,8 +446,9 @@ export function MealPanel({ userId }: { userId: string }) {
             needsRecalculation={needsRecalculation}
             onQuantityChange={changeQuantity}
             onRemove={removeIngredient}
-            onAdd={() => { setFoodTarget(null); setFoodSearchOpen(false); }}
+            onAdd={() => { setFoodTarget(null); setFoodSearchOpen(true); }}
             onAddManual={addManualIngredient}
+            onEstimating={setEstimatingIngredient}
             onRecalculate={recalculate}
           />
           {foodSearchOpen && (
@@ -458,7 +462,7 @@ export function MealPanel({ userId }: { userId: string }) {
           )}
           {(showManualFields || analysis) && (
             <div className="meal-actions">
-              <button className="primary" type="submit">
+              <button className="primary" type="submit" disabled={busy || estimatingIngredient || needsRecalculation || !ingredients.length}>
                 {busy
                   ? "กำลังบันทึก…"
                   : editingId
