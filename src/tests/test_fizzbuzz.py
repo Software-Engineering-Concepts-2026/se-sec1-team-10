@@ -1,4 +1,11 @@
 from src.fizzbuzz import fizzbuzz
+import pytest
+
+
+def test_fizzbuzz_rejects_boolean_input():
+    """Booleans are not valid FizzBuzz numbers even though Python treats them as ints."""
+    with pytest.raises(TypeError, match="integer"):
+        fizzbuzz(True)
 
 
 def test_fizzbuzz_3():
