@@ -24,3 +24,8 @@ def test_multiples_of_three_are_fizz(number):
 @pytest.mark.parametrize("number", [5, 10])
 def test_multiples_of_five_are_buzz(number):
     assert fizzbuzz_kata(number) == "Buzz"
+
+
+@pytest.mark.parametrize("number", [15, 30])
+def test_shared_multiples_are_fizzbuzz(number):
+    assert fizzbuzz_kata(number) == "FizzBuzz"
