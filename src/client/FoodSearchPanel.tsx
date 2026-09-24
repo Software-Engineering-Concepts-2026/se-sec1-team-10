@@ -17,7 +17,7 @@ export function FoodSearchPanel({ onSelect, initialAmount }: { onSelect: (food: 
   useEffect(() => setPortion(initialAmount == null ? "" : String(initialAmount)), [initialAmount]);
   async function search() {
     const trimmed = query.trim();
-    if (trimmed.length < 2 || trimmed.length > 80) { setMessage("กรุณาค้นหาด้วยชื่ออาหารอย่างน้อย 2 ตัวอักษร"); return; }
+    if (trimmed.length < 2 || trimmed.length > 80) { setMessage("กรุณาระบุชื่ออาหารระหว่าง 2 ถึง 80 ตัวอักษร"); return; }
     setBusy(true); setMessage("");
     try { const result = await api<{ foods: FoodSearchResult[] }>(`/foods/search?q=${encodeURIComponent(trimmed)}`); const found = result.foods ?? []; setFoods(found); if (!found.length) setMessage("ไม่พบอาหารจากฐานข้อมูล"); }
     catch (error) { setFoods([]); setMessage(error instanceof ApiError && error.status === 503 ? "ฐานข้อมูลอาหารยังไม่พร้อมใช้งาน กรุณาลองใหม่ภายหลังหรือวิเคราะห์รูปอาหาร" : error instanceof ApiError ? error.message : "ค้นหาอาหารไม่ได้ ลองใหม่"); }
