@@ -15,3 +15,9 @@ Verification:
 - One live university AI request for cooked rice 200g succeeded; returned reference energy was 130 kcal per 100g. This verifies connectivity and format, not nutritional accuracy.
 
 Existing legacy records with unknown gram weights remain labelled in their original serving units. No migration or conversion of unknown weights is included in this correction.
+
+## Saved meal flow check — 25 September 2026
+
+The mocked browser flow now stores meals by ID instead of replacing a single record. At 320px and 390px it verifies that reusing a favorite creates m2 at 50g and 65 kcal while the original m1 remains at 100g and 130 kcal. It then edits m2 to 150g, verifies the update targets m2 and shows 195 kcal in the daily list and history, and confirms both records retain their separate portions and totals after reload. Both mocked browser cases passed with `node_modules/.bin/playwright test e2e/ingredient-flow.spec.ts --workers=1`.
+
+This check covers the browser flow with mocked API persistence. It does not verify this flow on a real phone or against PostgreSQL; the earlier database lifecycle check did not exercise favorite selection or the two-record portion assertions.

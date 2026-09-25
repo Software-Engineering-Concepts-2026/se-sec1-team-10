@@ -2,9 +2,10 @@ import { test, expect } from '@playwright/test';
 
 for (const width of [320, 390]) test(`ingredient lifecycle at ${width}px without nested form submission`, async ({ page }) => {
   await page.setViewportSize({ width, height: 844 });
-  let saved: any = null;
+  const meals = new Map<string, any>();
   let creates = 0;
   let updates = 0;
+  const updatePaths: string[] = [];
   let fail = true;
   await page.route('**/api/**', async route => {
     const req = route.request();
@@ -16,12 +17,16 @@ for (const width of [320, 390]) test(`ingredient lifecycle at ${width}px without
       const { name, amount } = req.postDataJSON();
       return reply({ ingredient: { name, amount, unit: 'g', referenceAmount: 100, referenceUnit: 'g', source: 'ai-estimate', referenceNutrients: { caloriesKcal: 130, carbsGrams: 28, sugarGrams: 0, proteinGrams: 3, fatGrams: 0.3 } } });
     }
-    if (path === '/api/meals/daily') return reply({ meals: saved ? [saved] : [], caloriesConsumed: saved?.totalCalories ?? 0 });
-    if ((path === '/api/meals' && req.method() === 'POST') || (path === '/api/meals/m1' && req.method() === 'PUT')) {
-      req.method() === 'POST' ? creates++ : updates++;
+    if (path === '/api/meals/daily') return reply({ meals: [...meals.values()], caloriesConsumed: [...meals.values()].reduce((total, meal) => total + meal.totalCalories, 0) });
+    if (path === '/api/meals/history') return reply({ meals: [...meals.values()] });
+    if ((path === '/api/meals' && req.method() === 'POST') || (/^\/api\/meals\/m\d+$/.test(path) && req.method() === 'PUT')) {
+      if (req.method() === 'POST') creates++;
+      else { updates++; updatePaths.push(path); }
       const body = req.postDataJSON();
-      saved = { ...body, id: 'm1', totalCalories: body.ingredients.reduce((n: number, i: any) => n + i.referenceNutrients.caloriesKcal * i.amount / i.referenceAmount, 0) };
-      return reply({ meal: saved });
+      const id = req.method() === 'POST' ? `m${creates}` : path.split('/').pop()!;
+      const meal = { ...body, id, totalCalories: body.ingredients.reduce((n: number, i: any) => n + i.referenceNutrients.caloriesKcal * i.amount / i.referenceAmount, 0) };
+      meals.set(id, meal);
+      return reply({ meal });
     }
     if (path === '/api/exercises/daily') return reply({ exercises: [], caloriesConsumed: 0, caloriesBurned: 0 });
     return reply({ meals: [], points: [] });
@@ -47,11 +52,35 @@ for (const width of [320, 390]) test(`ingredient lifecycle at ${width}px without
   await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
   await expect(page.getByRole('region', { name: 'สรุปโภชนาการมื้ออาหาร' })).toContainText('130');
   await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'แก้ไข', exact: true })).toBeVisible();
+  await expect(page.locator('.meal-list article')).toHaveCount(1);
+  await expect(page.locator('.meal-list article').nth(0)).toContainText('130 kcal');
+  await expect(page.locator('.meal-list article').nth(0)).toContainText('100 ก.');
+  await expect(page.locator('.favorite-panel')).toContainText('ข้าวทดสอบ');
   await page.reload();
   await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
-  await page.getByRole('button', { name: 'แก้ไข', exact: true }).click();
+  await page.locator('.favorite-panel').getByRole('button', { name: 'ใช้รายการนี้' }).click();
   await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('100');
+  await page.getByLabel('ปริมาณส่วนประกอบ 1').fill('50');
+  await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
+  await expect(page.getByRole('region', { name: 'สรุปโภชนาการมื้ออาหาร' })).toContainText('65');
+  await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
+  await expect(page.locator('.meal-list')).toContainText('ข้าวทดสอบ');
+  await expect.poll(() => creates).toBe(2);
+  await expect(page.locator('.meal-list article')).toHaveCount(2);
+  await expect(page.locator('.meal-list article').nth(0)).toContainText('130 kcal');
+  await expect(page.locator('.meal-list article').nth(0)).toContainText('100 ก.');
+  await expect(page.locator('.meal-list article').nth(1)).toContainText('65 kcal');
+  await expect(page.locator('.meal-list article').nth(1)).toContainText('50 ก.');
+  await page.reload();
+  await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+  await page.locator('.favorite-panel').getByRole('button', { name: 'ใช้รายการนี้' }).click();
+  await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('50');
+  const secondMeal = page.locator('.meal-list article').filter({ hasText: '50 ก.' });
+  await secondMeal.getByRole('button', { name: 'แก้ไข' }).click();
+  await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('50');
+  await page.getByLabel('ปริมาณส่วนประกอบ 1').fill('150');
+  await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
+  await expect(page.getByRole('region', { name: 'สรุปโภชนาการมื้ออาหาร' })).toContainText('195');
   await page.getByRole('button', { name: 'ลบ ข้าวสวย', exact: true }).click();
   await expect(page.getByRole('button', { name: 'เพิ่มส่วนประกอบ', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'เพิ่มส่วนประกอบ', exact: true }).click();
@@ -60,8 +89,25 @@ for (const width of [320, 390]) test(`ingredient lifecycle at ${width}px without
   await page.getByRole('button', { name: 'ประมาณและเพิ่มส่วนประกอบ' }).click();
   await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
   await page.getByRole('button', { name: 'บันทึกการแก้ไข', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'แก้ไข', exact: true })).toBeVisible();
-  expect(creates).toBe(1);
+  await expect(page.locator('.meal-list article')).toHaveCount(2);
+  expect(updatePaths).toEqual(['/api/meals/m2']);
+  await expect(page.locator('.meal-list article').nth(0)).toContainText('130 kcal');
+  await expect(page.locator('.meal-list article').nth(0)).toContainText('100 ก.');
+  await expect(page.locator('.meal-list article').nth(1)).toContainText('195 kcal');
+  await expect(page.locator('.meal-list article').nth(1)).toContainText('150 ก.');
+  await page.getByRole('tab', { name: 'ประวัติ', exact: true }).click();
+  await expect(page.locator('.history-panel')).toContainText('130 kcal');
+  await expect(page.locator('.history-panel')).toContainText('195 kcal');
+  await page.reload();
+  await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+  await expect(page.locator('.meal-list article')).toHaveCount(2);
+  await expect(page.locator('.meal-list article').nth(0)).toContainText('130 kcal');
+  await expect(page.locator('.meal-list article').nth(0)).toContainText('100 ก.');
+  await expect(page.locator('.meal-list article').nth(1)).toContainText('195 kcal');
+  await expect(page.locator('.meal-list article').nth(1)).toContainText('150 ก.');
+  await page.locator('.meal-list article').nth(1).getByRole('button', { name: 'แก้ไข' }).click();
+  await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('150');
+  expect(creates).toBe(2);
   expect(updates).toBe(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
