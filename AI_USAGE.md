@@ -19,3 +19,11 @@
 ## Lab 9 follow-up (2026-09-21)
 
 AI assistance in this follow-up produced the chapter-exercise test structure, implementation draft, property-test ideas, CI coverage command, the fresh separate FizzBuzz kata, and documentation wording. The branch contains machine-run evidence for the test results stated in `docs/testing/lab9-test-plan.md` and `docs/saboteur-journal.md`. The Lab 9 reflection records technical observations from this repository and does not claim unverifiable personal actions or any human-contribution percentage.
+
+## Lab 12B safety-net follow-up (2026-09-27)
+
+**AI tool/model:** Codex, GPT-6 Luna (delegated coding agent).
+
+**Prompts used:** “make explicit AAA/docstrings/IDs reuse not duplicate”; “Write docs/safety-net.md short5headings actual table/runs honest gaps.”
+
+**AI-generated:** test-case organization, CI workflow draft, and documentation draft. **Human review:** the team should verify the behavior and edit the lesson/reflection in its own voice. Human contribution has not been independently verified, so no percentage is claimed.
