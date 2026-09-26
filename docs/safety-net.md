@@ -36,7 +36,11 @@ The focused calorie run passed 9 tests and reported 82% for the entire Stats Ser
 
 ## CI and protection evidence
 
-`.github/workflows/ci.yml` defines `lint` and `test` jobs for pull requests and pushes to `main`. Lint runs Ruff 0.16.9; tests enforce at least 90% combined statement/branch coverage across the four modules and upload `coverage.xml`. Repository settings inspection returned HTTP 404 for branch protection, the connected account lacks admin access, and the visible ruleset list was empty. These results do not confirm whether branch protection is enabled; an administrator must verify enforcement. The red-check → blocked-merge → green-check demonstration is pending that setup.
+`.github/workflows/ci.yml` defines `lint` and `test` jobs for pull requests and pushes to `main`. Lint runs Ruff 0.16.9; tests enforce at least 90% combined statement/branch coverage across the four modules and upload `coverage.xml`.
+
+On 2026-09-27, commit `73b920e` intentionally changed the expected result of `500 - 300` from `200` to `201`. [GitHub CI recorded test failure and lint success](https://github.com/Software-Engineering-Concepts-2026/se-sec1-team-10/actions/runs/36262569061). The following commit restores `200`; see [PR #58 checks](https://github.com/Software-Engineering-Concepts-2026/se-sec1-team-10/pull/58/checks) for the latest verification. No production code was changed during the experiment.
+
+The main branch API reports `protected: true`, but required status checks have `enforcement_level: off` and an empty checks list. The PR page explicitly requires one approving review. Detailed protection settings return HTTP 404 with this account. CI failure detection is demonstrated; **CI-enforced merge blocking is not yet demonstrated**. Draft state and the missing approval also block this PR and must not be presented as evidence that a failing test blocks merging. Administrator verification is needed if required checks remain unconfigured.
 
 ## Lessons (AI draft for team review)
 

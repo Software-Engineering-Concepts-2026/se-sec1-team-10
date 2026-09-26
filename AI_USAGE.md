@@ -22,8 +22,8 @@ AI assistance in this follow-up produced the chapter-exercise test structure, im
 
 ## Lab 12B safety-net follow-up (2026-09-27)
 
-**AI tool/model:** Codex, GPT-6 Luna (delegated coding agent).
+**AI tool/model:** Codex, GPT-6 Luna (delegated coding agent), with supervising Codex assistance for review and the CI experiment.
 
 **Prompts used:** “make explicit AAA/docstrings/IDs reuse not duplicate”; “Write docs/safety-net.md short5headings actual table/runs honest gaps.”
 
-**AI-generated:** test-case organization, CI workflow draft, and documentation draft. **Human review:** the team should verify the behavior and edit the lesson/reflection in its own voice. Human contribution has not been independently verified, so no percentage is claimed.
+**AI-generated:** test-case organization, CI workflow draft, and documentation draft. The supervising agent also performed the user-authorized intentional failing-test experiment and restoration, and recorded actual GitHub results. **Human review:** the team should verify the behavior and edit the lesson/reflection in its own voice. Human contribution has not been independently verified, so no percentage is claimed.

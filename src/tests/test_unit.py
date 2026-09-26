@@ -13,7 +13,7 @@ from app import calculate_net_calories
 @pytest.mark.parametrize(
     ("calories_in", "calories_out", "expected"),
     [
-        pytest.param(500, 300, 201, id="ordinary-calorie-totals"),  # Intentional Lab12 CI failure; restore to 200.
+        pytest.param(500, 300, 200, id="ordinary-calorie-totals"),
         pytest.param(125.5, 25.25, 100.25, id="fractional-calories"),
         pytest.param(0, 300, -300, id="zero-calories-in"),
         pytest.param(500, 0, 500, id="zero-calories-out"),
