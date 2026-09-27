@@ -318,6 +318,27 @@ describe('food calories', () => {
     expect(weekly.body.days).toHaveLength(7);
     expect(weekly.body.days.at(-1)).toMatchObject({ date: '2026-09-11', caloriesConsumed: 462, netCalories: 462 });
   });
+  it('uses the selected end date as the final day in the weekly summary window', async () => {
+    const auth = await signIn();
+    await request(app).post('/api/meals').set('Origin', origin).set('Cookie', auth).send({
+      ...meal,
+      activityDate: '2026-01-04',
+    }).expect(201);
+    await request(app).post('/api/meals').set('Origin', origin).set('Cookie', auth).send({
+      ...meal,
+      activityDate: '2026-01-10',
+    }).expect(201);
+
+    const weekly = await request(app).get('/api/summary/weekly?date=2026-01-10').set('Cookie', auth).expect(200);
+
+    expect(weekly.body).toMatchObject({
+      startDate: '2026-01-04',
+      endDate: '2026-01-10',
+    });
+    expect(weekly.body.days).toHaveLength(7);
+    expect(weekly.body.days[0]).toMatchObject({ date: '2026-01-04', caloriesConsumed: 462 });
+    expect(weekly.body.days.at(-1)).toMatchObject({ date: '2026-01-10', caloriesConsumed: 462, netCalories: 462 });
+  });
 });
 
 describe('dashboard performance', () => {

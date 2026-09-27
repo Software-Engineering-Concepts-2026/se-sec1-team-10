@@ -202,7 +202,8 @@
   margin-top: 28px;
 }
 .weekly-totals {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 14px;
 }
 .weekly-totals div {

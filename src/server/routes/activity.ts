@@ -6,6 +6,7 @@ import {
 import {
   calculateExerciseCalories,
   dateBounds,
+  weeklyDateWindow,
   publicExercise,
 } from "../exercise.js";
 import { calculateBmi } from "../health.js";
@@ -52,17 +53,11 @@ export function registerActivityRoutes(
   });
   app.get("/api/summary/weekly", requireAuth, async (req, res) => {
     const { date } = dailyExerciseQuerySchema.parse(req.query);
-    const { end } = dateBounds(date);
-    const start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const { start, end, selectedEnd, dates } = weeklyDateWindow(date);
     const [meals, exercises] = await Promise.all([
       repository.listMeals(res.locals.user.id, start, end),
       repository.listExercises(res.locals.user.id, start, end),
     ]);
-    const dates = Array.from({ length: 7 }, (_, index) =>
-      new Date(start.getTime() + index * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .slice(0, 10),
-    );
     const days = dates.map((day) => {
       const caloriesConsumed = meals
         .filter((meal) => meal.activityDate === day)
@@ -79,7 +74,7 @@ export function registerActivityRoutes(
     });
     res.json({
       startDate: dates[0],
-      endDate: date,
+      endDate: selectedEnd.toISOString().slice(0, 10),
       days,
       caloriesConsumed: days.reduce(
         (total, day) => total + day.caloriesConsumed,

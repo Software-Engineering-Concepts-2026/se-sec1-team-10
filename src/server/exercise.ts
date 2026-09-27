@@ -18,3 +18,13 @@ export function dateBounds(value: string) {
   const start = new Date(`${value}T00:00:00.000Z`);
   return { start, end: new Date(start.getTime() + 24 * 60 * 60 * 1000) };
 }
+
+export function weeklyDateWindow(value: string) {
+  const selectedEnd = new Date(`${value}T00:00:00.000Z`);
+  const start = new Date(selectedEnd.getTime() - 6 * 24 * 60 * 60 * 1000);
+  const end = new Date(selectedEnd.getTime() + 24 * 60 * 60 * 1000);
+  const dates = Array.from({ length: 7 }, (_, index) =>
+    new Date(start.getTime() + index * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+  );
+  return { selectedEnd, start, end, dates };
+}
