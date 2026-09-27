@@ -5,7 +5,7 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from "react";
-import type { MealIngredientRecord, PublicMeal } from "../shared/contracts";
+import { mealSchema, type PublicMeal } from "../shared/contracts";
 import { api, ApiError } from "./api";
 import type { FavoriteMeal } from "./FavoriteMealsPanel";
 import { rememberFavorite } from "./favorites";
@@ -13,13 +13,9 @@ import { FoodSearchPanel, type FoodSearchResult } from "./FoodSearchPanel";
 import { MealIngredientEditor } from "./MealIngredientEditor";
 import { MealList } from "./MealList";
 import {
-  emptyIngredient,
   localDate,
   mealOptions,
-  nutrientValues,
-  scaled,
   type IngredientDraft,
-  withQuantity,
 } from "./mealHelpers";
 
 type DailyMeals = {
@@ -30,7 +26,7 @@ type DailyMeals = {
 type Analysis = {
   name: string;
   mealType: string;
-  ingredients: Omit<IngredientDraft, "quantityGrams" | "nutrientsPer100g">[];
+  ingredients: IngredientDraft[];
   portionDescription: string;
   source: "ai-estimate";
   notes: string[];
@@ -41,9 +37,8 @@ export function MealPanel({ userId }: { userId: string }) {
   const [meals, setMeals] = useState<DailyMeals | null>(null);
   const [name, setName] = useState("");
   const [mealType, setMealType] = useState("breakfast");
-  const [ingredients, setIngredients] = useState<IngredientDraft[]>([
-    emptyIngredient(),
-  ]);
+  const [ingredients, setIngredients] = useState<IngredientDraft[]>([]);
+  const [estimatingIngredient, setEstimatingIngredient] = useState(false);
   const [imageData, setImageData] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -58,6 +53,8 @@ export function MealPanel({ userId }: { userId: string }) {
     "usda-fdc" | "ai-estimate" | null
   >(null);
   const [needsRecalculation, setNeedsRecalculation] = useState(false);
+  const [foodTarget, setFoodTarget] = useState<number | null>(null);
+  const [foodSearchOpen, setFoodSearchOpen] = useState(false);
   const cameraInput = useRef<HTMLInputElement>(null);
   const uploadInput = useRef<HTMLInputElement>(null);
 
@@ -80,7 +77,7 @@ export function MealPanel({ userId }: { userId: string }) {
   const reset = () => {
     setName("");
     setMealType("breakfast");
-    setIngredients([emptyIngredient()]);
+    setIngredients([]);
     setImageData(null);
     setAnalysis(null);
     setFoodSource(null);
@@ -97,7 +94,7 @@ export function MealPanel({ userId }: { userId: string }) {
       if (!favorite) return;
       setName(favorite.name);
       setMealType(favorite.mealType);
-      setIngredients(favorite.ingredients.map((item) => withQuantity(item)));
+      setIngredients(favorite.ingredients);
       setImageData(null);
       setAnalysis(null);
       setFoodSource(null);
@@ -117,7 +114,7 @@ export function MealPanel({ userId }: { userId: string }) {
     setIngredients((current) =>
       current.map((item, itemIndex) =>
         itemIndex === index
-          ? { ...item, quantityGrams: Math.max(0, Number(value) || 0) }
+          ? { ...item, amount: Math.max(0, Number(value) || 0) }
           : item,
       ),
     );
@@ -130,6 +127,11 @@ export function MealPanel({ userId }: { userId: string }) {
     setNeedsRecalculation(true);
   }
   function recalculate() {
+    const valid = mealSchema.safeParse({ name: name || 'มื้ออาหาร', mealType, activityDate: date, ingredients });
+    if (!valid.success || ingredients.some(item => Object.values(item.referenceNutrients).some(value => value === null))) {
+      setMessage({ text: 'กรุณาเพิ่มส่วนประกอบที่มีข้อมูลครบ และระบุกรัมมากกว่า 0 ก่อนคำนวณ', error: true });
+      return;
+    }
     setNeedsRecalculation(false);
     setMessage({
       text: "คำนวณสารอาหารใหม่แล้ว ตรวจสอบผลรวมก่อนบันทึก",
@@ -137,22 +139,21 @@ export function MealPanel({ userId }: { userId: string }) {
     });
   }
   function applyFood(food: FoodSearchResult, quantityGrams: number) {
-    const per100 = nutrientValues(food.nutrientsPer100g);
-    setName(food.name.slice(0, 120));
+    const referenceNutrients = { caloriesKcal: food.nutrientsPer100g.caloriesKcal ?? null, carbsGrams: food.nutrientsPer100g.carbsGrams ?? null, sugarGrams: food.nutrientsPer100g.sugarGrams ?? null, proteinGrams: food.nutrientsPer100g.proteinGrams ?? null, fatGrams: food.nutrientsPer100g.fatGrams ?? null };
     setFoodSource("usda-fdc");
-    setAnalysis(null);
-    setImageData(null);
     setShowManualFields(true);
-    setEditingId(null);
-    setIngredients([
-      {
-        name: food.name.slice(0, 120),
-        ...per100,
-        quantityGrams,
-        nutrientsPer100g: per100,
-      },
-    ]);
-    setNeedsRecalculation(false);
+    const next = { name: food.name.slice(0, 120), amount: quantityGrams, unit: "g" as const, referenceAmount: 100, referenceUnit: "g" as const, source: "usda-fdc" as const, referenceNutrients };
+    setIngredients(current => foodTarget === null ? [...current.filter(item => item.name), next] : current.map((item, index) => index === foodTarget ? next : item));
+    setFoodTarget(null);
+    setFoodSearchOpen(false);
+    setNeedsRecalculation(true);
+  }
+  function addManualIngredient(ingredient: IngredientDraft) {
+    setIngredients((current) => [...current.filter((item) => item.name), ingredient]);
+    setShowManualFields(true);
+    setFoodSource(null);
+    setFoodSearchOpen(false);
+    setNeedsRecalculation(true);
   }
   async function compressImage(file: File): Promise<string> {
     const source = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -218,7 +219,7 @@ export function MealPanel({ userId }: { userId: string }) {
       setName(next.name);
       setMealType(next.mealType);
       setFoodSource("ai-estimate");
-      setIngredients(next.ingredients.map((item) => withQuantity(item)));
+      setIngredients(next.ingredients);
       setAnalysis(next);
       setShowManualFields(true);
       setNeedsRecalculation(false);
@@ -240,6 +241,7 @@ export function MealPanel({ userId }: { userId: string }) {
   }
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy || estimatingIngredient || !ingredients.length) return;
     if (needsRecalculation) {
       setMessage({
         text: "ข้อมูลเปลี่ยนแล้ว กรุณากดคำนวณสารอาหารใหม่ก่อนบันทึก",
@@ -254,10 +256,7 @@ export function MealPanel({ userId }: { userId: string }) {
       mealType,
       activityDate: date,
       imageData,
-      ingredients: ingredients.map((item) => ({
-        name: item.name,
-        ...scaled(item),
-      })),
+      ingredients,
     };
     try {
       const result = await api<{ meal: PublicMeal }>(
@@ -307,7 +306,7 @@ export function MealPanel({ userId }: { userId: string }) {
     setName(meal.name);
     setMealType(meal.mealType);
     setIngredients(
-      meal.ingredients.map(({ id: _id, ...item }) => withQuantity(item)),
+      meal.ingredients.map(({ id: _id, caloriesKcal: _calories, carbsGrams: _carbs, sugarGrams: _sugar, proteinGrams: _protein, fatGrams: _fat, ...item }) => item),
     );
     setImageData(meal.imageData ?? null);
     setAnalysis(null);
@@ -407,10 +406,6 @@ export function MealPanel({ userId }: { userId: string }) {
               </div>
             )}
           </div>
-          <details className="food-search-details">
-            <summary>ค้นหาจากฐานข้อมูลอาหาร</summary>
-            <FoodSearchPanel onSelect={applyFood} />
-          </details>
           <div className="meal-top-row">
             <label className="compact-field">
               มื้ออาหาร
@@ -447,17 +442,27 @@ export function MealPanel({ userId }: { userId: string }) {
           )}
           <MealIngredientEditor
             ingredients={ingredients}
-            showManualFields={showManualFields}
             analysis={analysis}
-            foodSource={foodSource}
             needsRecalculation={needsRecalculation}
             onQuantityChange={changeQuantity}
             onRemove={removeIngredient}
+            onAdd={() => { setFoodTarget(null); setFoodSearchOpen(true); }}
+            onAddManual={addManualIngredient}
+            onEstimating={setEstimatingIngredient}
             onRecalculate={recalculate}
           />
+          {foodSearchOpen && (
+            <section className="food-search-inline" aria-labelledby="add-food-title">
+              <div className="food-search-inline-heading">
+                <h3 id="add-food-title">เพิ่มส่วนประกอบจากฐานข้อมูล</h3>
+                <button className="text-button" type="button" onClick={() => setFoodSearchOpen(false)}>ปิด</button>
+              </div>
+              <FoodSearchPanel onSelect={applyFood} />
+            </section>
+          )}
           {(showManualFields || analysis) && (
             <div className="meal-actions">
-              <button className="primary" type="submit">
+              <button className="primary" type="submit" disabled={busy || estimatingIngredient || needsRecalculation || !ingredients.length}>
                 {busy
                   ? "กำลังบันทึก…"
                   : editingId

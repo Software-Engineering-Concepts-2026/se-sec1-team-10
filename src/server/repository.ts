@@ -1,5 +1,6 @@
 import { Prisma, type PrismaClient, type User } from '@prisma/client';
 import type { ExerciseInput, ExerciseRecord, GoalInput, MealInput, MealRecord, ProfileInput } from '../shared/contracts.js';
+import { calculatedIngredient, scaleReferenceNutrients } from './meal.js';
 
 export interface Repository {
   findUserByEmail(email: string): Promise<User | null>;
@@ -34,8 +35,8 @@ export function prismaRepository(db: PrismaClient): Repository {
   const mealRecord = (record: {
     id: string; userId: string; name: string; mealType: string; imageData: string | null; totalCalories: number;
     activityDate: Date; createdAt: Date; updatedAt: Date;
-    ingredients: { id: string; name: string; carbsGrams: number; sugarGrams: number; proteinGrams: number; fatGrams: number }[];
-  }): MealRecord => ({ ...record, mealType: record.mealType as MealRecord['mealType'], activityDate: record.activityDate.toISOString().slice(0, 10) });
+    ingredients: { id: string; mealLogId: string; name: string; carbsGrams: number; sugarGrams: number; proteinGrams: number; fatGrams: number; amount: number; unit: string; referenceAmount: number; referenceUnit: string; source: string; referenceCaloriesKcal: number | null; referenceCarbsGrams: number | null; referenceSugarGrams: number | null; referenceProteinGrams: number | null; referenceFatGrams: number | null }[];
+  }): MealRecord => ({ ...record, mealType: record.mealType as MealRecord['mealType'], activityDate: record.activityDate.toISOString().slice(0, 10), ingredients: record.ingredients.map(({ mealLogId: _mealLogId, referenceCaloriesKcal, referenceCarbsGrams, referenceSugarGrams, referenceProteinGrams, referenceFatGrams, unit, referenceUnit, source, ...ingredient }) => ({ ...ingredient, ...scaleReferenceNutrients({ caloriesKcal: referenceCaloriesKcal, carbsGrams: referenceCarbsGrams, sugarGrams: referenceSugarGrams, proteinGrams: referenceProteinGrams, fatGrams: referenceFatGrams }, ingredient.amount, ingredient.referenceAmount), unit: unit as 'g' | 'serving', referenceUnit: referenceUnit as 'g' | 'serving', source: source as 'usda-fdc' | 'ai-estimate' | 'legacy' | 'manual', referenceNutrients: { caloriesKcal: referenceCaloriesKcal, carbsGrams: referenceCarbsGrams, sugarGrams: referenceSugarGrams, proteinGrams: referenceProteinGrams, fatGrams: referenceFatGrams } })) });
   return {
     findUserByEmail: email => db.user.findUnique({ where: { email } }),
     findUserById: id => db.user.findUnique({ where: { id } }),
@@ -99,7 +100,7 @@ export function prismaRepository(db: PrismaClient): Repository {
       const record = await db.mealLog.create({ data: {
         userId, name: data.name, mealType: data.mealType, imageData: data.imageData ?? null, totalCalories,
         activityDate: new Date(`${data.activityDate}T00:00:00.000Z`),
-        ingredients: { create: data.ingredients },
+        ingredients: { create: data.ingredients.map(input => { const calculated = calculatedIngredient(input); return { name: input.name, amount: input.amount, unit: input.unit, referenceAmount: input.referenceAmount, referenceUnit: input.referenceUnit, source: input.source, carbsGrams: calculated.carbsGrams ?? 0, sugarGrams: calculated.sugarGrams ?? 0, proteinGrams: calculated.proteinGrams ?? 0, fatGrams: calculated.fatGrams ?? 0, referenceCaloriesKcal: input.referenceNutrients.caloriesKcal, referenceCarbsGrams: input.referenceNutrients.carbsGrams, referenceSugarGrams: input.referenceNutrients.sugarGrams, referenceProteinGrams: input.referenceNutrients.proteinGrams, referenceFatGrams: input.referenceNutrients.fatGrams }; }) },
       }, include: { ingredients: true } });
       return mealRecord(record);
     },
@@ -110,7 +111,7 @@ export function prismaRepository(db: PrismaClient): Repository {
       } });
       if (result.count !== 1) return null;
       await db.mealIngredient.deleteMany({ where: { mealLogId: id } });
-      await db.mealIngredient.createMany({ data: data.ingredients.map(ingredient => ({ mealLogId: id, ...ingredient })) });
+      await db.mealIngredient.createMany({ data: data.ingredients.map(input => { const calculated = calculatedIngredient(input); return { mealLogId: id, name: input.name, amount: input.amount, unit: input.unit, referenceAmount: input.referenceAmount, referenceUnit: input.referenceUnit, source: input.source, carbsGrams: calculated.carbsGrams ?? 0, sugarGrams: calculated.sugarGrams ?? 0, proteinGrams: calculated.proteinGrams ?? 0, fatGrams: calculated.fatGrams ?? 0, referenceCaloriesKcal: input.referenceNutrients.caloriesKcal, referenceCarbsGrams: input.referenceNutrients.carbsGrams, referenceSugarGrams: input.referenceNutrients.sugarGrams, referenceProteinGrams: input.referenceNutrients.proteinGrams, referenceFatGrams: input.referenceNutrients.fatGrams }; }) });
       const record = await db.mealLog.findUnique({ where: { id }, include: { ingredients: true } });
       return record ? mealRecord(record) : null;
     },
