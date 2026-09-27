@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useState, type FormEvent } from 'react';
 import type { PublicUser } from '../shared/contracts';
-import { api, ApiError } from './api';
+import { ApiError } from './api';
+import { accountApi } from './Account';
+import { AccountPanel } from './AccountPanel';
 import { DashboardPanel } from './DashboardPanel';
 import { ReminderObserver } from './reminders';
 const ExercisePanel = lazy(() => import('./ExercisePanel').then(module => ({ default: module.ExercisePanel })));
@@ -61,7 +63,7 @@ export function App() {
 
   async function loadSession() {
     setLoading(true); setBootError(false);
-    try { setUser((await api<{ user: PublicUser }>('/auth/me')).user); }
+    try { setUser((await accountApi.current()).user); }
     catch (error) {
       if (!(error instanceof ApiError && error.status === 401)) setBootError(true);
     } finally { setLoading(false); }
@@ -78,34 +80,20 @@ export function App() {
     }
     try {
       if (mode === 'register') {
-        await api('/auth/register', { email: values.email, password: values.password, displayName: values.displayName });
+        await accountApi.register({ email: String(values.email), password: String(values.password), displayName: String(values.displayName) });
         setMode('login'); form.reset();
         setFeedback({ error: false, message: 'สมัครสมาชิกสำเร็จ เข้าสู่ระบบด้วยอีเมลและรหัสผ่านของคุณได้เลย' });
       } else {
-        setUser((await api<{ user: PublicUser }>('/auth/login', { email: values.email, password: values.password })).user);
+        setUser((await accountApi.login({ email: String(values.email), password: String(values.password) })).user);
         setFeedback(null);
       }
     } catch (error) { setFeedback(asFeedback(error)); }
     finally { setBusy(false); }
   }
 
-  async function saveProfile(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setBusy(true); setFeedback(null);
-    const values = Object.fromEntries(new FormData(event.currentTarget));
-    try {
-      const result = await api<{ user: PublicUser }>('/profile', {
-        displayName: values.displayName, age: Number(values.age),
-        weightKg: Number(values.weightKg), heightCm: Number(values.heightCm),
-      }, 'PUT');
-      setUser(result.user); window.dispatchEvent(new Event('profile-updated')); setFeedback({ error: false, message: 'บันทึกข้อมูลส่วนตัวเรียบร้อยแล้ว' });
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 401) setUser(null);
-      setFeedback(asFeedback(error));
-    } finally { setBusy(false); }
-  }
   async function logout() {
     setBusy(true);
-    try { await api('/auth/logout', {}); setUser(null); setMode('login'); setFeedback(null); setMobileSection('today'); setVisitedSections(new Set(['today'])); setSettingsView(null); }
+    try { await accountApi.logout(); setUser(null); setMode('login'); setFeedback(null); setMobileSection('today'); setVisitedSections(new Set(['today'])); setSettingsView(null); }
     catch (error) { setFeedback(asFeedback(error)); }
     finally { setBusy(false); }
   }
@@ -163,13 +151,7 @@ export function App() {
               <button type="button" className="secondary" onClick={() => setSettingsView(current => current === 'goals' ? null : 'goals')}>เป้าหมายสุขภาพ <span>›</span></button>
               <button type="button" className="secondary" onClick={() => setSettingsView(current => current === 'reminders' ? null : 'reminders')}>แจ้งเตือนมื้ออาหาร <span>›</span></button>
             </div>
-            {settingsView === 'profile' && <div className="settings-detail"><h3>ข้อมูลส่วนตัว</h3><p className="muted">กรอกข้อมูลให้ครบ แล้วบันทึกเมื่อพร้อม</p><FeedbackMessage value={feedback} />
-            <form onSubmit={saveProfile}><fieldset disabled={busy}>
-              <Field name="displayName" label="ชื่อที่ใช้แสดง" defaultValue={user.displayName} maxLength={80} autoComplete="nickname" error={feedback?.fields?.displayName} />
-              <Field name="age" label="อายุ (ปี)" type="number" min={1} max={120} step="1" defaultValue={user.age ?? ''} error={feedback?.fields?.age} />
-              <div className="field-row"><Field name="weightKg" label="น้ำหนัก (กก.)" type="number" min={0.1} max={500} step="0.1" defaultValue={user.weightKg ?? ''} error={feedback?.fields?.weightKg} /><Field name="heightCm" label="ส่วนสูง (ซม.)" type="number" min={30} max={250} step="0.1" defaultValue={user.heightCm ?? ''} error={feedback?.fields?.heightCm} /></div>
-              <button className="primary" type="submit">{busy ? 'กำลังบันทึก…' : 'บันทึกข้อมูลส่วนตัว →'}</button>
-            </fieldset></form></div>}
+            {settingsView === 'profile' && <div className="settings-detail"><AccountPanel user={user} onSaved={setUser} onSessionExpired={() => setUser(null)} /></div>}
             {settingsView === 'goals' && <div className="settings-detail"><GoalPanel user={user} onSaved={setUser} /></div>}
             {settingsView === 'reminders' && <div className="settings-detail"><ReminderPanel userId={user.id} /></div>}
           </section>
