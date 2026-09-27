@@ -66,6 +66,44 @@ async function login(page: Page) {
 }
 
 test.describe('mobile navigation and food logging', () => {
+  test('keeps logout disabled until a profile save completes', async ({ page }) => {
+    await mockApi(page);
+    let releaseSave!: () => void;
+    const saveGate = new Promise<void>(resolve => { releaseSave = resolve; });
+    await page.route('**/api/profile', async route => {
+      await saveGate;
+      await route.fulfill({ json: { user } });
+    });
+    await login(page);
+    await page.getByRole('button', { name: 'บัญชี', exact: true }).click();
+    await page.getByRole('button', { name: 'ข้อมูลส่วนตัว' }).click();
+    const logout = page.getByRole('button', { name: 'ออกจากระบบ ↗' });
+    try {
+      await page.getByRole('button', { name: 'บันทึกข้อมูลส่วนตัว →' }).click();
+      await expect(page.getByRole('button', { name: 'กำลังบันทึก…' })).toBeDisabled();
+      await expect(logout).toBeDisabled();
+    } finally {
+      releaseSave();
+    }
+    await expect(page.getByText('บันทึกข้อมูลส่วนตัวเรียบร้อยแล้ว')).toBeVisible();
+    await expect(logout).toBeEnabled();
+    await logout.click();
+    await expect(page.getByRole('heading', { name: 'ยินดีต้อนรับกลับมา', exact: true })).toBeVisible();
+  });
+
+  test('opens account profile details only when requested', async ({ page }) => {
+    await mockApi(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await login(page);
+    await page.getByRole('button', { name: 'บัญชี', exact: true }).click();
+
+    await expect(page.getByText('ข้อมูลล่าสุด', { exact: true })).not.toBeVisible();
+    await page.getByRole('button', { name: 'ดูข้อมูลโปรไฟล์', exact: true }).click();
+    await expect(page.getByText('ข้อมูลล่าสุด', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'ซ่อนข้อมูลโปรไฟล์', exact: true }).click();
+    await expect(page.getByText('ข้อมูลล่าสุด', { exact: true })).not.toBeVisible();
+  });
+
   test('opts into account-scoped reminders and delivers a due notification once', async ({ page }) => {
     await page.addInitScript(() => {
       const calls: unknown[] = [];

@@ -94,6 +94,12 @@ Key architectural decisions and diagrams are documented in the `/docs/architectu
 - **[C4 Models & Tech Stack](./docs/architecture/README.md)**
 - **[Architectural Decision Records (ADRs)](./docs/architecture/adr/)**
 
+## 👩‍💻 คู่มือสำหรับสมาชิกทีม
+
+เริ่มอ่าน [คู่มือเริ่มพัฒนา LifeBalance สำหรับทีม](./docs/team-development-guide.md) เพื่อดูตำแหน่งของโค้ด หน้าจอที่มีอยู่ วิธีเปิดระบบ และเช็กลิสต์ก่อนส่งงาน
+
+ดู [แผนแบ่งงานสามคนและจุดที่ควรแก้ก่อน](./docs/team-work-allocation.md) สำหรับขอบเขตไฟล์ เกณฑ์ส่งงาน และข้อเสนอการใช้ branch ส่วนตัว
+
 ## 👥 Requirements
 
 User personas and key scenarios that drive our development are located in the `/docs/requirements` directory.

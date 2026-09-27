@@ -1,61 +1,489 @@
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
-import type { MealIngredientRecord, PublicMeal } from '../shared/contracts';
-import { api, ApiError } from './api';
-import type { FavoriteMeal } from './FavoriteMealsPanel';
-import { rememberFavorite } from './favorites';
-import { FoodSearchPanel, type FoodSearchResult } from './FoodSearchPanel';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
+import { mealSchema, type PublicMeal } from "../shared/contracts";
+import { api, ApiError } from "./api";
+import type { FavoriteMeal } from "./FavoriteMealsPanel";
+import { rememberFavorite } from "./favorites";
+import { FoodSearchPanel, type FoodSearchResult } from "./FoodSearchPanel";
+import { MealIngredientEditor } from "./MealIngredientEditor";
+import { MealList } from "./MealList";
+import {
+  localDate,
+  mealOptions,
+  type IngredientDraft,
+} from "./mealHelpers";
 
-type Nutrients = Pick<MealIngredientRecord, 'carbsGrams' | 'sugarGrams' | 'proteinGrams' | 'fatGrams'>;
-type IngredientDraft = Omit<MealIngredientRecord, 'id'> & { quantityGrams: number; nutrientsPer100g: Nutrients };
-type DailyMeals = { date: string; meals: PublicMeal[]; caloriesConsumed: number };
-type Analysis = { name: string; mealType: string; ingredients: Omit<IngredientDraft, 'quantityGrams' | 'nutrientsPer100g'>[]; portionDescription: string; source: 'ai-estimate'; notes: string[] };
-
-const mealOptions = [{ id: 'breakfast', label: 'อาหารเช้า' }, { id: 'lunch', label: 'อาหารกลางวัน' }, { id: 'dinner', label: 'อาหารเย็น' }, { id: 'snack', label: 'ของว่าง' }] as const;
-const localDate = () => new Date().toISOString().slice(0, 10);
-const nutrientValues = (item: { carbsGrams?: number | null; sugarGrams?: number | null; proteinGrams?: number | null; fatGrams?: number | null }): Nutrients => ({ carbsGrams: Number(item.carbsGrams) || 0, sugarGrams: Number(item.sugarGrams) || 0, proteinGrams: Number(item.proteinGrams) || 0, fatGrams: Number(item.fatGrams) || 0 });
-const withQuantity = (item: Omit<IngredientDraft, 'quantityGrams' | 'nutrientsPer100g'>, quantityGrams = 100): IngredientDraft => ({ ...item, ...nutrientValues(item), quantityGrams, nutrientsPer100g: nutrientValues(item) });
-const scaled = (item: IngredientDraft): Nutrients => {
-  const factor = Math.max(0, Number(item.quantityGrams) || 0) / 100;
-  return Object.fromEntries(Object.entries(item.nutrientsPer100g).map(([key, value]) => [key, Math.round(Number(value) * factor * 10) / 10])) as Nutrients;
+type DailyMeals = {
+  date: string;
+  meals: PublicMeal[];
+  caloriesConsumed: number;
 };
-const emptyIngredient = () => withQuantity({ name: '', carbsGrams: 0, sugarGrams: 0, proteinGrams: 0, fatGrams: 0 });
-const calories = (items: IngredientDraft[]) => Math.round(items.reduce((total, item) => { const value = scaled(item); return total + value.carbsGrams * 4 + value.proteinGrams * 4 + value.fatGrams * 9; }, 0));
+type Analysis = {
+  name: string;
+  mealType: string;
+  ingredients: IngredientDraft[];
+  portionDescription: string;
+  source: "ai-estimate";
+  notes: string[];
+};
 
 export function MealPanel({ userId }: { userId: string }) {
   const [date, setDate] = useState(localDate);
   const [meals, setMeals] = useState<DailyMeals | null>(null);
-  const [name, setName] = useState('');
-  const [mealType, setMealType] = useState('breakfast');
-  const [ingredients, setIngredients] = useState<IngredientDraft[]>([emptyIngredient()]);
+  const [name, setName] = useState("");
+  const [mealType, setMealType] = useState("breakfast");
+  const [ingredients, setIngredients] = useState<IngredientDraft[]>([]);
+  const [estimatingIngredient, setEstimatingIngredient] = useState(false);
   const [imageData, setImageData] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
+  const [message, setMessage] = useState<{
+    text: string;
+    error: boolean;
+  } | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [showManualFields, setShowManualFields] = useState(false);
-  const [foodSource, setFoodSource] = useState<'usda-fdc' | 'ai-estimate' | null>(null);
+  const [foodSource, setFoodSource] = useState<
+    "usda-fdc" | "ai-estimate" | null
+  >(null);
   const [needsRecalculation, setNeedsRecalculation] = useState(false);
+  const [foodTarget, setFoodTarget] = useState<number | null>(null);
+  const [foodSearchOpen, setFoodSearchOpen] = useState(false);
   const cameraInput = useRef<HTMLInputElement>(null);
   const uploadInput = useRef<HTMLInputElement>(null);
 
-  async function load() { try { setMeals(await api<DailyMeals>(`/meals/daily?date=${encodeURIComponent(date)}`)); } catch (error) { setMessage({ text: error instanceof ApiError ? error.message : 'โหลดรายการอาหารไม่ได้', error: true }); } }
-  useEffect(() => { void load(); }, [date]);
-  const reset = () => { setName(''); setMealType('breakfast'); setIngredients([emptyIngredient()]); setImageData(null); setAnalysis(null); setFoodSource(null); setShowManualFields(false); setEditingId(null); setNeedsRecalculation(false); [cameraInput.current, uploadInput.current].forEach(input => { if (input) input.value = ''; }); };
+  async function load() {
+    try {
+      setMeals(
+        await api<DailyMeals>(`/meals/daily?date=${encodeURIComponent(date)}`),
+      );
+    } catch (error) {
+      setMessage({
+        text:
+          error instanceof ApiError ? error.message : "โหลดรายการอาหารไม่ได้",
+        error: true,
+      });
+    }
+  }
   useEffect(() => {
-    const selectFavorite = (event: Event) => { const favorite = (event as CustomEvent<FavoriteMeal>).detail; if (!favorite) return; setName(favorite.name); setMealType(favorite.mealType); setIngredients(favorite.ingredients.map(item => withQuantity(item))); setImageData(null); setAnalysis(null); setFoodSource(null); setShowManualFields(true); setEditingId(null); setNeedsRecalculation(false); setMessage({ text: `เติมข้อมูล ${favorite.name} แล้ว ตรวจสอบปริมาณก่อนบันทึกได้เลย`, error: false }); };
-    window.addEventListener('favorite-selected', selectFavorite); return () => window.removeEventListener('favorite-selected', selectFavorite);
+    void load();
+  }, [date]);
+  const reset = () => {
+    setName("");
+    setMealType("breakfast");
+    setIngredients([]);
+    setImageData(null);
+    setAnalysis(null);
+    setFoodSource(null);
+    setShowManualFields(false);
+    setEditingId(null);
+    setNeedsRecalculation(false);
+    [cameraInput.current, uploadInput.current].forEach((input) => {
+      if (input) input.value = "";
+    });
+  };
+  useEffect(() => {
+    const selectFavorite = (event: Event) => {
+      const favorite = (event as CustomEvent<FavoriteMeal>).detail;
+      if (!favorite) return;
+      setName(favorite.name);
+      setMealType(favorite.mealType);
+      setIngredients(favorite.ingredients);
+      setImageData(null);
+      setAnalysis(null);
+      setFoodSource(null);
+      setShowManualFields(true);
+      setEditingId(null);
+      setNeedsRecalculation(false);
+      setMessage({
+        text: `เติมข้อมูล ${favorite.name} แล้ว ตรวจสอบปริมาณก่อนบันทึกได้เลย`,
+        error: false,
+      });
+    };
+    window.addEventListener("favorite-selected", selectFavorite);
+    return () =>
+      window.removeEventListener("favorite-selected", selectFavorite);
   }, []);
-  function changeQuantity(index: number, value: string) { setIngredients(current => current.map((item, itemIndex) => itemIndex === index ? { ...item, quantityGrams: Math.max(0, Number(value) || 0) } : item)); setNeedsRecalculation(true); }
-  function removeIngredient(index: number) { setIngredients(current => current.filter((_, itemIndex) => itemIndex !== index)); setNeedsRecalculation(true); }
-  function recalculate() { setNeedsRecalculation(false); setMessage({ text: 'คำนวณสารอาหารใหม่แล้ว ตรวจสอบผลรวมก่อนบันทึก', error: false }); }
-  function applyFood(food: FoodSearchResult, quantityGrams: number) { const per100 = nutrientValues(food.nutrientsPer100g); setName(food.name.slice(0, 120)); setFoodSource('usda-fdc'); setAnalysis(null); setImageData(null); setShowManualFields(true); setEditingId(null); setIngredients([{ name: food.name.slice(0, 120), ...per100, quantityGrams, nutrientsPer100g: per100 }]); setNeedsRecalculation(false); }
-  async function compressImage(file: File): Promise<string> { const source = await new Promise<HTMLImageElement>((resolve, reject) => { const image = new Image(); image.onload = () => resolve(image); image.onerror = () => reject(new Error('อ่านรูปไม่ได้')); image.src = URL.createObjectURL(file); }); const scale = Math.min(1, 768 / Math.max(source.naturalWidth, source.naturalHeight)); const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(source.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(source.naturalHeight * scale)); const context = canvas.getContext('2d'); if (!context) throw new Error('ไม่สามารถเตรียมรูปได้'); context.drawImage(source, 0, 0, canvas.width, canvas.height); URL.revokeObjectURL(source.src); let quality = .82; let result = canvas.toDataURL('image/jpeg', quality); while (result.length * .75 > 200_000 && quality > .42) { quality -= .08; result = canvas.toDataURL('image/jpeg', quality); } if (result.length * .75 > 200_000) throw new Error('รูปนี้ยังใหญ่เกินไป ลองเลือกภาพที่เล็กลง'); return result; }
-  async function chooseImage(event: ChangeEvent<HTMLInputElement>) { const file = event.target.files?.[0]; if (!file) return; if (!file.type.startsWith('image/')) { setMessage({ text: 'เลือกรูปภาพอาหารที่ถูกต้อง', error: true }); return; } try { setImageData(await compressImage(file)); setAnalysis(null); setFoodSource(null); setShowManualFields(false); setNeedsRecalculation(false); setMessage({ text: 'เตรียมรูปแล้ว กดวิเคราะห์เพื่อรับค่าประมาณ', error: false }); } catch (error) { setMessage({ text: error instanceof Error ? error.message : 'เตรียมรูปไม่ได้', error: true }); } }
-  async function analyzeImage() { if (!imageData || analyzing) return; setAnalyzing(true); setMessage(null); try { const result = await api<{ analysis: Analysis }>('/meals/analyze', { imageData }); const next = result.analysis; setName(next.name); setMealType(next.mealType); setFoodSource('ai-estimate'); setIngredients(next.ingredients.map(item => withQuantity(item))); setAnalysis(next); setShowManualFields(true); setNeedsRecalculation(false); setMessage({ text: 'วิเคราะห์แล้ว ปรับปริมาณหรือลบส่วนประกอบก่อนบันทึกได้', error: false }); } catch (error) { setMessage({ text: error instanceof ApiError ? `${error.message} คุณยังกรอกข้อมูลเองแล้วบันทึกได้` : 'วิเคราะห์รูปไม่ได้ คุณยังกรอกข้อมูลเองแล้วบันทึกได้', error: true }); } finally { setAnalyzing(false); } }
-  async function save(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (needsRecalculation) { setMessage({ text: 'ข้อมูลเปลี่ยนแล้ว กรุณากดคำนวณสารอาหารใหม่ก่อนบันทึก', error: true }); return; } setBusy(true); setMessage(null); const body = { name, mealType, activityDate: date, imageData, ingredients: ingredients.map(item => ({ name: item.name, ...scaled(item) })) }; try { const result = await api<{ meal: PublicMeal }>(editingId ? `/meals/${editingId}` : '/meals', body, editingId ? 'PUT' : 'POST'); rememberFavorite(userId, { name: result.meal.name, mealType: result.meal.mealType as FavoriteMeal['mealType'], ingredients: body.ingredients }); setMessage({ text: editingId ? 'แก้ไขอาหารแล้ว' : 'บันทึกอาหารแล้ว', error: false }); reset(); await load(); window.dispatchEvent(new Event('daily-calories-updated')); } catch (error) { setMessage({ text: error instanceof ApiError ? error.message : 'บันทึกอาหารไม่ได้', error: true }); } finally { setBusy(false); } }
-  async function remove(id: string) { setBusy(true); try { await api(`/meals/${id}`, {}, 'DELETE'); setMessage({ text: 'ลบรายการอาหารแล้ว', error: false }); await load(); window.dispatchEvent(new Event('daily-calories-updated')); } catch (error) { setMessage({ text: error instanceof ApiError ? error.message : 'ลบรายการอาหารไม่ได้', error: true }); } finally { setBusy(false); } }
-  function edit(meal: PublicMeal) { setEditingId(meal.id); setName(meal.name); setMealType(meal.mealType); setIngredients(meal.ingredients.map(({ id: _id, ...item }) => withQuantity(item))); setImageData(meal.imageData ?? null); setAnalysis(null); setFoodSource(null); setShowManualFields(true); setNeedsRecalculation(false); setMessage(null); }
-  const previewCalories = calories(ingredients);
-  return <section className="card meal-panel" aria-labelledby="meal-title"><div className="exercise-heading"><div><span className="eyebrow">DAILY NUTRITION</span><h2 id="meal-title">บันทึกอาหาร</h2><p className="muted">เพิ่มจากรูปหรือฐานข้อมูล แล้วตรวจปริมาณก่อนบันทึก</p></div><label className="compact-field">วันที่<input type="date" value={date} onChange={event => setDate(event.target.value)} /></label></div>{message && <div className={`feedback ${message.error ? 'error' : 'success'}`} role={message.error ? 'alert' : 'status'}>{message.text}</div>}<form className="meal-form" onSubmit={save}><fieldset disabled={busy || analyzing}><div className="image-picker"><input ref={cameraInput} id="meal-camera" type="file" accept="image/*" capture="environment" onChange={chooseImage} /><input ref={uploadInput} id="meal-upload" type="file" accept="image/*" onChange={chooseImage} />{imageData ? <img src={imageData} alt="ตัวอย่างรูปอาหาร" /> : <div className="image-choice"><strong>เพิ่มรูปอาหาร</strong><span>ถ่ายรูปใหม่หรือเลือกจากอัลบั้ม</span><div><button className="secondary" type="button" onClick={() => cameraInput.current?.click()}>ถ่ายรูป</button><button className="secondary" type="button" onClick={() => uploadInput.current?.click()}>อัลบั้ม</button></div></div>}{imageData && <div className="image-actions"><button className="secondary" type="button" onClick={() => void analyzeImage()}>{analyzing ? 'กำลังวิเคราะห์…' : 'วิเคราะห์รูป'}</button><button className="text-button" type="button" onClick={() => { setImageData(null); setAnalysis(null); }}>ลบรูป</button></div>}</div><details className="food-search-details"><summary>ค้นหาจากฐานข้อมูลอาหาร</summary><FoodSearchPanel onSelect={applyFood} /></details><div className="meal-top-row"><label className="compact-field">มื้ออาหาร<select value={mealType} onChange={event => setMealType(event.target.value)}>{mealOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label><label className="compact-field meal-name">ชื่ออาหาร<input value={name} maxLength={120} placeholder="เช่น ข้าวมันไก่" onChange={event => setName(event.target.value)} required /></label></div>{!showManualFields && !analysis && <button className="secondary manual-entry-button" type="button" onClick={() => setShowManualFields(true)}>เพิ่มรายการเอง</button>}{analysis && <div className="analysis-note" role="status"><strong>ค่าประมาณจาก AI</strong><span>{analysis.portionDescription}</span>{analysis.notes.map(note => <small key={note}>{note}</small>)}<em>ลบรายการที่ไม่ตรงและปรับปริมาณก่อนบันทึก</em></div>}{foodSource === 'usda-fdc' && <div className="source-note" role="status"><strong>อ้างอิง USDA FoodData Central</strong><span>ปริมาณและผลรวมคำนวณจากข้อมูลต่อ 100 กรัม</span></div>}{(showManualFields || analysis) && <><div className="nutrient-heading"><h3>ส่วนประกอบ</h3><span>พลังงานรวม <strong>{previewCalories} kcal</strong></span></div><p className="nutrient-note">ปรับปริมาณหรือลบส่วนประกอบได้ ระบบใช้ค่าสารอาหารตั้งต้นต่อ 100 กรัมในการคำนวณ</p>{ingredients.map((ingredient, index) => { const value = scaled(ingredient); return <div className="ingredient-row portion-row" key={index}><strong>{ingredient.name || `ส่วนประกอบ ${index + 1}`}</strong><label>ปริมาณ (ก.)<input aria-label={`ปริมาณส่วนประกอบ ${index + 1}`} type="number" min="0" max="10000" step="1" value={ingredient.quantityGrams} onChange={event => changeQuantity(index, event.target.value)} required /></label><span>C {value.carbsGrams}g · P {value.proteinGrams}g · F {value.fatGrams}g</span><button className="remove-ingredient" type="button" onClick={() => removeIngredient(index)} disabled={ingredients.length === 1}>ลบ</button></div>; })}{showManualFields && !analysis && <p className="empty-state">รายการที่กรอกเองเริ่มต้นที่ 0 สารอาหาร แนะนำให้ค้นหาจากฐานข้อมูลหรือวิเคราะห์รูปเพื่อให้มีค่าตั้งต้น</p>}{needsRecalculation && <p className="feedback" role="status">ข้อมูลเปลี่ยนแล้ว กรุณาคำนวณสารอาหารใหม่</p>}<button className="secondary manual-entry-button" type="button" onClick={recalculate}>คำนวณสารอาหารใหม่</button><div className="meal-actions"><button className="primary" type="submit">{busy ? 'กำลังบันทึก…' : editingId ? 'บันทึกการแก้ไข' : 'บันทึกข้อมูล'}</button>{editingId && <button className="secondary" type="button" onClick={reset}>ยกเลิก</button>}</div></>}</fieldset></form><div className="meal-list"><div><h3>รายการอาหารของวันที่เลือก</h3><strong>{meals?.caloriesConsumed ?? 0} kcal</strong></div>{!meals?.meals.length ? <p className="empty-state">ยังไม่มีรายการอาหารในวันนี้</p> : meals.meals.map(meal => <article key={meal.id}>{meal.imageData && <img src={meal.imageData} alt="" />}<div><strong>{meal.name}</strong><span>{mealOptions.find(option => option.id === meal.mealType)?.label} · {meal.totalCalories} kcal</span></div><div className="row-actions"><button type="button" onClick={() => edit(meal)}>แก้ไข</button><button type="button" disabled={busy} onClick={() => void remove(meal.id)}>ลบ</button></div></article>)}</div></section>;
+  function changeQuantity(index: number, value: string) {
+    setIngredients((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === index
+          ? { ...item, amount: Math.max(0, Number(value) || 0) }
+          : item,
+      ),
+    );
+    setNeedsRecalculation(true);
+  }
+  function removeIngredient(index: number) {
+    setIngredients((current) =>
+      current.filter((_, itemIndex) => itemIndex !== index),
+    );
+    setNeedsRecalculation(true);
+  }
+  function recalculate() {
+    const valid = mealSchema.safeParse({ name: name || 'มื้ออาหาร', mealType, activityDate: date, ingredients });
+    if (!valid.success || ingredients.some(item => Object.values(item.referenceNutrients).some(value => value === null))) {
+      setMessage({ text: 'กรุณาเพิ่มส่วนประกอบที่มีข้อมูลครบ และระบุกรัมมากกว่า 0 ก่อนคำนวณ', error: true });
+      return;
+    }
+    setNeedsRecalculation(false);
+    setMessage({
+      text: "คำนวณสารอาหารใหม่แล้ว ตรวจสอบผลรวมก่อนบันทึก",
+      error: false,
+    });
+  }
+  function applyFood(food: FoodSearchResult, quantityGrams: number) {
+    const referenceNutrients = { caloriesKcal: food.nutrientsPer100g.caloriesKcal ?? null, carbsGrams: food.nutrientsPer100g.carbsGrams ?? null, sugarGrams: food.nutrientsPer100g.sugarGrams ?? null, proteinGrams: food.nutrientsPer100g.proteinGrams ?? null, fatGrams: food.nutrientsPer100g.fatGrams ?? null };
+    setFoodSource("usda-fdc");
+    setShowManualFields(true);
+    const next = { name: food.name.slice(0, 120), amount: quantityGrams, unit: "g" as const, referenceAmount: 100, referenceUnit: "g" as const, source: "usda-fdc" as const, referenceNutrients };
+    setIngredients(current => foodTarget === null ? [...current.filter(item => item.name), next] : current.map((item, index) => index === foodTarget ? next : item));
+    setFoodTarget(null);
+    setFoodSearchOpen(false);
+    setNeedsRecalculation(true);
+  }
+  function addManualIngredient(ingredient: IngredientDraft) {
+    setIngredients((current) => [...current.filter((item) => item.name), ingredient]);
+    setShowManualFields(true);
+    setFoodSource(null);
+    setFoodSearchOpen(false);
+    setNeedsRecalculation(true);
+  }
+  async function compressImage(file: File): Promise<string> {
+    const source = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("อ่านรูปไม่ได้"));
+      image.src = URL.createObjectURL(file);
+    });
+    const scale = Math.min(
+      1,
+      768 / Math.max(source.naturalWidth, source.naturalHeight),
+    );
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(source.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(source.naturalHeight * scale));
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("ไม่สามารถเตรียมรูปได้");
+    context.drawImage(source, 0, 0, canvas.width, canvas.height);
+    URL.revokeObjectURL(source.src);
+    let quality = 0.82;
+    let result = canvas.toDataURL("image/jpeg", quality);
+    while (result.length * 0.75 > 200_000 && quality > 0.42) {
+      quality -= 0.08;
+      result = canvas.toDataURL("image/jpeg", quality);
+    }
+    if (result.length * 0.75 > 200_000)
+      throw new Error("รูปนี้ยังใหญ่เกินไป ลองเลือกภาพที่เล็กลง");
+    return result;
+  }
+  async function chooseImage(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setMessage({ text: "เลือกรูปภาพอาหารที่ถูกต้อง", error: true });
+      return;
+    }
+    try {
+      setImageData(await compressImage(file));
+      setAnalysis(null);
+      setFoodSource(null);
+      setShowManualFields(false);
+      setNeedsRecalculation(false);
+      setMessage({
+        text: "เตรียมรูปแล้ว กดวิเคราะห์เพื่อรับค่าประมาณ",
+        error: false,
+      });
+    } catch (error) {
+      setMessage({
+        text: error instanceof Error ? error.message : "เตรียมรูปไม่ได้",
+        error: true,
+      });
+    }
+  }
+  async function analyzeImage() {
+    if (!imageData || analyzing) return;
+    setAnalyzing(true);
+    setMessage(null);
+    try {
+      const result = await api<{ analysis: Analysis }>("/meals/analyze", {
+        imageData,
+      });
+      const next = result.analysis;
+      setName(next.name);
+      setMealType(next.mealType);
+      setFoodSource("ai-estimate");
+      setIngredients(next.ingredients);
+      setAnalysis(next);
+      setShowManualFields(true);
+      setNeedsRecalculation(false);
+      setMessage({
+        text: "วิเคราะห์แล้ว ปรับปริมาณหรือลบส่วนประกอบก่อนบันทึกได้",
+        error: false,
+      });
+    } catch (error) {
+      setMessage({
+        text:
+          error instanceof ApiError
+            ? `${error.message} คุณยังกรอกข้อมูลเองแล้วบันทึกได้`
+            : "วิเคราะห์รูปไม่ได้ คุณยังกรอกข้อมูลเองแล้วบันทึกได้",
+        error: true,
+      });
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy || estimatingIngredient || !ingredients.length) return;
+    if (needsRecalculation) {
+      setMessage({
+        text: "ข้อมูลเปลี่ยนแล้ว กรุณากดคำนวณสารอาหารใหม่ก่อนบันทึก",
+        error: true,
+      });
+      return;
+    }
+    setBusy(true);
+    setMessage(null);
+    const body = {
+      name,
+      mealType,
+      activityDate: date,
+      imageData,
+      ingredients,
+    };
+    try {
+      const result = await api<{ meal: PublicMeal }>(
+        editingId ? `/meals/${editingId}` : "/meals",
+        body,
+        editingId ? "PUT" : "POST",
+      );
+      rememberFavorite(userId, {
+        name: result.meal.name,
+        mealType: result.meal.mealType as FavoriteMeal["mealType"],
+        ingredients: body.ingredients,
+      });
+      setMessage({
+        text: editingId ? "แก้ไขอาหารแล้ว" : "บันทึกอาหารแล้ว",
+        error: false,
+      });
+      reset();
+      await load();
+      window.dispatchEvent(new Event("daily-calories-updated"));
+    } catch (error) {
+      setMessage({
+        text: error instanceof ApiError ? error.message : "บันทึกอาหารไม่ได้",
+        error: true,
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function remove(id: string) {
+    setBusy(true);
+    try {
+      await api(`/meals/${id}`, {}, "DELETE");
+      setMessage({ text: "ลบรายการอาหารแล้ว", error: false });
+      await load();
+      window.dispatchEvent(new Event("daily-calories-updated"));
+    } catch (error) {
+      setMessage({
+        text: error instanceof ApiError ? error.message : "ลบรายการอาหารไม่ได้",
+        error: true,
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+  function edit(meal: PublicMeal) {
+    setEditingId(meal.id);
+    setName(meal.name);
+    setMealType(meal.mealType);
+    setIngredients(
+      meal.ingredients.map(({ id: _id, caloriesKcal: _calories, carbsGrams: _carbs, sugarGrams: _sugar, proteinGrams: _protein, fatGrams: _fat, ...item }) => item),
+    );
+    setImageData(meal.imageData ?? null);
+    setAnalysis(null);
+    setFoodSource(null);
+    setShowManualFields(true);
+    setNeedsRecalculation(false);
+    setMessage(null);
+  }
+  return (
+    <section className="card meal-panel" aria-labelledby="meal-title">
+      <div className="exercise-heading">
+        <div>
+          <span className="eyebrow">DAILY NUTRITION</span>
+          <h2 id="meal-title">บันทึกอาหาร</h2>
+          <p className="muted">
+            เพิ่มจากรูปหรือฐานข้อมูล แล้วตรวจปริมาณก่อนบันทึก
+          </p>
+        </div>
+        <label className="compact-field">
+          วันที่
+          <input
+            type="date"
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
+          />
+        </label>
+      </div>
+      {message && (
+        <div
+          className={`feedback ${message.error ? "error" : "success"}`}
+          role={message.error ? "alert" : "status"}
+        >
+          {message.text}
+        </div>
+      )}
+      <form className="meal-form" onSubmit={save}>
+        <fieldset disabled={busy || analyzing}>
+          <div className="image-picker">
+            <input
+              ref={cameraInput}
+              id="meal-camera"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={chooseImage}
+            />
+            <input
+              ref={uploadInput}
+              id="meal-upload"
+              type="file"
+              accept="image/*"
+              onChange={chooseImage}
+            />
+            {imageData ? (
+              <img src={imageData} alt="ตัวอย่างรูปอาหาร" />
+            ) : (
+              <div className="image-choice">
+                <strong>เพิ่มรูปอาหาร</strong>
+                <span>ถ่ายรูปใหม่หรือเลือกจากอัลบั้ม</span>
+                <div>
+                  <button
+                    className="secondary"
+                    type="button"
+                    onClick={() => cameraInput.current?.click()}
+                  >
+                    ถ่ายรูป
+                  </button>
+                  <button
+                    className="secondary"
+                    type="button"
+                    onClick={() => uploadInput.current?.click()}
+                  >
+                    อัลบั้ม
+                  </button>
+                </div>
+              </div>
+            )}
+            {imageData && (
+              <div className="image-actions">
+                <button
+                  className="secondary"
+                  type="button"
+                  onClick={() => void analyzeImage()}
+                >
+                  {analyzing ? "กำลังวิเคราะห์…" : "วิเคราะห์รูป"}
+                </button>
+                <button
+                  className="text-button"
+                  type="button"
+                  onClick={() => {
+                    setImageData(null);
+                    setAnalysis(null);
+                  }}
+                >
+                  ลบรูป
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="meal-top-row">
+            <label className="compact-field">
+              มื้ออาหาร
+              <select
+                value={mealType}
+                onChange={(event) => setMealType(event.target.value)}
+              >
+                {mealOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="compact-field meal-name">
+              ชื่ออาหาร
+              <input
+                value={name}
+                maxLength={120}
+                placeholder="เช่น ข้าวมันไก่"
+                onChange={(event) => setName(event.target.value)}
+                required
+              />
+            </label>
+          </div>
+          {!showManualFields && !analysis && (
+            <button
+              className="secondary manual-entry-button"
+              type="button"
+              onClick={() => setShowManualFields(true)}
+            >
+              เพิ่มรายการเอง
+            </button>
+          )}
+          <MealIngredientEditor
+            ingredients={ingredients}
+            analysis={analysis}
+            needsRecalculation={needsRecalculation}
+            onQuantityChange={changeQuantity}
+            onRemove={removeIngredient}
+            onAdd={() => { setFoodTarget(null); setFoodSearchOpen(true); }}
+            onAddManual={addManualIngredient}
+            onEstimating={setEstimatingIngredient}
+            onRecalculate={recalculate}
+          />
+          {foodSearchOpen && (
+            <section className="food-search-inline" aria-labelledby="add-food-title">
+              <div className="food-search-inline-heading">
+                <h3 id="add-food-title">เพิ่มส่วนประกอบจากฐานข้อมูล</h3>
+                <button className="text-button" type="button" onClick={() => setFoodSearchOpen(false)}>ปิด</button>
+              </div>
+              <FoodSearchPanel onSelect={applyFood} />
+            </section>
+          )}
+          {(showManualFields || analysis) && (
+            <div className="meal-actions">
+              <button className="primary" type="submit" disabled={busy || estimatingIngredient || needsRecalculation || !ingredients.length}>
+                {busy
+                  ? "กำลังบันทึก…"
+                  : editingId
+                    ? "บันทึกการแก้ไข"
+                    : "บันทึกข้อมูล"}
+              </button>
+              {editingId && (
+                <button className="secondary" type="button" onClick={reset}>
+                  ยกเลิก
+                </button>
+              )}
+            </div>
+          )}
+        </fieldset>
+      </form>
+      <MealList
+        meals={meals}
+        busy={busy}
+        onEdit={edit}
+        onRemove={(id) => void remove(id)}
+      />
+    </section>
+  );
 }
