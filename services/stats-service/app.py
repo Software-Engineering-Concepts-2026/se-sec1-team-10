@@ -7,6 +7,13 @@ app = FastAPI(
 )
 
 
+def calculate_net_calories(calories_in, calories_out):
+    if calories_in < 0 or calories_out < 0:
+        raise ValueError("Calories cannot be negative")
+
+    return calories_in - calories_out
+
+
 @app.get("/")
 def root():
     return {

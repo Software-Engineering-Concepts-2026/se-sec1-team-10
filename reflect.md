@@ -205,3 +205,21 @@ index.html และ chayakorn_Food Logging_prototype.html มี CSS/JavaScript
 เปิดทั้ง 2 หน้า ตรวจสอบ UI, JavaScript และ Browser Console ว่ายังทำงานปกติและไม่มี Error
 ## AI Workflow:
 Explain → AI เสนอแนวทาง → ทีมตรวจสอบ Codebase → เลือกวิธี Refactor → Apply → Test
+
+---
+
+# Lab 9 — Testing and CI
+
+## B1. Apply — Unit-test plan
+
+ออกแบบ unit test จาก equivalence partition และ boundary value ก่อนเขียน test. สำหรับ `calculate_discount` แบ่ง input ที่ถูกต้องและไม่ถูกต้อง โดยตรวจ boundary ของ amount ที่ `0` และ percentage ที่ `0` กับ `100`; decision table ระบุทุกกรณีที่ต้อง raise `ValueError`. สำหรับ `validate_email` ตรวจ exactly-one `@`, local/domain ที่ไม่ว่าง, dot ใน domain และ TLD อย่างน้อยสองตัวอักษร. แผนและตัวอย่าง test อยู่ที่ `docs/testing/lab9-test-plan.md`. จากงานนี้เห็นว่าการระบุ expected result และขอบเขตก่อนช่วยให้ test ครอบคลุมกรณีปกติและกรณีขอบเขตชัดเจนขึ้น.
+
+## B2. Connect — TDD
+
+ทำ FizzBuzz kata ใหม่ใน `src/lab9_fizzbuzz_kata.py` แยกจาก `src/fizzbuzz.py` เพื่อให้ประวัติ TDD ตรวจสอบได้โดยไม่อ้างย้อนหลังกับงานเดิม. แต่ละรอบเริ่มจาก test ที่ fail แล้วเพิ่ม code เท่าที่ทำให้ผ่าน: ordinary values, Fizz, Buzz และ FizzBuzz. หลัง test ผ่าน 9 กรณี จึง refactor เป็น tuple ของกฎและ join labels โดยผลลัพธ์เดิมยังผ่าน. Commit และผลของแต่ละ RED/GREEN อยู่ใน test plan. จากงานนี้เห็นว่า RED ทำให้รู้ว่ากฎที่ยังขาดคืออะไร ส่วน GREEN ทำให้เพิ่มโค้ดทีละส่วนและตรวจผลได้ทันที.
+
+## B3. Reflect — Property-based testing
+
+ใช้ Hypothesis ทดสอบ FizzBuzz ด้วย generated input อย่างน้อย 150 ตัวอย่างต่อ property: multiple ของ 15 เป็น `FizzBuzz`, multiple ของ 3 หรือ 5 ที่ไม่ซ้ำกันเป็น `Fizz` หรือ `Buzz`, และจำนวนอื่นคืนค่าเป็นข้อความ. สำหรับ email ใช้ 125 ตัวอย่างต่อ property เพื่อตรวจ address ที่สร้างตามรูปแบบ, จำนวน `@` ที่ไม่เท่ากับหนึ่ง, และการย่อ TLD เหลือหนึ่งตัวอักษร. จากงานนี้เห็นว่า property test ช่วยตรวจรูปแบบของ input ได้กว้างกว่า example test; ตัวอย่าง email mutant ถูกย่อเป็น `0@0.A` ซึ่งชี้ให้เห็น boundary ของ TLD ได้ตรงจุด.
+
+workflow `Tests` ติดตั้ง dependency จาก `requirements-test.txt` และบังคับ coverage ขั้นต่ำ 90% เมื่อเปิด pull request หรือ push เข้า `main`. การตั้ง branch protection ต้องทำโดย repository administrator; บัญชีที่ใช้กับงานนี้ไม่มีสิทธิ์ admin จึงไม่อ้างว่าได้เปิดใช้งานแล้ว.
