@@ -14,30 +14,76 @@ LifeBalance ช่วยลดความยุ่งยากจากกา�
 
 ## 🚀 Getting Started
 
-This section explains how to get a local copy of the project up and running for development and testing purposes.
+โปรเจกต์ปัจจุบันเป็นเว็บแอปแบบ Modular Monolith โดยใช้ React + TypeScript สำหรับหน้าเว็บ, Node.js + Express สำหรับ API และ PostgreSQL + Prisma สำหรับฐานข้อมูล
 
 ### Prerequisites
 
 - Git
-- Python 3.10+
-- Docker & Docker Compose
+- Node.js 22.12+
+- Docker Desktop หรือ Docker Engine พร้อม Docker Compose
 
-### Running the Application (with Docker)
+### Running the Application
 
-1.  **Clone the repository:**
+เครื่องที่เตรียม PostgreSQL แบบพกพาไว้แล้วเปิดด้วย `npm run db:local` และ `npm run dev` ได้ ดู [วิธีเปิดและทดสอบบนเครื่องนี้](docs/local-testing.md) โดยเก็บค่าจริงใน `.env` เดิม ไม่ต้องคัดลอกทับใหม่
+
+1. **ติดตั้ง dependencies:**
     ```bash
-    git clone [your-repository-url]
-    cd [your-project-folder]
+    npm install
     ```
 
-2.  **Run the services:**
-    *(This section will be updated in later weeks when using Docker Compose)*
+2. **สร้างไฟล์ environment จากตัวอย่าง:**
     ```bash
-    # Example for a single service
-    cd services/stats-service
-    docker build -t your-team/stats-service .
-    docker run -p 5001:5000 your-team/stats-service
+    Copy-Item .env.example .env
     ```
+    จากนั้นแก้ `JWT_SECRET` ใน `.env` เป็นค่าสุ่มที่มีความยาวอย่างน้อย 32 ตัวอักษร
+
+3. **เปิด PostgreSQL และเตรียม schema:**
+    ```bash
+    docker compose up -d db
+    npm run db:migrate
+    ```
+
+4. **เปิดระบบสำหรับพัฒนา:**
+    ```bash
+    npm run dev
+    ```
+
+หน้าเว็บอยู่ที่ `http://localhost:5173` และ API อยู่ที่ `http://localhost:3000`
+
+### Verification
+
+```bash
+npm test
+npm run build
+```
+
+### เว็บแอปมือถือและ AI วิเคราะห์รูป
+
+ทุกขนาดจอใช้หน้าแอปเดียวกัน: วันนี้ / บันทึก / ความคืบหน้า / บัญชี หน้าอาหารรองรับถ่ายรูปหรือเลือกรูป → วิเคราะห์ → ตรวจแก้ → ยืนยันบันทึก ค่าสารอาหารจาก AI เป็นค่าประมาณ ไม่ใช่ผลวัดจริง
+
+ใส่ค่าจริงใน `.env` เท่านั้น (`.env.example` เป็นตัวอย่างสาธารณะ):
+
+```dotenv
+AI_BASE_URL=https://gen.ai.kku.ac.th/upacth/api/v1
+AI_API_KEY=
+AI_MODEL=
+AI_DAILY_SCAN_LIMIT=50
+NUTRITION_API_KEY=
+```
+
+`AI_MODEL` ใช้ชื่อโมเดลที่มหาวิทยาลัยเปิดให้และรองรับภาพ ส่วน `NUTRITION_API_KEY` เป็น key ของ USDA/data.gov อีกบริการหนึ่ง ใช้เฉพาะการค้นข้อมูลสารอาหาร หากเว้นว่างยังใช้ AI ได้ อ่านรายละเอียดที่ [คู่มือตั้งค่า AI](docs/ai-setup.md)
+
+หลังแก้ `.env` ให้บันทึกไฟล์และเริ่ม API ใหม่ ต้องเปิด PostgreSQL และรัน migration ก่อนใช้งานระบบจริง หน้าเว็บทดสอบกับ API จำลองไม่ยืนยันการบันทึกฐานข้อมูลจริง
+
+ทดสอบ UI ด้วย Edge ที่ติดตั้งในเครื่อง:
+
+```bash
+npm run test:e2e
+```
+
+ชุดทดสอบ UI เปิดเว็บชั่วคราวที่ port 5174 และจำลองคำตอบ API จึงไม่ใช้ key หรือโควตา AI ดูขอบเขตผลทดสอบใน [รายงานทดสอบ](docs/test-report-mobile.md)
+
+ขณะนี้ระบบรองรับการสมัครสมาชิก, เข้าสู่ระบบ, ออกจากระบบ, แก้ไขข้อมูลสุขภาพส่วนตัว, บันทึกอาหารพร้อมส่วนประกอบและรูปประกอบ, และบันทึกการออกกำลังกาย ระบบคำนวณ BMI, แคลอรีจากสารอาหาร, แคลอรีที่เผาผลาญ และ Net Calories รายวันให้อัตโนมัติ
 
 ---
 
@@ -47,6 +93,12 @@ Key architectural decisions and diagrams are documented in the `/docs/architectu
 
 - **[C4 Models & Tech Stack](./docs/architecture/README.md)**
 - **[Architectural Decision Records (ADRs)](./docs/architecture/adr/)**
+
+## 👩‍💻 คู่มือสำหรับสมาชิกทีม
+
+เริ่มอ่าน [คู่มือเริ่มพัฒนา LifeBalance สำหรับทีม](./docs/team-development-guide.md) เพื่อดูตำแหน่งของโค้ด หน้าจอที่มีอยู่ วิธีเปิดระบบ และเช็กลิสต์ก่อนส่งงาน
+
+ดู [แผนแบ่งงานสามคนและจุดที่ควรแก้ก่อน](./docs/team-work-allocation.md) สำหรับขอบเขตไฟล์ เกณฑ์ส่งงาน และข้อเสนอการใช้ branch ส่วนตัว
 
 ## 👥 Requirements
 

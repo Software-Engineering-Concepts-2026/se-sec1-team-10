@@ -1,0 +1,18 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: lifebalance
+      POSTGRES_PASSWORD: local-development-only
+      POSTGRES_DB: lifebalance
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - lifebalance-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lifebalance -d lifebalance"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+volumes:
+  lifebalance-data:

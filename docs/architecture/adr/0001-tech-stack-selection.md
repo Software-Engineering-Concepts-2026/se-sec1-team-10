@@ -1,6 +1,6 @@
 # ADR-001: Selection of Core Technology Stack
 
-**Status:** ✅ Accepted  
+**Status:** Superseded by [ADR 0001: Modular Monolith](./0001-monolith-vs-microservices.md) on August 25, 2026
 **Date:** July 21, 2026  
 **Decision Makers:** LifeBalance Development Team  
 
