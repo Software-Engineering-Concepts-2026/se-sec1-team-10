@@ -9,6 +9,7 @@ async function mockApi(page: Page, options: { aiConfigured?: boolean } = {}) {
   let nextMealId = 1;
   let analyzeCalls = 0;
   let mealSaveCalls = 0;
+  let lastSavedIngredients: unknown[] = [];
   await page.route('**/api/**', async (route: Route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -18,16 +19,26 @@ async function mockApi(page: Page, options: { aiConfigured?: boolean } = {}) {
     if (path === '/api/auth/me' && method === 'GET') return loggedIn ? json({ user }) : json({ message: 'unauthorized' }, 401);
     if (path === '/api/auth/login' && method === 'POST') { loggedIn = true; return json({ user }); }
     if (path === '/api/auth/logout' && method === 'POST') { loggedIn = false; return route.fulfill({ status: 204 }); }
-    if (path === '/api/meals/daily' && method === 'GET') return json({ date: url.searchParams.get('date'), meals, caloriesConsumed: meals.length * 238 });
+    const caloriesConsumed = () => (meals as { totalCalories: number }[]).reduce((total, meal) => total + meal.totalCalories, 0);
+    const calculateMeal = (body: Record<string, unknown>, id: string) => {
+      const ingredients = (body.ingredients as { amount: number; referenceAmount: number; referenceNutrients: Record<string, number | null>; [key: string]: unknown }[]).map(ingredient => {
+        const nutrients = Object.fromEntries(Object.entries(ingredient.referenceNutrients).map(([key, value]) => [key, value === null ? null : Math.round(value * ingredient.amount / ingredient.referenceAmount * 100) / 100]));
+        return { ...ingredient, ...nutrients };
+      });
+      const totalCalories = Math.round(ingredients.reduce((total, ingredient) => total + (typeof ingredient.caloriesKcal === 'number' ? ingredient.caloriesKcal : 0), 0));
+      return { id, ...body, ingredients, totalCalories };
+    };
+    if (path === '/api/meals/daily' && method === 'GET') return json({ date: url.searchParams.get('date'), meals, caloriesConsumed: caloriesConsumed() });
     if (path === '/api/meals/analyze' && method === 'POST') {
       analyzeCalls += 1;
       if (!options.aiConfigured) return json({ message: 'ยังไม่ได้เปิดใช้การวิเคราะห์รูปภาพอาหาร' }, 503);
-      return json({ analysis: { name: 'ข้าวมันไก่', mealType: 'lunch', ingredients: [{ name: 'ข้าว', carbsGrams: 50, sugarGrams: 1, proteinGrams: 5, fatGrams: 2 }], portionDescription: 'หนึ่งจาน', source: 'ai-estimate', notes: ['Estimated from the image only; confirm ingredients and portions before saving.'] } });
+      return json({ analysis: { name: 'ข้าวมันไก่', mealType: 'lunch', ingredients: [{ name: 'ข้าว', amount: 100, unit: 'g', referenceAmount: 100, referenceUnit: 'g', source: 'ai-estimate', referenceNutrients: { caloriesKcal: 462, carbsGrams: 50, sugarGrams: 4, proteinGrams: 25, fatGrams: 18 } }], portionDescription: 'หนึ่งจาน', source: 'ai-estimate', notes: ['Estimated from the image only; confirm ingredients and portions before saving.'] } });
     }
     if (path === '/api/meals' && method === 'POST') {
       mealSaveCalls += 1;
       const body = request.postDataJSON() as Record<string, unknown>;
-      const meal = { id: `m${nextMealId++}`, ...body, totalCalories: 238 };
+      lastSavedIngredients = body.ingredients as unknown[];
+      const meal = calculateMeal(body, `m${nextMealId++}`);
       meals = [meal];
       return json({ meal }, 201);
     }
@@ -36,7 +47,8 @@ async function mockApi(page: Page, options: { aiConfigured?: boolean } = {}) {
       const id = path.split('/').at(-1);
       const current = (meals as Record<string, unknown>[]).find(meal => meal.id === id);
       if (!current) return json({ message: 'not found' }, 404);
-      const meal = { ...current, ...body, totalCalories: 238 };
+      lastSavedIngredients = body.ingredients as unknown[];
+      const meal = calculateMeal(body, id ?? 'missing');
       meals = (meals as Record<string, unknown>[]).map(item => item.id === id ? meal : item);
       return json({ meal });
     }
@@ -46,7 +58,7 @@ async function mockApi(page: Page, options: { aiConfigured?: boolean } = {}) {
       return route.fulfill({ status: 204 });
     }
     if (path === '/api/foods/search' && method === 'GET') return json({ foods: [{ fdcId: 123, name: 'Rice', dataType: 'Foundation', nutrientsPer100g: { caloriesKcal: 130, carbsGrams: 28, proteinGrams: 3, fatGrams: 0.3, sugarGrams: 0.1 }, source: 'usda-fdc', url: 'https://fdc.nal.usda.gov/food-details/123/nutrients' }] });
-    if (path === '/api/exercises/daily' && method === 'GET') return json({ date: url.searchParams.get('date'), exercises: [], caloriesConsumed: meals.length * 238, caloriesBurned: 0, netCalories: meals.length * 238 });
+    if (path === '/api/exercises/daily' && method === 'GET') return json({ date: url.searchParams.get('date'), exercises: [], caloriesConsumed: caloriesConsumed(), caloriesBurned: 0, netCalories: caloriesConsumed() });
     if (path === '/api/summary/weekly' && method === 'GET') return json({ startDate: '2026-09-08', endDate: '2026-09-14', days: [], caloriesConsumed: 0, caloriesBurned: 0 });
     if (path === '/api/health-history' && method === 'GET') return json({ points: [], rangeDays: 365, performanceTargetMs: 1500 });
     if (path === '/api/meals/history' && method === 'GET') return json({ meals });
@@ -54,7 +66,7 @@ async function mockApi(page: Page, options: { aiConfigured?: boolean } = {}) {
     if (path === '/api/goals' && method === 'PUT') return json({ user });
     return json({ message: `unmocked ${method} ${path}` }, 404);
   });
-  return { get analyzeCalls() { return analyzeCalls; }, get mealSaveCalls() { return mealSaveCalls; } };
+  return { get analyzeCalls() { return analyzeCalls; }, get mealSaveCalls() { return mealSaveCalls; }, get lastSavedIngredients() { return lastSavedIngredients; } };
 }
 
 async function login(page: Page) {
@@ -63,6 +75,13 @@ async function login(page: Page) {
   await page.getByLabel('รหัสผ่าน').fill('ValidPassword123!');
   await page.getByRole('button', { name: 'เข้าสู่ระบบ →' }).click();
   await expect(page.getByRole('heading', { name: /สวัสดี/ })).toBeVisible();
+}
+
+async function openFoodSearch(page: Page) {
+  await page.getByRole('button', { name: 'เพิ่มรายการเอง', exact: true }).click();
+  await page.getByRole('button', { name: 'เพิ่มส่วนประกอบ', exact: true }).click();
+  await page.getByRole('button', { name: 'ค้นหาจากฐานข้อมูลอาหาร', exact: true }).click();
+  return page.getByRole('region', { name: 'เพิ่มส่วนประกอบจากฐานข้อมูล' });
 }
 
 test.describe('mobile navigation and food logging', () => {
@@ -169,17 +188,22 @@ test.describe('mobile navigation and food logging', () => {
     expect(mock.analyzeCalls).toBe(1);
     expect(mock.mealSaveCalls).toBe(0);
     await page.getByLabel('ปริมาณส่วนประกอบ 1').fill('50');
-    await page.getByRole('button', { name: 'บันทึกข้อมูล' }).click();
-    await expect(page.getByRole('alert')).toContainText('กรุณากดคำนวณสารอาหารใหม่');
+    const saveButton = page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true });
+    await expect(saveButton).toBeDisabled();
     expect(mock.mealSaveCalls).toBe(0);
     await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
     await expect(page.getByText('คำนวณสารอาหารใหม่แล้ว ตรวจสอบผลรวมก่อนบันทึก')).toBeVisible();
+    await expect(page.locator('.meal-total-calories')).toContainText('231');
+    await expect(page.locator('.nutrition-summary-grid')).toContainText('25');
+    await expect(page.locator('.nutrition-summary-grid')).toContainText('12.5');
+    await expect(page.locator('.nutrition-summary-grid')).toContainText('9');
     await page.getByRole('button', { name: 'บันทึกข้อมูล' }).click();
     await expect(page.getByText('บันทึกอาหารแล้ว')).toBeVisible();
     expect(mock.mealSaveCalls).toBe(1);
+    expect(mock.lastSavedIngredients).toMatchObject([{ amount: 50 }]);
     await page.getByRole('button', { name: 'วันนี้', exact: true }).click();
-    await expect(page.locator('.energy-ring strong')).toHaveText('238');
-    await expect(page.locator('.macro-summary')).toContainText('25');
+    await expect(page.locator('.energy-ring strong')).toHaveText('231');
+    await expect(page.locator('.macro-summary')).toContainText('13');
   });
 
   test('shows a usable fallback when analysis is unavailable', async ({ page }) => {
@@ -192,7 +216,12 @@ test.describe('mobile navigation and food logging', () => {
     await expect(page.getByRole('alert')).toContainText('คุณยังกรอกข้อมูลเองแล้วบันทึกได้');
     await page.getByLabel('ชื่ออาหาร').fill('อาหารกรอกเอง');
     await expect(page.getByLabel('ชื่ออาหาร')).toHaveValue('อาหารกรอกเอง');
-    await page.getByRole('button', { name: 'เพิ่มรายการเอง' }).click();
+    const foodSearch = await openFoodSearch(page);
+    await foodSearch.getByRole('textbox', { name: 'ค้นหาอาหาร' }).fill('rice');
+    await foodSearch.getByLabel('ปริมาณ (ก.)').fill('100');
+    await foodSearch.getByRole('button', { name: 'ค้นหา', exact: true }).click();
+    await foodSearch.getByRole('button', { name: /Rice/ }).click();
+    await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
     await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
     await expect(page.getByText('บันทึกอาหารแล้ว')).toBeVisible();
     expect(mock.mealSaveCalls).toBe(1);
@@ -214,14 +243,13 @@ test.describe('mobile navigation and food logging', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await login(page);
     await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
-    await page.getByText('ค้นหาจากฐานข้อมูลอาหาร').click();
-    const foodSearch = page.getByRole('region', { name: 'ค้นหาอาหารสำเร็จรูป' });
-    await foodSearch.getByLabel('ค้นหาอาหาร').fill('rice');
+    const foodSearch = await openFoodSearch(page);
+    await foodSearch.getByRole('textbox', { name: 'ค้นหาอาหาร' }).fill('rice');
     await foodSearch.getByLabel('ปริมาณ (ก.)').fill('200');
     await page.getByRole('button', { name: 'ค้นหา', exact: true }).click();
     await page.getByRole('button', { name: /Rice/ }).click();
-    await expect(page.getByRole('status').filter({ hasText: 'USDA' })).toBeVisible();
-    await expect(page.getByLabel('ชื่ออาหาร')).toHaveValue('Rice');
+    await expect(page.getByText('USDA FoodData Central', { exact: true })).toBeVisible();
+    await expect(page.locator('.portion-row strong').first()).toHaveText('Rice');
     await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('200');
   });
 
@@ -230,12 +258,13 @@ test.describe('mobile navigation and food logging', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await login(page);
     await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
-    await page.getByText('ค้นหาจากฐานข้อมูลอาหาร').click();
-    const foodSearch = page.getByRole('region', { name: 'ค้นหาอาหารสำเร็จรูป' });
-    await foodSearch.getByLabel('ค้นหาอาหาร').fill('rice');
+    const foodSearch = await openFoodSearch(page);
+    await foodSearch.getByRole('textbox', { name: 'ค้นหาอาหาร' }).fill('rice');
+    await foodSearch.getByLabel('ปริมาณ (ก.)').fill('100');
     await page.getByRole('button', { name: 'ค้นหา', exact: true }).click();
     await page.getByRole('button', { name: /Rice/ }).click();
     await page.getByLabel('ชื่ออาหาร').fill('มื้อทดสอบ');
+    await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
     await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
     await expect(page.getByText('มื้อทดสอบ')).toBeVisible();
     await page.getByRole('button', { name: 'แก้ไข', exact: true }).click();

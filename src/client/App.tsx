@@ -1,23 +1,7 @@
-<<<<<<< HEAD
-import { lazy, Suspense, useEffect, useState, type FormEvent } from 'react';
-import type { PublicUser } from '../shared/contracts';
-import { ApiError } from './api';
-import { accountApi } from './Account';
-import { AccountPanel } from './AccountPanel';
-import { DashboardPanel } from './DashboardPanel';
-import { ReminderObserver } from './reminders';
-const ExercisePanel = lazy(() => import('./ExercisePanel').then(module => ({ default: module.ExercisePanel })));
-const MealPanel = lazy(() => import('./MealPanel').then(module => ({ default: module.MealPanel })));
-const WeeklySummaryPanel = lazy(() => import('./WeeklySummaryPanel').then(module => ({ default: module.WeeklySummaryPanel })));
-const GoalPanel = lazy(() => import('./GoalPanel').then(module => ({ default: module.GoalPanel })));
-const FoodHistoryPanel = lazy(() => import('./FoodHistoryPanel').then(module => ({ default: module.FoodHistoryPanel })));
-const FavoriteMealsPanel = lazy(() => import('./FavoriteMealsPanel').then(module => ({ default: module.FavoriteMealsPanel })));
-const ReminderPanel = lazy(() => import('./ReminderPanel').then(module => ({ default: module.ReminderPanel })));
-const HealthTrendPanel = lazy(() => import('./HealthTrendPanel').then(module => ({ default: module.HealthTrendPanel })));
-=======
 import { lazy, Suspense, useEffect, useState, type FormEvent } from "react";
 import type { PublicUser } from "../shared/contracts";
-import { api, ApiError } from "./api";
+import { ApiError } from "./api";
+import { accountApi } from "./Account";
 import { DashboardPanel } from "./DashboardPanel";
 import { ReminderObserver } from "./reminders";
 import { AccountPanel } from "./AccountPanel";
@@ -50,7 +34,6 @@ const HealthTrendPanel = lazy(() =>
     default: module.HealthTrendPanel,
   })),
 );
->>>>>>> bfbbb22a05d659215cc302faf906a8f73907430e
 
 type MobileSection = "today" | "diary" | "progress" | "account";
 
@@ -140,24 +123,16 @@ export function App() {
   }
 
   async function loadSession() {
-<<<<<<< HEAD
-    setLoading(true); setBootError(false);
-    try { setUser((await accountApi.current()).user); }
-    catch (error) {
-      if (!(error instanceof ApiError && error.status === 401)) setBootError(true);
-    } finally { setLoading(false); }
-=======
     setLoading(true);
     setBootError(false);
     try {
-      setUser((await api<{ user: PublicUser }>("/auth/me")).user);
+      setUser((await accountApi.current()).user);
     } catch (error) {
       if (!(error instanceof ApiError && error.status === 401))
         setBootError(true);
     } finally {
       setLoading(false);
     }
->>>>>>> bfbbb22a05d659215cc302faf906a8f73907430e
   }
   useEffect(() => {
     void loadSession();
@@ -179,19 +154,11 @@ export function App() {
       return;
     }
     try {
-<<<<<<< HEAD
-      if (mode === 'register') {
-        await accountApi.register({ email: String(values.email), password: String(values.password), displayName: String(values.displayName) });
-        setMode('login'); form.reset();
-        setFeedback({ error: false, message: 'สมัครสมาชิกสำเร็จ เข้าสู่ระบบด้วยอีเมลและรหัสผ่านของคุณได้เลย' });
-      } else {
-        setUser((await accountApi.login({ email: String(values.email), password: String(values.password) })).user);
-=======
       if (mode === "register") {
-        await api("/auth/register", {
-          email: values.email,
-          password: values.password,
-          displayName: values.displayName,
+        await accountApi.register({
+          email: String(values.email),
+          password: String(values.password),
+          displayName: String(values.displayName),
         });
         setMode("login");
         form.reset();
@@ -203,13 +170,12 @@ export function App() {
       } else {
         setUser(
           (
-            await api<{ user: PublicUser }>("/auth/login", {
-              email: values.email,
-              password: values.password,
+            await accountApi.login({
+              email: String(values.email),
+              password: String(values.password),
             })
           ).user,
         );
->>>>>>> bfbbb22a05d659215cc302faf906a8f73907430e
         setFeedback(null);
       }
     } catch (error) {
@@ -221,13 +187,8 @@ export function App() {
 
   async function logout() {
     setBusy(true);
-<<<<<<< HEAD
-    try { await accountApi.logout(); setUser(null); setMode('login'); setFeedback(null); setMobileSection('today'); setVisitedSections(new Set(['today'])); setSettingsView(null); }
-    catch (error) { setFeedback(asFeedback(error)); }
-    finally { setBusy(false); }
-=======
     try {
-      await api("/auth/logout", {});
+      await accountApi.logout();
       setUser(null);
       setMode("login");
       setFeedback(null);
@@ -238,7 +199,6 @@ export function App() {
     } finally {
       setBusy(false);
     }
->>>>>>> bfbbb22a05d659215cc302faf906a8f73907430e
   }
 
   return (
@@ -263,42 +223,6 @@ export function App() {
           <div className="loading" role="status">
             กำลังโหลดข้อมูล…
           </div>
-<<<<<<< HEAD
-          <span className="eyebrow card-eyebrow">LET’S FIND YOUR BALANCE</span>
-          <h2 id="auth-title">{mode === 'login' ? 'ยินดีต้อนรับกลับมา' : 'เริ่มต้นดูแลตัวเอง'}</h2>
-          <p className="muted">{mode === 'login' ? 'เข้าสู่ระบบเพื่อจัดการข้อมูลสุขภาพของคุณ' : 'สร้างบัญชีของคุณ ใช้เวลาเพียงนิดเดียว'}</p>
-          <FeedbackMessage value={feedback} />
-          <form key={mode} onSubmit={authenticate}>
-            <fieldset disabled={busy}>
-              {mode === 'register' && <Field name="displayName" label="ชื่อที่ใช้แสดง" autoComplete="nickname" maxLength={80} placeholder="คุณชื่ออะไร" error={feedback?.fields?.displayName} />}
-              <Field name="email" label="อีเมล" type="email" autoComplete="email" maxLength={254} placeholder="you@example.com" error={feedback?.fields?.email} />
-              <Field name="password" label="รหัสผ่าน" type="password" minLength={8} maxLength={128} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} placeholder="อย่างน้อย 8 ตัวอักษร" error={feedback?.fields?.password} />
-              {mode === 'register' && <Field name="confirmPassword" label="ยืนยันรหัสผ่าน" type="password" minLength={8} maxLength={128} autoComplete="new-password" placeholder="กรอกรหัสผ่านอีกครั้ง" error={feedback?.fields?.confirmPassword} />}
-              <button className="primary" type="submit">{busy ? 'กำลังดำเนินการ…' : mode === 'login' ? 'เข้าสู่ระบบ →' : 'สร้างบัญชี →'}</button>
-            </fieldset>
-          </form>
-          <div className="privacy-note"><span aria-hidden="true">◇</span> ข้อมูลสุขภาพเป็นเรื่องส่วนตัวของคุณ<br /><small>ระบบออกจากเซสชันเมื่อไม่ใช้งาน 30 นาที</small></div>
-        </section>
-      </div> : <div className="profile-layout">
-        <ReminderObserver userId={user.id} />
-        <div className={`mobile-page ${mobileSection === 'today' ? 'is-active' : ''}`}>
-        <section className="profile-heading"><span className="eyebrow">YOUR DAILY BALANCE</span><h1>สวัสดี, {user.displayName} <span>✦</span></h1><p className="muted">วันนี้ดูแลตัวเองได้อีกนิดนะ</p></section>
-        <DashboardPanel user={user} />
-        <button type="button" className="mobile-quick-log" onClick={() => navigate('diary')}>＋ บันทึกอาหารของวันนี้</button>
-        </div>
-        {visitedSections.has('account') && <Suspense fallback={<div className={`mobile-page ${mobileSection === 'account' ? 'is-active' : ''} loading`} role="status">กำลังเตรียมพื้นที่…</div>}><div className={`mobile-page ${mobileSection === 'account' ? 'is-active' : ''}`}>
-        <div className="profile-grid">
-          <aside className="card profile-summary"><div className="avatar" aria-hidden="true">{user.displayName.slice(0, 1)}</div><h2>{user.displayName}</h2><p className="email">{user.email}</p><span className="status-chip">บัญชีของคุณ</span><hr /><h3>ข้อมูลล่าสุด</h3><dl><div><dt>อายุ</dt><dd>{user.age === null ? 'ยังไม่ระบุ' : `${user.age} ปี`}</dd></div><div><dt>น้ำหนัก</dt><dd>{user.weightKg === null ? 'ยังไม่ระบุ' : `${user.weightKg} กก.`}</dd></div><div><dt>ส่วนสูง</dt><dd>{user.heightCm === null ? 'ยังไม่ระบุ' : `${user.heightCm} ซม.`}</dd></div><div><dt>BMI</dt><dd>{user.bmi === null ? 'ต้องระบุน้ำหนักและส่วนสูง' : user.bmi.toFixed(1)}</dd></div></dl></aside>
-          <section className="card profile-form"><span className="eyebrow">SETTINGS</span><h2>ตั้งค่า</h2><p className="muted">เลือกหัวข้อที่ต้องการแก้ไข</p>
-            <div className="settings-menu" aria-label="หัวข้อตั้งค่า">
-              <button type="button" className="secondary" onClick={() => setSettingsView(current => current === 'profile' ? null : 'profile')}>ข้อมูลส่วนตัว <span>›</span></button>
-              <button type="button" className="secondary" onClick={() => setSettingsView(current => current === 'goals' ? null : 'goals')}>เป้าหมายสุขภาพ <span>›</span></button>
-              <button type="button" className="secondary" onClick={() => setSettingsView(current => current === 'reminders' ? null : 'reminders')}>แจ้งเตือนมื้ออาหาร <span>›</span></button>
-            </div>
-            {settingsView === 'profile' && <div className="settings-detail"><AccountPanel user={user} onSaved={setUser} onSessionExpired={() => setUser(null)} /></div>}
-            {settingsView === 'goals' && <div className="settings-detail"><GoalPanel user={user} onSaved={setUser} /></div>}
-            {settingsView === 'reminders' && <div className="settings-detail"><ReminderPanel userId={user.id} /></div>}
-=======
         ) : bootError ? (
           <section className="card connection-error">
             <h1>ยังเชื่อมต่อระบบไม่ได้</h1>
@@ -306,7 +230,6 @@ export function App() {
             <button className="primary" onClick={loadSession}>
               ลองอีกครั้ง
             </button>
->>>>>>> bfbbb22a05d659215cc302faf906a8f73907430e
           </section>
         ) : !user ? (
           <div className="auth-layout">

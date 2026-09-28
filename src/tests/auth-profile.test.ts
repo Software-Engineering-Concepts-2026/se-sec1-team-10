@@ -4,10 +4,10 @@ import request from 'supertest';
 import type { User } from '@prisma/client';
 import { createApp } from '../server/app.js';
 import { DuplicateEmailError, type Repository } from '../server/repository.js';
-import type { ExerciseInput, ExerciseRecord, GoalInput, MealInput, MealRecord, ProfileInput } from '../shared/contracts.js';
+import { mealSchema, type ExerciseInput, type ExerciseRecord, type GoalInput, type MealInput, type MealRecord, type ProfileInput } from '../shared/contracts.js';
 import { calculateBmi } from '../server/health.js';
 import { calculateExerciseCalories } from '../server/exercise.js';
-import { calculateMealCalories } from '../server/meal.js';
+import { calculateMeal } from '../server/meal.js';
 import { COOKIE_NAME, SESSION_MS, tokenService, verifyPassword } from '../server/security.js';
 
 class MemoryRepository implements Repository {
@@ -69,13 +69,13 @@ class MemoryRepository implements Repository {
   }
   async createMeal(userId: string, data: MealInput, totalCalories: number) {
     const now = new Date();
-    const meal: MealRecord = { id: randomUUID(), userId, ...data, imageData: data.imageData ?? null, totalCalories, createdAt: now, updatedAt: now, ingredients: data.ingredients.map(ingredient => ({ id: randomUUID(), ...ingredient })) };
+    const meal: MealRecord = { id: randomUUID(), userId, ...data, imageData: data.imageData ?? null, totalCalories, createdAt: now, updatedAt: now, ingredients: calculateMeal(data).ingredients.map(ingredient => ({ id: randomUUID(), ...ingredient })) };
     this.meals.set(meal.id, meal); return meal;
   }
   async updateMeal(id: string, userId: string, data: MealInput, totalCalories: number) {
     const current = this.meals.get(id);
     if (!current || current.userId !== userId) return null;
-    const meal: MealRecord = { ...current, ...data, imageData: data.imageData ?? null, totalCalories, updatedAt: new Date(), ingredients: data.ingredients.map(ingredient => ({ id: randomUUID(), ...ingredient })) };
+    const meal: MealRecord = { ...current, ...data, imageData: data.imageData ?? null, totalCalories, updatedAt: new Date(), ingredients: calculateMeal(data).ingredients.map(ingredient => ({ id: randomUUID(), ...ingredient })) };
     this.meals.set(id, meal); return meal;
   }
   async deleteMeal(id: string, userId: string) {
@@ -282,7 +282,7 @@ describe('food calories', () => {
   it('creates food, totals its calories, and includes it in the daily net calories', async () => {
     const auth = await signIn();
     const created = await request(app).post('/api/meals').set('Origin', origin).set('Cookie', auth).send(meal).expect(201);
-    expect(created.body.meal).toMatchObject({ name: meal.name, totalCalories: 462, ingredients: meal.ingredients });
+    expect(created.body.meal).toMatchObject({ name: meal.name, totalCalories: 462, ingredients: [{ name: 'ข้าวและไก่', carbsGrams: 50, sugarGrams: 4, proteinGrams: 25, fatGrams: 18 }] });
     const daily = await request(app).get('/api/meals/daily?date=2026-09-11').set('Cookie', auth).expect(200);
     expect(daily.body).toMatchObject({ caloriesConsumed: 462 });
     const exercise = await request(app).get('/api/exercises/daily?date=2026-09-11').set('Cookie', auth).expect(200);
@@ -308,7 +308,7 @@ describe('food calories', () => {
     await request(app).get('/api/meals/daily?date=2026-09-11').set('Cookie', second).expect(200).expect({ date: '2026-09-11', meals: [], caloriesConsumed: 0 });
   });
   it('uses standard macronutrient energy values without double-counting sugar', () => {
-    expect(calculateMealCalories(meal.ingredients)).toBe(462);
+    expect(calculateMeal(mealSchema.parse(meal)).totalCalories).toBe(462);
   });
   it('summarizes seven daily calorie totals for the weekly dashboard', async () => {
     const auth = await signIn();
