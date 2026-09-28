@@ -27,3 +27,7 @@ AI assistance in this follow-up produced the chapter-exercise test structure, im
 **Prompts used:** “make explicit AAA/docstrings/IDs reuse not duplicate”; “Write docs/safety-net.md short5headings actual table/runs honest gaps.”
 
 **AI-generated:** test-case organization, CI workflow draft, and documentation draft. The supervising agent also performed the user-authorized intentional failing-test experiment and restoration, and recorded actual GitHub results. **Human review:** the team should verify the behavior and edit the lesson/reflection in its own voice. Human contribution has not been independently verified, so no percentage is claimed.
+
+## Lab 12 reflection follow-up (2026-09-28)
+
+Codex drafted the Post-quiz 12 section in `reflect.md` from the existing Stats Service code, tests, and recorded CI evidence at the user's request. It does not assert unverified personal experiences or a human-authorship percentage. The team should read and revise the interpretation before submission. The LifeBalance-based revision remains separate future work.

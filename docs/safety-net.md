@@ -44,4 +44,4 @@ The main branch API reports `protected: true`, but required status checks have `
 
 ## Lessons (AI draft for team review)
 
-The tests show that zero inputs can produce a negative net result while still being valid, and that either negative input is rejected. The full suite exercises both the calculation and its API routes. Team members should review this draft and add their own Lab 12 post-quiz reflection; no quiz answers are supplied here.
+The tests show that zero inputs can produce a negative net result while still being valid, and that either negative input is rejected. The full suite exercises both the calculation and its API routes. A draft Post-quiz 12 reflection based on this Stats Service version is now in [reflect.md](../reflect.md). Team members should review its interpretation before submission; the later LifeBalance-based revision is not included.
