@@ -3,12 +3,10 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-
 service_path = Path(__file__).resolve().parents[2] / "services" / "stats-service"
 sys.path.insert(0, str(service_path))
 
 from app import app
-
 
 client = TestClient(app)
 
