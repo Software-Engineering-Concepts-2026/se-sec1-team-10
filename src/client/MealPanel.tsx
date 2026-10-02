@@ -32,14 +32,23 @@ type Analysis = {
   notes: string[];
 };
 
-export function MealPanel({ userId }: { userId: string }) {
-  const [date, setDate] = useState(localDate);
+type MealPanelProps = {
+  userId: string;
+  selectedDate?: string;
+  onDateChange?: (date: string) => void;
+  initialMode?: "manual" | "photo";
+  initialImage?: string | null;
+  initialMeal?: PublicMeal | null;
+};
+
+export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "manual", initialImage = null, initialMeal = null }: MealPanelProps) {
+  const [date, setDate] = useState(selectedDate ?? localDate);
   const [meals, setMeals] = useState<DailyMeals | null>(null);
   const [name, setName] = useState("");
   const [mealType, setMealType] = useState("breakfast");
   const [ingredients, setIngredients] = useState<IngredientDraft[]>([]);
   const [estimatingIngredient, setEstimatingIngredient] = useState(false);
-  const [imageData, setImageData] = useState<string | null>(null);
+  const [imageData, setImageData] = useState<string | null>(initialImage);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{
@@ -48,7 +57,7 @@ export function MealPanel({ userId }: { userId: string }) {
   } | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
-  const [showManualFields, setShowManualFields] = useState(false);
+  const [showManualFields, setShowManualFields] = useState(initialMode === "manual");
   const [foodSource, setFoodSource] = useState<
     "usda-fdc" | "ai-estimate" | null
   >(null);
@@ -57,6 +66,24 @@ export function MealPanel({ userId }: { userId: string }) {
   const [foodSearchOpen, setFoodSearchOpen] = useState(false);
   const cameraInput = useRef<HTMLInputElement>(null);
   const uploadInput = useRef<HTMLInputElement>(null);
+  const photoWorkflow = initialMode === "photo";
+
+  useEffect(() => {
+    if (selectedDate) setDate(selectedDate);
+  }, [selectedDate]);
+
+  useEffect(() => {
+    if (!initialMeal) return;
+    setName(initialMeal.name);
+    setMealType(initialMeal.mealType);
+    setIngredients(initialMeal.ingredients.map(({ id: _id, caloriesKcal: _calories, carbsGrams: _carbs, sugarGrams: _sugar, proteinGrams: _protein, fatGrams: _fat, ...item }) => item));
+    setImageData(initialMeal.imageData ?? null);
+    setEditingId(null);
+    setAnalysis(null);
+    setShowManualFields(true);
+    setNeedsRecalculation(false);
+    setMessage({ text: `เติมข้อมูล ${initialMeal.name} แล้ว ตรวจสอบปริมาณก่อนบันทึกได้เลย`, error: false });
+  }, [initialMeal]);
 
   async function load() {
     try {
@@ -194,12 +221,14 @@ export function MealPanel({ userId }: { userId: string }) {
       setImageData(await compressImage(file));
       setAnalysis(null);
       setFoodSource(null);
-      setShowManualFields(false);
-      setNeedsRecalculation(false);
-      setMessage({
-        text: "เตรียมรูปแล้ว กดวิเคราะห์เพื่อรับค่าประมาณ",
-        error: false,
-      });
+      if (photoWorkflow) {
+        setShowManualFields(false);
+        setNeedsRecalculation(false);
+        setMessage({ text: "เตรียมรูปแล้ว กดวิเคราะห์เพื่อรับค่าประมาณ", error: false });
+      } else {
+        setShowManualFields(true);
+        setMessage({ text: "แนบรูปแล้ว กรอกรายการอาหารและส่วนประกอบได้เลย", error: false });
+      }
     } catch (error) {
       setMessage({
         text: error instanceof Error ? error.message : "เตรียมรูปไม่ได้",
@@ -330,7 +359,7 @@ export function MealPanel({ userId }: { userId: string }) {
           <input
             type="date"
             value={date}
-            onChange={(event) => setDate(event.target.value)}
+              onChange={(event) => { setDate(event.target.value); onDateChange?.(event.target.value); }}
           />
         </label>
       </div>
@@ -386,13 +415,13 @@ export function MealPanel({ userId }: { userId: string }) {
             )}
             {imageData && (
               <div className="image-actions">
-                <button
+                {photoWorkflow && <button
                   className="secondary"
                   type="button"
                   onClick={() => void analyzeImage()}
                 >
                   {analyzing ? "กำลังวิเคราะห์…" : "วิเคราะห์รูป"}
-                </button>
+                </button>}
                 <button
                   className="text-button"
                   type="button"
@@ -431,7 +460,7 @@ export function MealPanel({ userId }: { userId: string }) {
               />
             </label>
           </div>
-          {!showManualFields && !analysis && (
+          {!showManualFields && !analysis && photoWorkflow && (
             <button
               className="secondary manual-entry-button"
               type="button"

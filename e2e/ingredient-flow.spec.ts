@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
 
+async function openManualDiary(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'บันทึกอาหาร', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: /บันทึกอาหาร/ }).click();
+  await expect(page.getByLabel('ชื่ออาหาร', { exact: true })).toBeVisible();
+}
+
 for (const width of [320, 390]) test(`ingredient lifecycle at ${width}px without nested form submission`, async ({ page }) => {
   await page.setViewportSize({ width, height: 844 });
   const meals = new Map<string, any>();
@@ -32,7 +39,7 @@ for (const width of [320, 390]) test(`ingredient lifecycle at ${width}px without
     return reply({ meals: [], points: [] });
   });
   await page.goto('/');
-  await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+  await openManualDiary(page);
   await page.getByLabel('ชื่ออาหาร', { exact: true }).fill('ข้าวทดสอบ');
   await page.getByRole('button', { name: 'เพิ่มส่วนประกอบ', exact: true }).click();
   await expect(page.locator('form form')).toHaveCount(0);
@@ -57,7 +64,7 @@ for (const width of [320, 390]) test(`ingredient lifecycle at ${width}px without
   await expect(page.locator('.meal-list article').nth(0)).toContainText('100 ก.');
   await expect(page.locator('.favorite-panel')).toContainText('ข้าวทดสอบ');
   await page.reload();
-  await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+  await openManualDiary(page);
   await page.locator('.favorite-panel').getByRole('button', { name: 'ใช้รายการนี้' }).click();
   await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('100');
   await page.getByLabel('ปริมาณส่วนประกอบ 1').fill('50');
@@ -72,7 +79,7 @@ for (const width of [320, 390]) test(`ingredient lifecycle at ${width}px without
   await expect(page.locator('.meal-list article').nth(1)).toContainText('65 kcal');
   await expect(page.locator('.meal-list article').nth(1)).toContainText('50 ก.');
   await page.reload();
-  await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+  await openManualDiary(page);
   await page.locator('.favorite-panel').getByRole('button', { name: 'ใช้รายการนี้' }).click();
   await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('50');
   const secondMeal = page.locator('.meal-list article').filter({ hasText: '50 ก.' });
@@ -95,11 +102,12 @@ for (const width of [320, 390]) test(`ingredient lifecycle at ${width}px without
   await expect(page.locator('.meal-list article').nth(0)).toContainText('100 ก.');
   await expect(page.locator('.meal-list article').nth(1)).toContainText('195 kcal');
   await expect(page.locator('.meal-list article').nth(1)).toContainText('150 ก.');
-  await page.getByRole('tab', { name: 'ประวัติ', exact: true }).click();
-  await expect(page.locator('.history-panel')).toContainText('130 kcal');
-  await expect(page.locator('.history-panel')).toContainText('195 kcal');
+  await page.getByRole('button', { name: /กลับไปบันทึก/ }).click();
+  await page.getByRole('button', { name: 'ดูทั้งหมด', exact: true }).click();
+  await expect(page.locator('.diary-meal-history')).toContainText('130 kcal');
+  await expect(page.locator('.diary-meal-history')).toContainText('195 kcal');
   await page.reload();
-  await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+  await openManualDiary(page);
   await expect(page.locator('.meal-list article')).toHaveCount(2);
   await expect(page.locator('.meal-list article').nth(0)).toContainText('130 kcal');
   await expect(page.locator('.meal-list article').nth(0)).toContainText('100 ก.');
