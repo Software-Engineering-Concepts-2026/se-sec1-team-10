@@ -35,8 +35,8 @@ export function MealIngredientEditor({ ingredients, analysis, needsRecalculation
     onEstimating(true);
     setError("");
     try {
-      const result = await api<{ ingredient: IngredientDraft }>("/foods/estimate", { name: name.trim(), amount: grams });
-      onAddManual(result.ingredient);
+      const result = await api<{ ingredient: IngredientDraft; catalogMatch?: IngredientDraft["catalogMatch"] }>("/foods/estimate", { name: name.trim(), amount: grams });
+      onAddManual({ ...result.ingredient, ...(result.catalogMatch ? { catalogMatch: result.catalogMatch } : {}) });
       setName("");
       setAmount("");
       setOpen(false);
@@ -62,6 +62,9 @@ export function MealIngredientEditor({ ingredients, analysis, needsRecalculation
       <div className="ingredient-card-heading"><strong>{ingredient.name}</strong><strong className="ingredient-calories">{needsRecalculation ? "รอคำนวณ" : `${display(values[index].caloriesKcal)} kcal`}</strong></div>
       <label>ปริมาณ ({ingredient.unit === 'g' ? 'กรัม' : 'ส่วนเดิม'})<input aria-label={`ปริมาณส่วนประกอบ ${index + 1}`} type="number" min="0.01" max="10000" step="any" value={ingredient.amount || ''} onChange={event => onQuantityChange(index, event.target.value)} required /></label>
       <small>{ingredient.source === 'ai-estimate' ? 'ค่าประมาณจาก AI' : ingredient.source === 'usda-fdc' ? 'USDA FoodData Central' : ingredient.source === 'food-catalog' ? 'ฐานข้อมูลอาหาร' : ingredient.source === 'manual' ? 'ข้อมูลที่กรอกเอง' : 'ข้อมูลเดิม · ไม่ทราบน้ำหนักเป็นกรัม'}</small>
+      {ingredient.catalogMatch?.status === 'matched' && ingredient.catalogMatch.food && <small className="catalog-match-feedback">{ingredient.catalogMatch.food.sourceName ?? 'ฐานข้อมูลอาหาร'}{ingredient.catalogMatch.food.url && <> · <a href={ingredient.catalogMatch.food.url} target="_blank" rel="noreferrer">แหล่งข้อมูล</a></>}{ingredient.photoEstimate && <> · ปริมาณยังเป็นค่าประมาณจากภาพ</>}</small>}
+      {ingredient.catalogMatch && ingredient.catalogMatch.status !== 'matched' && <small className="catalog-match-warning" role="status">{ingredient.catalogMatch.status === 'ambiguous' ? 'ยังจับคู่กับฐานข้อมูลอาหารไม่ได้แน่ชัด' : ingredient.catalogMatch.status === 'incomplete' ? 'ข้อมูลสารอาหารในฐานข้อมูลยังไม่ครบ' : 'ไม่พบในฐานข้อมูลอาหาร'} · ยังคงเป็นค่าประมาณจาก AI สามารถลบหรือค้นหาจากฐานข้อมูลได้</small>}
+      {ingredient.photoEstimate && !ingredient.catalogMatch && ingredient.source === 'ai-estimate' && <small className="catalog-match-warning" role="status">ยังเป็นค่าประมาณจาก AI สามารถลบหรือค้นหาจากฐานข้อมูลได้</small>}
       <button className="remove-ingredient" type="button" aria-label={`ลบ ${ingredient.name}`} onClick={() => onRemove(index)}>ลบ</button>
     </article>)}
     {!ingredients.length && <p className="empty-state">ยังไม่มีส่วนประกอบ เพิ่มรายการหรือวิเคราะห์รูปอาหารเพื่อเริ่มต้น</p>}

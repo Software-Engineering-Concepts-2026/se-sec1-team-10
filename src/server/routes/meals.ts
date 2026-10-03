@@ -15,6 +15,7 @@ import {
   NotFoodError,
 } from "../ai.js";
 import { calculateMeal, publicMeal } from "../meal.js";
+import { matchCatalogIngredients } from "../catalogMatching.js";
 import {
   foodSearchQuerySchema,
   isNutritionConfigured,
@@ -98,7 +99,13 @@ export function registerMealRoutes(
     }
     try {
       const analysis = await analyzeMealImage(imageData, config.ai);
-      res.json({ analysis });
+      const references = await repository.lookupFoodReferences(res.locals.user.id, analysis.ingredients.map(item => item.name));
+      const matched = matchCatalogIngredients(analysis.ingredients, references);
+      const missingCount = matched.catalogMatches.filter(match => match.status !== 'matched').length;
+      const note = missingCount
+        ? 'ข้อมูลที่ตรงกันจากฐานข้อมูลไม่ครบทุกส่วนผสม; ส่วนที่ไม่ตรงยังเป็นค่าประเมินจาก AI โปรดตรวจสอบก่อนบันทึก'
+        : 'สารอาหารของส่วนผสมที่ตรงกันมาจากฐานข้อมูล; โปรดตรวจสอบปริมาณก่อนบันทึก';
+      res.json({ analysis: { ...analysis, ingredients: matched.ingredients, notes: [...analysis.notes, note], catalogMatches: matched.catalogMatches } });
     } catch (error) {
       if (error instanceof NotFoodError) {
         res
@@ -121,8 +128,29 @@ export function registerMealRoutes(
       throw error;
     }
   });
-  app.post('/api/foods/estimate', requireAuth, aiLimiter, async (req, res) => {
-    const input = ingredientRequestSchema.parse(req.body);
+  const resolveCatalogEstimate: RequestHandler = async (req, res, next) => {
+    try {
+      const input = ingredientRequestSchema.parse(req.body);
+      const references = await repository.lookupFoodReferences(res.locals.user.id, [input.name]);
+      const placeholder = {
+        name: input.name, amount: input.amount, unit: 'g' as const, referenceAmount: 100,
+        referenceUnit: 'g' as const, source: 'ai-estimate' as const,
+        referenceNutrients: { caloriesKcal: null, carbsGrams: null, sugarGrams: null, proteinGrams: null, fatGrams: null },
+      };
+      const direct = matchCatalogIngredients([placeholder], references);
+      const catalogMatch = direct.catalogMatches[0];
+      if (catalogMatch.status === 'matched') {
+        res.json({ ingredient: direct.ingredients[0], catalogMatch });
+        return;
+      }
+      res.locals.estimateInput = input;
+      res.locals.catalogMatch = catalogMatch;
+      next();
+    } catch (error) { next(error); }
+  };
+  app.post('/api/foods/estimate', requireAuth, resolveCatalogEstimate, aiLimiter, async (_req, res) => {
+    const input = res.locals.estimateInput as ReturnType<typeof ingredientRequestSchema.parse>;
+    const catalogMatch = res.locals.catalogMatch;
     if (!isAiConfigured(config.ai)) {
       res.status(503).json({ message: 'ยังไม่ได้ตั้งค่า AI สำหรับประมาณสารอาหาร กรุณาค้นหาจากฐานข้อมูลอาหาร' });
       return;
@@ -132,7 +160,7 @@ export function registerMealRoutes(
       return;
     }
     try {
-      res.json({ ingredient: await estimateIngredient(input, config.ai) });
+      res.json({ ingredient: await estimateIngredient(input, config.ai), catalogMatch });
     } catch (error) {
       if (error instanceof NotFoodError) {
         res.status(422).json({ message: 'ไม่รู้จักส่วนประกอบนี้ กรุณาระบุชื่ออาหารและวิธีปรุงให้ชัดเจน' });

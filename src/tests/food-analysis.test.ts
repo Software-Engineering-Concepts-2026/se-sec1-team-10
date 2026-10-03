@@ -4,9 +4,12 @@ import request from 'supertest';
 import type { User } from '@prisma/client';
 import { createApp } from '../server/app.js';
 import type { Repository } from '../server/repository.js';
+import type { CatalogReference } from '../shared/foodCatalog.js';
 import type { ExerciseInput, ExerciseRecord, GoalInput, MealInput, MealRecord, ProfileInput } from '../shared/contracts.js';
 
 class MemoryRepository implements Repository {
+  catalogReferences: CatalogReference[] = [];
+  async lookupFoodReferences() { return this.catalogReferences; }
   async searchFoods() { return []; }
   users = new Map<string, User>();
   sessions = new Map<string, { id: string; userId: string; expiresAt: Date }>();
@@ -56,6 +59,11 @@ async function signIn() {
 }
 const providerResponse = (payload: unknown) => new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(payload) } }] }), { status: 200, headers: { 'content-type': 'application/json' } });
 const validEstimate = { name: 'Chicken rice', mealType: 'lunch', ingredients: [{ name: 'Rice', amount: 200, unit: 'g', referenceAmount: 200, referenceUnit: 'g', source: 'ai-estimate', referenceNutrients: { caloriesKcal: 238, carbsGrams: 50, sugarGrams: 1, proteinGrams: 5, fatGrams: 2 } }], portionDescription: 'One plate', notes: ['Estimate only'] };
+const catalogRice: CatalogReference = {
+  id: 'catalog-rice', name: 'ข้าวสวย', aliases: ['rice', 'cooked rice'], source: 'food-catalog',
+  sourceName: 'Verified reference', url: 'https://example.org/rice', imageUrl: null,
+  nutrientsPer100g: { caloriesKcal: 130, carbsGrams: 28, sugarGrams: 0, proteinGrams: 3, fatGrams: 0.3 },
+};
 
 beforeEach(() => {
   repository = new MemoryRepository();
@@ -63,6 +71,45 @@ beforeEach(() => {
 });
 
 describe('food image analysis', () => {
+  it('matches photo components in one scoped lookup and calculates catalog portions only on save', async () => {
+    repository.catalogReferences = [catalogRice];
+    const lookup = vi.spyOn(repository, 'lookupFoodReferences');
+    app = createApp(repository, { jwtSecret: secret, appOrigin: origin, ai: {
+      baseUrl: 'https://provider.test/v1', apiKey: 'secret', model: 'food', fetch: async () => providerResponse(validEstimate),
+    } });
+    const auth = await signIn();
+    const result = await request(app).post('/api/meals/analyze').set('Origin', origin).set('Cookie', auth).send({ imageData }).expect(200);
+    expect(result.body.analysis.ingredients[0]).toMatchObject({ amount: 200, referenceAmount: 100, source: 'food-catalog', referenceNutrients: { caloriesKcal: 130 } });
+    expect(result.body.analysis.catalogMatches[0]).toMatchObject({ index: 0, status: 'matched', food: { sourceName: 'Verified reference' } });
+    expect(lookup).toHaveBeenCalledTimes(1);
+    expect(lookup).toHaveBeenCalledWith([...repository.users.values()][0].id, ['Rice']);
+    expect(repository.meals.size).toBe(0);
+    const saved = await request(app).post('/api/meals').set('Origin', origin).set('Cookie', auth).send({
+      name: result.body.analysis.name, mealType: 'lunch', activityDate: '2026-10-03', ingredients: result.body.analysis.ingredients,
+    }).expect(201);
+    expect(saved.body.meal.totalCalories).toBe(260);
+  });
+  it('resolves a named ingredient without AI configuration or scan quota, including repeated requests', async () => {
+    repository.catalogReferences = [catalogRice];
+    const quota = vi.spyOn(repository, 'claimDailyAiScan');
+    const auth = await signIn();
+    for (let i = 0; i < 11; i++) {
+      const result = await request(app).post('/api/foods/estimate').set('Origin', origin).set('Cookie', auth).send({ name: 'cooked rice', amount: 50 }).expect(200);
+      expect(result.body.ingredient).toMatchObject({ amount: 50, referenceAmount: 100, source: 'food-catalog' });
+      expect(result.body.catalogMatch.status).toBe('matched');
+    }
+    expect(quota).not.toHaveBeenCalled();
+  });
+  it('retains AI estimates with an explicit unmatched status', async () => {
+    app = createApp(repository, { jwtSecret: secret, appOrigin: origin, ai: {
+      baseUrl: 'https://provider.test/v1', apiKey: 'secret', model: 'food', fetch: async () => providerResponse(validEstimate),
+    } });
+    const auth = await signIn();
+    const result = await request(app).post('/api/meals/analyze').set('Origin', origin).set('Cookie', auth).send({ imageData }).expect(200);
+    expect(result.body.analysis.catalogMatches[0].status).toBe('not-found');
+    expect(result.body.analysis.ingredients[0].source).toBe('ai-estimate');
+    expect(result.body.analysis.notes.join(' ')).toContain('AI');
+  });
   it('estimates a named component, preserves requested grams, and shares the daily quota', async () => {
     let calls = 0;
     const fetch: typeof globalThis.fetch = async (_url, options) => {

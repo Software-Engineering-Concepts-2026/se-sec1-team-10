@@ -9,3 +9,12 @@ export type CatalogFood = {
   url: string | null;
   imageUrl: string | null;
 };
+
+/** Exact references remain account-scoped and distinguish ambiguous aliases. */
+export type CatalogReference = CatalogFood & { aliases: string[] };
+export type CatalogMatch = {
+  index: number;
+  name: string;
+  status: 'matched' | 'not-found' | 'ambiguous' | 'incomplete';
+  food?: CatalogFood;
+};

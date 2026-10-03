@@ -1,7 +1,12 @@
 import type { MealIngredientRecord, ReferenceNutrients } from "../shared/contracts";
+import type { CatalogMatch } from "../shared/foodCatalog";
 
 export type Nutrients = ReferenceNutrients;
-export type IngredientDraft = Omit<MealIngredientRecord, "id" | keyof ReferenceNutrients>;
+export type IngredientDraft = Omit<MealIngredientRecord, "id" | keyof ReferenceNutrients> & {
+  /** Transient provenance from photo analysis or a manual estimate. */
+  catalogMatch?: CatalogMatch;
+  photoEstimate?: boolean;
+};
 
 export const mealOptions = [
   { id: "breakfast", label: "อาหารเช้า" },

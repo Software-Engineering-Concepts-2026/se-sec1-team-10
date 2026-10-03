@@ -6,7 +6,7 @@ import {
   type FormEvent,
 } from "react";
 import { mealSchema, type PublicMeal } from "../shared/contracts";
-import type { CatalogFood } from "../shared/foodCatalog";
+import type { CatalogFood, CatalogMatch } from "../shared/foodCatalog";
 import { api, ApiError } from "./api";
 import type { FavoriteMeal } from "./FavoriteMealsPanel";
 import { rememberFavorite } from "./favorites";
@@ -31,6 +31,7 @@ type Analysis = {
   portionDescription: string;
   source: "ai-estimate";
   notes: string[];
+  catalogMatches?: CatalogMatch[];
 };
 
 type MealPanelProps = {
@@ -232,6 +233,7 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
     }
     try {
       setImageData(await compressImage(file));
+      setIngredients((current) => current.map(({ catalogMatch: _match, photoEstimate: _photo, ...item }) => item));
       setCatalogImageUrl(null);
       setAnalysis(null);
       if (photoWorkflow) {
@@ -258,9 +260,14 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
         imageData,
       });
       const next = result.analysis;
+      const matches = new Map((next.catalogMatches ?? []).map((match) => [match.index, match]));
       setName(next.name);
       setMealType(next.mealType);
-      setIngredients(next.ingredients);
+      setIngredients(next.ingredients.map((ingredient, index) => ({
+        ...ingredient,
+        ...(matches.has(index) ? { catalogMatch: matches.get(index) } : {}),
+        photoEstimate: true,
+      })));
       setAnalysis(next);
       setShowManualFields(true);
       setNeedsRecalculation(false);
@@ -297,7 +304,7 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
       mealType,
       activityDate: date,
       imageData,
-      ingredients,
+      ingredients: ingredients.map(({ catalogMatch: _catalogMatch, photoEstimate: _photoEstimate, ...ingredient }) => ingredient),
     };
     try {
       const result = await api<{ meal: PublicMeal }>(
