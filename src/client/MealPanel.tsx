@@ -60,6 +60,8 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
   } | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const analyzingRef = useRef(false);
+  const [preparingImage, setPreparingImage] = useState(false);
   const [showManualFields, setShowManualFields] = useState(initialMode === "manual");
   const [catalogImageUrl, setCatalogImageUrl] = useState<string | null>(null);
   const [needsRecalculation, setNeedsRecalculation] = useState(false);
@@ -134,7 +136,7 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
   useEffect(() => {
     const selectFavorite = (event: Event) => {
       const favorite = (event as CustomEvent<FavoriteMeal>).detail;
-      if (!favorite) return;
+      if (!favorite || analyzingRef.current) return;
       setName(favorite.name);
       setMealType(favorite.mealType);
       setIngredients(favorite.ingredients);
@@ -225,12 +227,14 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
     return result;
   }
   async function chooseImage(event: ChangeEvent<HTMLInputElement>) {
+    if (analyzingRef.current || busy || preparingImage) return;
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       setMessage({ text: "เลือกรูปภาพอาหารที่ถูกต้อง", error: true });
       return;
     }
+    setPreparingImage(true);
     try {
       setImageData(await compressImage(file));
       setIngredients((current) => current.map(({ catalogMatch: _match, photoEstimate: _photo, ...item }) => item));
@@ -249,26 +253,31 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
         text: error instanceof Error ? error.message : "เตรียมรูปไม่ได้",
         error: true,
       });
+    } finally {
+      setPreparingImage(false);
     }
   }
-  async function analyzeImage() {
-    if (!imageData || analyzing) return;
+  async function analyzeImage(correctedMealName?: string) {
+    if (!imageData || analyzingRef.current || busy || preparingImage || estimatingIngredient) return;
+    if (correctedMealName !== undefined && (correctedMealName.length < 2 || correctedMealName.length > 120)) return;
+    analyzingRef.current = true;
     setAnalyzing(true);
     setMessage(null);
     try {
       const result = await api<{ analysis: Analysis }>("/meals/analyze", {
         imageData,
+        ...(correctedMealName !== undefined ? { correctedMealName } : {}),
       });
       const next = result.analysis;
       const matches = new Map((next.catalogMatches ?? []).map((match) => [match.index, match]));
-      setName(next.name);
-      setMealType(next.mealType);
+      setName(correctedMealName ?? next.name);
+      if (correctedMealName === undefined) setMealType(next.mealType);
       setIngredients(next.ingredients.map((ingredient, index) => ({
         ...ingredient,
         ...(matches.has(index) ? { catalogMatch: matches.get(index) } : {}),
         photoEstimate: true,
       })));
-      setAnalysis(next);
+      setAnalysis({ ...next, name: correctedMealName ?? next.name });
       setShowManualFields(true);
       setNeedsRecalculation(false);
       setMessage({
@@ -284,12 +293,13 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
         error: true,
       });
     } finally {
+      analyzingRef.current = false;
       setAnalyzing(false);
     }
   }
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy || estimatingIngredient || !ingredients.length) return;
+    if (busy || analyzingRef.current || preparingImage || estimatingIngredient || !ingredients.length) return;
     if (needsRecalculation) {
       setMessage({
         text: "ข้อมูลเปลี่ยนแล้ว กรุณากดคำนวณสารอาหารใหม่ก่อนบันทึก",
@@ -334,6 +344,7 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
     }
   }
   async function remove(id: string) {
+    if (analyzingRef.current) return;
     setBusy(true);
     try {
       await api(`/meals/${id}`, {}, "DELETE");
@@ -350,6 +361,7 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
     }
   }
   function edit(meal: PublicMeal) {
+    if (analyzingRef.current) return;
     setEditingId(meal.id);
     setName(meal.name);
     setMealType(meal.mealType);
@@ -376,6 +388,7 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
           วันที่
           <input
             type="date"
+            disabled={busy || analyzing || preparingImage}
             value={date}
               onChange={(event) => { setDate(event.target.value); onDateChange?.(event.target.value); }}
           />
@@ -390,7 +403,7 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
         </div>
       )}
       <form className="meal-form" onSubmit={save}>
-        <fieldset disabled={busy || analyzing}>
+        <fieldset disabled={busy || analyzing || preparingImage}>
           <div className="image-picker">
             <input
               ref={cameraInput}
@@ -433,9 +446,10 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
             )}
             {imageData && (
               <div className="image-actions">
-                {photoWorkflow && <button
+                {photoWorkflow && !analysis && <button
                   className="secondary"
                   type="button"
+                  disabled={estimatingIngredient}
                   onClick={() => void analyzeImage()}
                 >
                   {analyzing ? "กำลังวิเคราะห์…" : "วิเคราะห์รูป"}
@@ -480,6 +494,14 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
               />
             </label>
           </div>
+          {analysis && imageData && name.trim() && name.trim() !== analysis.name && (
+            <div className="analysis-note">
+              <p id="meal-correction-warning">วิเคราะห์รูปเดิมตามชื่อที่แก้ไข จะใช้โควตาอีก 1 ครั้งและแทนที่ส่วนประกอบเดิมทั้งหมด รวมถึงปริมาณที่แก้ไว้ กรุณาตรวจสอบก่อนบันทึก หากต้องการแก้เฉพาะชื่อ สามารถบันทึกได้เลย</p>
+              <button className="secondary" type="button" aria-describedby="meal-correction-warning" disabled={estimatingIngredient || name.trim().length < 2 || name.trim().length > 120} onClick={() => void analyzeImage(name.trim())}>
+                {analyzing ? "กำลังวิเคราะห์…" : "วิเคราะห์ใหม่ตามชื่อที่แก้ไข"}
+              </button>
+            </div>
+          )}
           {!showManualFields && !analysis && photoWorkflow && (
             <button
               className="secondary manual-entry-button"
@@ -511,7 +533,7 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
           )}
           {(showManualFields || analysis) && (
             <div className="meal-actions">
-              <button className="primary" type="submit" disabled={busy || estimatingIngredient || needsRecalculation || !ingredients.length}>
+              <button className="primary" type="submit" disabled={busy || analyzing || preparingImage || estimatingIngredient || needsRecalculation || !ingredients.length}>
                 {busy
                   ? "กำลังบันทึก…"
                   : editingId
@@ -529,7 +551,7 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
       </form>
       <MealList
         meals={meals}
-        busy={busy}
+        busy={busy || analyzing || preparingImage}
         onEdit={edit}
         onRemove={(id) => void remove(id)}
       />

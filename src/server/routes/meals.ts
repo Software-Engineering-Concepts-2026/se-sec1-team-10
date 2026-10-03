@@ -81,7 +81,7 @@ export function registerMealRoutes(
         .json({ message: "ยังไม่ได้เปิดใช้การวิเคราะห์รูปภาพอาหาร" });
       return;
     }
-    const { imageData } = analyzeMealRequestSchema.parse(req.body);
+    const { imageData, correctedMealName } = analyzeMealRequestSchema.parse(req.body);
     if (
       !(await repository.claimDailyAiScan(
         res.locals.user.id,
@@ -98,7 +98,7 @@ export function registerMealRoutes(
       return;
     }
     try {
-      const analysis = await analyzeMealImage(imageData, config.ai);
+      const analysis = await analyzeMealImage(imageData, config.ai, correctedMealName);
       const references = await repository.lookupFoodReferences(res.locals.user.id, analysis.ingredients.map(item => item.name));
       const matched = matchCatalogIngredients(analysis.ingredients, references);
       const missingCount = matched.catalogMatches.filter(match => match.status !== 'matched').length;
