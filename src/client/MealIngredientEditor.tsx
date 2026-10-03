@@ -71,7 +71,7 @@ export function MealIngredientEditor({ ingredients, analysis, needsRecalculation
     <button className="secondary add-ingredient" type="button" onClick={() => { setOpen(true); setError(''); }}>เพิ่มส่วนประกอบ</button>
     {open && <section className="manual-ingredient-form" aria-label="เพิ่มส่วนประกอบ" onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void add(); } }}>
       <div className="manual-ingredient-heading"><h3>เพิ่มส่วนประกอบ</h3><button type="button" disabled={busy} onClick={() => setOpen(false)}>ยกเลิก</button></div>
-      <p>ระบุชื่อและกรัม ให้ AI ประมาณสารอาหาร แล้วตรวจสอบก่อนบันทึก</p>
+      <p>ระบุชื่อและกรัม ระบบค้นหาในฐานข้อมูลอาหารก่อน หากไม่พบ AI จะประมาณสารอาหาร ตรวจสอบก่อนบันทึก</p>
       <label>ชื่อส่วนประกอบ<input autoFocus maxLength={120} disabled={busy} value={name} placeholder="เช่น ข้าวสวยสุก" onChange={event => setName(event.target.value)} /></label>
       <label>ปริมาณที่เพิ่ม (กรัม)<input type="number" min="0.01" max="10000" step="any" disabled={busy} value={amount} onChange={event => setAmount(event.target.value)} /></label>
       {error && <p className="feedback error" role="alert">{error}</p>}
