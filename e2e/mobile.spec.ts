@@ -108,6 +108,77 @@ async function openFoodSearch(page: Page) {
 }
 
 test.describe('mobile navigation and food logging', () => {
+  test('shows elapsed analysis time, preserves failed drafts, and retries only on a manual click', async ({ page }) => {
+    const mock = await mockApi(page, { aiConfigured: true });
+    const requests: { imageData: string; correctedMealName?: string }[] = [];
+    let release!: () => void;
+    let gate = new Promise<void>(resolve => { release = resolve; });
+    const ingredient = { name: 'ข้าว', amount: 100, unit: 'g', referenceAmount: 100, referenceUnit: 'g', source: 'ai-estimate', referenceNutrients: { caloriesKcal: 130, carbsGrams: 28, sugarGrams: 0, proteinGrams: 3, fatGrams: 0.3 } };
+    await page.route('**/api/meals/analyze', async route => {
+      requests.push(route.request().postDataJSON());
+      if (requests.length === 1 || requests.length === 3) {
+        await gate;
+        return route.fulfill({ status: 504, json: { error: 'timeout', message: 'การวิเคราะห์ใช้เวลานานเกินไป กรุณาลองใหม่' } });
+      }
+      return route.fulfill({ json: { analysis: { name: 'ข้าวมันไก่', mealType: 'lunch', ingredients: [ingredient], portionDescription: 'หนึ่งจาน', source: 'ai-estimate', notes: [] } } });
+    });
+    await login(page);
+    await openDiary(page);
+    await page.getByRole('button', { name: /ถ่ายภาพอาหาร/ }).click();
+    await page.getByLabel('เลือกรูปอาหารจากอัลบั้ม').setInputFiles({ name: 'food.png', mimeType: 'image/png', buffer: png });
+    const analyze = page.getByRole('button', { name: 'วิเคราะห์รูป', exact: true });
+    await expect(analyze).toBeEnabled();
+    const name = page.getByLabel('ชื่ออาหาร', { exact: true });
+    await name.fill('ชื่อที่กรอกเอง');
+    const preview = page.getByRole('img', { name: 'ตัวอย่างรูปอาหาร' });
+    const originalImage = await preview.getAttribute('src');
+    await page.clock.install();
+    await analyze.click();
+    try {
+      await expect.poll(() => requests.length).toBe(1);
+      await page.clock.runFor(11_000);
+      await expect(page.locator('.meal-panel .analysis-note[role="status"]')).toContainText('11 วินาที');
+      await expect(page.locator('.meal-panel .analysis-note[role="status"]')).toContainText('ไม่ต้องกดวิเคราะห์ซ้ำ');
+      await page.getByRole('button', { name: 'กำลังวิเคราะห์…', exact: true }).evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
+      expect(requests).toHaveLength(1);
+      expect(mock.mealSaveCalls).toBe(0);
+    } finally { release(); }
+    await expect(page.getByRole('alert')).toContainText('โควตาอีก 1 ครั้ง');
+    await expect(name).toHaveValue('ชื่อที่กรอกเอง');
+    await expect(preview).toHaveAttribute('src', originalImage!);
+    await expect(analyze).toBeEnabled();
+    await page.clock.runFor(5000);
+    expect(requests).toHaveLength(1);
+    await expect(page.locator('.meal-panel .analysis-note[role="status"]')).toHaveCount(0);
+    await analyze.click();
+    await expect(name).toHaveValue('ข้าวมันไก่');
+    await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('100');
+    expect(requests).toHaveLength(2);
+    expect(mock.mealSaveCalls).toBe(0);
+
+    await name.fill('ข้าวผัด');
+    await page.getByLabel('ปริมาณส่วนประกอบ 1').fill('175');
+    gate = new Promise<void>(resolve => { release = resolve; });
+    const correction = page.getByRole('button', { name: 'วิเคราะห์ใหม่ตามชื่อที่แก้ไข', exact: true });
+    await correction.click();
+    try {
+      await expect.poll(() => requests.length).toBe(3);
+      await page.clock.runFor(10_000);
+      await expect(page.locator('.meal-panel .analysis-note[role="status"]')).toContainText('10 วินาที');
+      await expect(page.locator('.meal-panel .analysis-note[role="status"]')).toContainText('ไม่ต้องกดวิเคราะห์ซ้ำ');
+      await expect(page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true })).toBeDisabled();
+    } finally { release(); }
+    await expect(correction).toBeEnabled();
+    await expect(name).toHaveValue('ข้าวผัด');
+    await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('175');
+    await expect(preview).toHaveAttribute('src', originalImage!);
+    await page.clock.runFor(5000);
+    await expect(page.locator('.meal-panel .analysis-note[role="status"]')).toHaveCount(0);
+    expect(requests).toHaveLength(3);
+    expect(requests.every(item => item.imageData === originalImage)).toBe(true);
+    expect(mock.mealSaveCalls).toBe(0);
+  });
+
   test('reanalyses the same photo with a corrected name, replaces only on success, and requires an explicit save', async ({ page }) => {
     const mock = await mockApi(page, { aiConfigured: true });
     const requests: { imageData: string; correctedMealName?: string }[] = [];

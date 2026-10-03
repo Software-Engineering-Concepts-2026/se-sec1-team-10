@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { PrismaClient } from '@prisma/client';
 import { createApp } from './app.js';
 import { prismaRepository } from './repository.js';
-import { parseDailyScanLimit } from './ai.js';
+import { parseDailyScanLimit, parseAiTimeoutMs } from './ai.js';
 
 const db = new PrismaClient();
 const production = process.env.NODE_ENV === 'production';
@@ -15,6 +15,7 @@ const app = createApp(prismaRepository(db), {
     apiKey: process.env.AI_API_KEY,
     model: process.env.AI_MODEL,
     dailyScanLimit: parseDailyScanLimit(process.env.AI_DAILY_SCAN_LIMIT),
+    timeoutMs: parseAiTimeoutMs(process.env.AI_TIMEOUT_MS),
   },
   nutrition: { apiKey: process.env.NUTRITION_API_KEY },
 });

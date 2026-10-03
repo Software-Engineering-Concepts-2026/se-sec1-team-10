@@ -61,6 +61,8 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const analyzingRef = useRef(false);
+  const [analysisElapsedSeconds, setAnalysisElapsedSeconds] = useState(0);
+  const analysisTimerRef = useRef<number | null>(null);
   const [preparingImage, setPreparingImage] = useState(false);
   const [showManualFields, setShowManualFields] = useState(initialMode === "manual");
   const [catalogImageUrl, setCatalogImageUrl] = useState<string | null>(null);
@@ -70,6 +72,10 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
   const cameraInput = useRef<HTMLInputElement>(null);
   const uploadInput = useRef<HTMLInputElement>(null);
   const photoWorkflow = initialMode === "photo";
+
+  useEffect(() => () => {
+    if (analysisTimerRef.current !== null) window.clearInterval(analysisTimerRef.current);
+  }, []);
 
   useEffect(() => {
     if (selectedDate) setDate(selectedDate);
@@ -262,6 +268,9 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
     if (correctedMealName !== undefined && (correctedMealName.length < 2 || correctedMealName.length > 120)) return;
     analyzingRef.current = true;
     setAnalyzing(true);
+    setAnalysisElapsedSeconds(0);
+    const started = Date.now();
+    analysisTimerRef.current = window.setInterval(() => setAnalysisElapsedSeconds(Math.floor((Date.now() - started) / 1000)), 1000);
     setMessage(null);
     try {
       const result = await api<{ analysis: Analysis }>("/meals/analyze", {
@@ -288,11 +297,13 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
       setMessage({
         text:
           error instanceof ApiError
-            ? `${error.message} คุณยังกรอกข้อมูลเองแล้วบันทึกได้`
-            : "วิเคราะห์รูปไม่ได้ คุณยังกรอกข้อมูลเองแล้วบันทึกได้",
+            ? `${error.message} รูปและข้อมูลที่กรอกยังอยู่ การกดวิเคราะห์อีกครั้งจะใช้โควตาอีก 1 ครั้ง หรือกรอกข้อมูลเองแล้วบันทึกได้`
+            : "วิเคราะห์รูปไม่ได้ รูปและข้อมูลที่กรอกยังอยู่ กดวิเคราะห์เพื่อลองใหม่จะใช้โควตาอีก 1 ครั้ง หรือกรอกข้อมูลเองแล้วบันทึกได้",
         error: true,
       });
     } finally {
+      if (analysisTimerRef.current !== null) window.clearInterval(analysisTimerRef.current);
+      analysisTimerRef.current = null;
       analyzingRef.current = false;
       setAnalyzing(false);
     }
@@ -402,6 +413,10 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
           {message.text}
         </div>
       )}
+      {analyzing && <p className="analysis-note" role="status" aria-live="polite">
+        กำลังวิเคราะห์… {analysisElapsedSeconds} วินาที
+        {analysisElapsedSeconds >= 10 && ' บริการ AI อาจใช้เวลาสักครู่ กรุณารอ ไม่ต้องกดวิเคราะห์ซ้ำ'}
+      </p>}
       <form className="meal-form" onSubmit={save}>
         <fieldset disabled={busy || analyzing || preparingImage}>
           <div className="image-picker">
