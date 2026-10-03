@@ -38,6 +38,13 @@ describe('AI component catalog matching', () => {
     expect(result.catalogMatches[0].status).toBe('incomplete');
     expect(result.ingredients[0]).toEqual(estimate);
   });
+  it('matches a known meal component and keeps an unmatched component as its AI estimate', () => {
+    const chicken = { ...estimate, name: 'cooked chicken', amount: 120 };
+    const result = matchCatalogIngredients([estimate, chicken], [rice]);
+    expect(result.catalogMatches.map(match => match.status)).toEqual(['matched', 'not-found']);
+    expect(result.ingredients[0]).toMatchObject({ source: 'food-catalog', amount: 200, referenceAmount: 100 });
+    expect(result.ingredients[1]).toEqual(chicken);
+  });
   it('deduplicates the same record and keeps metadata aligned with repeated components', () => {
     const result = matchCatalogIngredients([estimate, { ...estimate, amount: 50 }], [rice, rice]);
     expect(result.catalogMatches.map(match => [match.index, match.status])).toEqual([[0, 'matched'], [1, 'matched']]);

@@ -17,11 +17,15 @@ All amounts are USDA mean nutrient values per 100 g edible portion. The original
 | Garlic, raw | NDB 11215 | [USDA SR28, group 11, p. 777](https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg11.pdf#page=777) | 149 | 33.06 | 1.00 | 6.36 | 0.50 |
 | Tomatoes, red, ripe, raw, year round average | NDB 11529 | [USDA SR28, group 11, p. 2142](https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg11.pdf#page=2142) | 18 | 3.89 | 2.63 | 0.88 | 0.20 |
 | Cucumber, with peel, raw | NDB 11205 | [USDA SR28, group 11, p. 713](https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg11.pdf#page=713) | 15 | 3.63 | 1.67 | 0.65 | 0.11 |
+| Basil, fresh (*Ocimum basilicum*) | NDB 02044 | [USDA SR28, group 02, p. 1](https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg02.pdf#page=1) | 23 | 2.65 | 0.30 | 3.15 | 0.64 |
+| Broccoli, cooked, boiled, drained, without salt | NDB 11091 | [USDA SR28, group 11, p. 257](https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg11.pdf#page=257) | 35 | 7.18 | 1.39 | 2.38 | 0.41 |
+| Potatoes, boiled, cooked in skin, flesh, with salt | NDB 11831 | [USDA SR28, group 11, p. 1449](https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg11.pdf#page=1449) | 87 | 20.13 | 0.91 | 1.87 | 0.10 |
+| Soy sauce made from soy and wheat (shoyu) | NDB 16123 | [USDA SR28, group 16, p. 746](https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg16.pdf#page=746) | 53 | 4.93 | 0.40 | 8.14 | 0.57 |
 
 ## Reference notes
 
-All 13 seeded records were checked against the 100 g mean fields on the cited USDA SR28 pages. Raw/cooked names describe the same food as the reference. Oil and chicken sugar values are explicit zeros, not filled-in missing values.
+All 17 seeded records were checked against the 100 g mean fields on the cited USDA SR28 pages. Raw/cooked names describe the same food as the reference. Oil and chicken sugar values are explicit zeros, not filled-in missing values. The new basil record is USDA *Ocimum basilicum*; it is not aliased to Thai holy basil (กะเพรา). The boiled potato record is for edible flesh boiled in the skin; the skin is not part of its listed edible portion, and the Thai name clarifies this. Shoyu is specifically soy-and-wheat soy sauce and is not aliased to generic ซีอิ๊ว.
 
-Firm tofu (NDB 16426) is excluded from this starter set: a complete sugar reference was not verified, and the regular tofu vector must not be substituted for the firm tofu record.
+Cooked shrimp (NDB 15271) is excluded because SR28 leaves total sugars blank. Firm tofu (NDB 16426) is excluded from this starter set: a complete sugar reference was not verified, and the regular tofu vector must not be substituted for the firm tofu record.
 
 These are composition references for the stated foods, not measurements of a particular plate or a verified recipe for a Thai dish. The displayed source and preparation should be checked before applying them to a meal.
