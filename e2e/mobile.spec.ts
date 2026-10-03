@@ -66,7 +66,7 @@ async function mockApi(page: Page, options: { aiConfigured?: boolean } = {}) {
       meals = (meals as Record<string, unknown>[]).filter(meal => meal.id !== id);
       return route.fulfill({ status: 204 });
     }
-    if (path === '/api/foods/search' && method === 'GET') return json({ foods: [{ fdcId: 123, name: 'Rice', dataType: 'Foundation', nutrientsPer100g: { caloriesKcal: 130, carbsGrams: 28, proteinGrams: 3, fatGrams: 0.3, sugarGrams: 0.1 }, source: 'usda-fdc', url: 'https://fdc.nal.usda.gov/food-details/123/nutrients' }] });
+    if (path === '/api/foods/catalog' && method === 'GET') return json({ foods: url.searchParams.get('q')?.toLowerCase().includes('rice') ? [{ id: 'rice', name: 'Rice', nutrientsPer100g: { caloriesKcal: 130, carbsGrams: 28, proteinGrams: 3, fatGrams: 0.3, sugarGrams: 0.1 }, source: 'food-catalog', sourceName: 'USDA FoodData Central', imageUrl: null, url: 'https://fdc.nal.usda.gov/food-details/123/nutrients' }] : [] });
     if (path === '/api/exercises/daily' && method === 'GET') return json({ date: url.searchParams.get('date'), exercises: [], caloriesConsumed: caloriesConsumed(), caloriesBurned: 0, netCalories: caloriesConsumed() });
     if (path === '/api/summary/weekly' && method === 'GET') return json({ startDate: '2026-09-08', endDate: '2026-09-14', days: [], caloriesConsumed: 0, caloriesBurned: 0 });
     if (path === '/api/health-history' && method === 'GET') return json({ points: [], rangeDays: 365, performanceTargetMs: 1500 });
@@ -310,7 +310,7 @@ test.describe('mobile navigation and food logging', () => {
     await page.screenshot({ path: 'test-results/desktop-same-app.png', fullPage: true });
   });
 
-  test('searches USDA food, applies a 200g portion, and marks the source', async ({ page }) => {
+  test('searches catalog food, applies a 200g portion, and marks the source', async ({ page }) => {
     const mock = await mockApi(page, { aiConfigured: true });
     await page.setViewportSize({ width: 390, height: 844 });
     await login(page);
@@ -321,7 +321,7 @@ test.describe('mobile navigation and food logging', () => {
     await page.getByRole('button', { name: 'ค้นหา', exact: true }).click();
     await page.getByRole('button', { name: /Rice/ }).click();
     await page.getByLabel('ชื่ออาหาร').fill('มื้อพร้อมรูป');
-    await expect(page.getByText('USDA FoodData Central', { exact: true })).toBeVisible();
+    await expect(page.getByText('ฐานข้อมูลอาหาร', { exact: true })).toBeVisible();
     await expect(page.locator('.portion-row strong').first()).toHaveText('Rice');
     await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('200');
     await page.setInputFiles('#meal-upload', { name: 'food.png', mimeType: 'image/png', buffer: png });
@@ -332,8 +332,49 @@ test.describe('mobile navigation and food logging', () => {
     await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
     await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
     expect(mock.analyzeCalls).toBe(0);
-    expect(mock.createdMealBodies[0]).toMatchObject({ name: 'มื้อพร้อมรูป', ingredients: [{ source: 'usda-fdc', amount: 200 }] });
+    expect(mock.createdMealBodies[0]).toMatchObject({ name: 'มื้อพร้อมรูป', ingredients: [{ source: 'food-catalog', amount: 200 }] });
     expect(mock.createdMealBodies[0].imageData).toEqual(expect.any(String));
+  });
+
+  test('searches the diary catalog and saves a reduced gram quantity without AI', async ({ page }) => {
+    const mock = await mockApi(page);
+    await page.setViewportSize({ width: 320, height: 844 });
+    await login(page);
+    await openDiary(page);
+    await page.getByLabel('ค้นหาประวัติอาหาร').fill('rice');
+    await expect(page.getByRole('heading', { name: 'ประวัติอาหาร', exact: true })).toBeVisible();
+    const catalog = page.getByRole('region', { name: 'ฐานข้อมูลอาหาร', exact: true });
+    await expect(catalog.getByText('Rice', { exact: true })).toBeVisible();
+    await expect(catalog.getByRole('link', { name: 'แหล่งข้อมูล' })).toHaveAttribute('href', 'https://fdc.nal.usda.gov/food-details/123/nutrients');
+    await catalog.getByRole('button', { name: 'ใช้ Rice', exact: true }).click();
+    await expect(page.getByLabel('ชื่ออาหาร')).toHaveValue('Rice');
+    await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('100');
+    await page.getByLabel('ปริมาณส่วนประกอบ 1').fill('50');
+    await expect(page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true })).toBeDisabled();
+    await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
+    await expect(page.getByRole('region', { name: 'สรุปโภชนาการมื้ออาหาร' })).toContainText('65');
+    await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
+    await expect(page.locator('.meal-list article')).toContainText('65 kcal');
+    expect(mock.createdMealBodies[0]).toMatchObject({ ingredients: [{ source: 'food-catalog', amount: 50, referenceAmount: 100, unit: 'g' }] });
+    expect(mock.analyzeCalls).toBe(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+
+  test('shows unknown nutrients without enabling an incomplete catalog food', async ({ page }) => {
+    await mockApi(page);
+    await page.route('**/api/foods/catalog?*', route => route.fulfill({ json: { foods: [{ id: 'unknown', name: 'Unknown food', source: 'food-catalog', sourceName: 'Reference', url: null, imageUrl: null, nutrientsPer100g: { caloriesKcal: null, carbsGrams: 10, sugarGrams: null, proteinGrams: 3, fatGrams: 1 } }] } }));
+    await login(page);
+    await openDiary(page);
+    await page.getByLabel('ค้นหาประวัติอาหาร').fill('unknown');
+    const catalog = page.getByRole('region', { name: 'ฐานข้อมูลอาหาร', exact: true });
+    await expect(catalog.getByRole('button', { name: /Unknown food/ })).toBeDisabled();
+    await expect(catalog).toContainText('สารอาหารไม่ครบ');
+    await page.getByRole('button', { name: /บันทึกอาหาร/ }).click();
+    const foodSearch = await openFoodSearch(page);
+    await foodSearch.getByRole('textbox', { name: 'ค้นหาอาหาร' }).fill('unknown');
+    await foodSearch.getByRole('button', { name: 'ค้นหา', exact: true }).click();
+    await expect(foodSearch.getByRole('button', { name: /Unknown food/ })).toBeDisabled();
+    await expect(foodSearch).toContainText('ไม่ทราบ kcal');
   });
 
   test('edits, deletes, and finds a saved meal in history', async ({ page }) => {
@@ -372,8 +413,9 @@ test.describe('mobile navigation and food logging', () => {
     await login(page);
     await openDiary(page);
     const selectedDate = '2026-09-27';
-    await page.getByRole('textbox', { name: 'เลือกวันที่', exact: true }).fill(selectedDate);
+    await expect(page.locator('.diary-date-card')).toHaveCount(0);
     await page.getByRole('button', { name: /บันทึกอาหาร/ }).click();
+    await page.locator('.meal-panel').getByLabel('วันที่', { exact: true }).fill(selectedDate);
     const foodSearch = await openFoodSearch(page);
     await foodSearch.getByRole('textbox', { name: 'ค้นหาอาหาร' }).fill('rice');
     await foodSearch.getByLabel('ปริมาณ (ก.)').fill('120');
@@ -385,7 +427,7 @@ test.describe('mobile navigation and food logging', () => {
     expect(mock.createdMealBodies[0]).toMatchObject({
       name: 'ข้าวสำหรับทดสอบประวัติ',
       activityDate: selectedDate,
-      ingredients: [{ source: 'usda-fdc', amount: 120 }],
+      ingredients: [{ source: 'food-catalog', amount: 120 }],
     });
 
     await page.getByRole('button', { name: /กลับไปบันทึก/ }).click();
@@ -397,7 +439,7 @@ test.describe('mobile navigation and food logging', () => {
     await history.getByRole('button', { name: /บันทึกมื้อนี้อีกครั้ง/ }).click();
     await expect(page.getByLabel('ชื่ออาหาร')).toHaveValue('ข้าวสำหรับทดสอบประวัติ');
     await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('120');
-    await expect(page.getByText('USDA FoodData Central', { exact: true })).toBeVisible();
+    await expect(page.getByText('ฐานข้อมูลอาหาร', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
     await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
 
@@ -406,7 +448,7 @@ test.describe('mobile navigation and food logging', () => {
     expect(mock.createdMealBodies[1]).toMatchObject({
       name: 'ข้าวสำหรับทดสอบประวัติ',
       activityDate: selectedDate,
-      ingredients: [{ source: 'usda-fdc', amount: 120 }],
+      ingredients: [{ source: 'food-catalog', amount: 120 }],
     });
     await page.getByRole('button', { name: /กลับไปบันทึก/ }).click();
     mkdirSync('.local/screenshots', { recursive: true });

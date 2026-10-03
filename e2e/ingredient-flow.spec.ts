@@ -62,10 +62,10 @@ for (const width of [320, 390]) test(`ingredient lifecycle at ${width}px without
   await expect(page.locator('.meal-list article')).toHaveCount(1);
   await expect(page.locator('.meal-list article').nth(0)).toContainText('130 kcal');
   await expect(page.locator('.meal-list article').nth(0)).toContainText('100 ก.');
-  await expect(page.locator('.favorite-panel')).toContainText('ข้าวทดสอบ');
+  await expect(page.locator('.favorite-panel')).toHaveCount(0);
   await page.reload();
-  await openManualDiary(page);
-  await page.locator('.favorite-panel').getByRole('button', { name: 'ใช้รายการนี้' }).click();
+  await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+  await page.getByRole('button', { name: 'บันทึกมื้อนี้อีกครั้ง: ข้าวทดสอบ', exact: true }).click();
   await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('100');
   await page.getByLabel('ปริมาณส่วนประกอบ 1').fill('50');
   await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
@@ -79,8 +79,8 @@ for (const width of [320, 390]) test(`ingredient lifecycle at ${width}px without
   await expect(page.locator('.meal-list article').nth(1)).toContainText('65 kcal');
   await expect(page.locator('.meal-list article').nth(1)).toContainText('50 ก.');
   await page.reload();
-  await openManualDiary(page);
-  await page.locator('.favorite-panel').getByRole('button', { name: 'ใช้รายการนี้' }).click();
+  await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+  await page.locator('.diary-meal-row').filter({ hasText: '50 กรัม' }).getByRole('button').click();
   await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('50');
   const secondMeal = page.locator('.meal-list article').filter({ hasText: '50 ก.' });
   await secondMeal.getByRole('button', { name: 'แก้ไข' }).click();

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import type { User } from '@prisma/client';
 import { createApp } from '../server/app.js';
@@ -7,6 +7,7 @@ import type { Repository } from '../server/repository.js';
 import type { ExerciseInput, ExerciseRecord, GoalInput, MealInput, MealRecord, ProfileInput } from '../shared/contracts.js';
 
 class MemoryRepository implements Repository {
+  async searchFoods() { return []; }
   users = new Map<string, User>();
   sessions = new Map<string, { id: string; userId: string; expiresAt: Date }>();
   meals = new Map<string, MealRecord>();
@@ -174,5 +175,21 @@ describe('food image analysis', () => {
     expect(result.body.analysis).toMatchObject({ name: validEstimate.name, source: 'ai-estimate' });
     expect(result.body.analysis.notes.join(' ')).toMatch(/ตรวจสอบส่วนผสม|confirm ingredients/i);
     expect(repository.meals.size).toBe(0);
+  });
+});
+
+
+describe('local food catalog API', () => {
+  it('requires a login and searches only through the authenticated user scope without an external API key', async () => {
+    await request(app).get('/api/foods/catalog?q=rice').expect(401);
+    const auth = await signIn();
+    const spy = vi.spyOn(repository, 'searchFoods');
+    await request(app).get('/api/foods/catalog?q=rice').set('Cookie', auth).expect(200, { foods: [] });
+    expect(spy).toHaveBeenCalledWith([...repository.users.keys()][0], 'rice');
+  });
+  it('rejects too short or too long catalog queries', async () => {
+    const auth = await signIn();
+    await request(app).get('/api/foods/catalog?q=a').set('Cookie', auth).expect(400);
+    await request(app).get('/api/foods/catalog?q=' + 'a'.repeat(81)).set('Cookie', auth).expect(400);
   });
 });

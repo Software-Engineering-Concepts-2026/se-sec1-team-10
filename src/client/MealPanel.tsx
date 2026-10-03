@@ -6,6 +6,7 @@ import {
   type FormEvent,
 } from "react";
 import { mealSchema, type PublicMeal } from "../shared/contracts";
+import type { CatalogFood } from "../shared/foodCatalog";
 import { api, ApiError } from "./api";
 import type { FavoriteMeal } from "./FavoriteMealsPanel";
 import { rememberFavorite } from "./favorites";
@@ -39,9 +40,10 @@ type MealPanelProps = {
   initialMode?: "manual" | "photo";
   initialImage?: string | null;
   initialMeal?: PublicMeal | null;
+  initialCatalogFood?: CatalogFood | null;
 };
 
-export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "manual", initialImage = null, initialMeal = null }: MealPanelProps) {
+export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "manual", initialImage = null, initialMeal = null, initialCatalogFood = null }: MealPanelProps) {
   const [date, setDate] = useState(selectedDate ?? localDate);
   const [meals, setMeals] = useState<DailyMeals | null>(null);
   const [name, setName] = useState("");
@@ -58,9 +60,7 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [showManualFields, setShowManualFields] = useState(initialMode === "manual");
-  const [foodSource, setFoodSource] = useState<
-    "usda-fdc" | "ai-estimate" | null
-  >(null);
+  const [catalogImageUrl, setCatalogImageUrl] = useState<string | null>(null);
   const [needsRecalculation, setNeedsRecalculation] = useState(false);
   const [foodTarget, setFoodTarget] = useState<number | null>(null);
   const [foodSearchOpen, setFoodSearchOpen] = useState(false);
@@ -85,6 +85,21 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
     setMessage({ text: `เติมข้อมูล ${initialMeal.name} แล้ว ตรวจสอบปริมาณก่อนบันทึกได้เลย`, error: false });
   }, [initialMeal]);
 
+  useEffect(() => {
+    if (!initialCatalogFood) return;
+    const food = initialCatalogFood;
+    setName(food.name.slice(0, 120));
+    setMealType("breakfast");
+    setIngredients([{ name: food.name.slice(0, 120), amount: 100, unit: "g", referenceAmount: 100, referenceUnit: "g", source: "food-catalog", referenceNutrients: food.nutrientsPer100g }]);
+    setCatalogImageUrl(food.imageUrl);
+    setImageData(null);
+    setEditingId(null);
+    setAnalysis(null);
+    setShowManualFields(true);
+    setNeedsRecalculation(false);
+    setMessage({ text: `เพิ่ม ${food.name} จำนวน 100 กรัมแล้ว ปรับปริมาณก่อนบันทึกได้`, error: false });
+  }, [initialCatalogFood]);
+
   async function load() {
     try {
       setMeals(
@@ -106,8 +121,8 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
     setMealType("breakfast");
     setIngredients([]);
     setImageData(null);
+    setCatalogImageUrl(null);
     setAnalysis(null);
-    setFoodSource(null);
     setShowManualFields(false);
     setEditingId(null);
     setNeedsRecalculation(false);
@@ -123,8 +138,8 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
       setMealType(favorite.mealType);
       setIngredients(favorite.ingredients);
       setImageData(null);
+      setCatalogImageUrl(null);
       setAnalysis(null);
-      setFoodSource(null);
       setShowManualFields(true);
       setEditingId(null);
       setNeedsRecalculation(false);
@@ -155,8 +170,8 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
   }
   function recalculate() {
     const valid = mealSchema.safeParse({ name: name || 'มื้ออาหาร', mealType, activityDate: date, ingredients });
-    if (!valid.success || ingredients.some(item => Object.values(item.referenceNutrients).some(value => value === null))) {
-      setMessage({ text: 'กรุณาเพิ่มส่วนประกอบที่มีข้อมูลครบ และระบุกรัมมากกว่า 0 ก่อนคำนวณ', error: true });
+    if (!valid.success) {
+      setMessage({ text: 'กรุณาระบุปริมาณกรัมมากกว่า 0 ก่อนคำนวณ', error: true });
       return;
     }
     setNeedsRecalculation(false);
@@ -167,9 +182,8 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
   }
   function applyFood(food: FoodSearchResult, quantityGrams: number) {
     const referenceNutrients = { caloriesKcal: food.nutrientsPer100g.caloriesKcal ?? null, carbsGrams: food.nutrientsPer100g.carbsGrams ?? null, sugarGrams: food.nutrientsPer100g.sugarGrams ?? null, proteinGrams: food.nutrientsPer100g.proteinGrams ?? null, fatGrams: food.nutrientsPer100g.fatGrams ?? null };
-    setFoodSource("usda-fdc");
     setShowManualFields(true);
-    const next = { name: food.name.slice(0, 120), amount: quantityGrams, unit: "g" as const, referenceAmount: 100, referenceUnit: "g" as const, source: "usda-fdc" as const, referenceNutrients };
+    const next = { name: food.name.slice(0, 120), amount: quantityGrams, unit: "g" as const, referenceAmount: 100, referenceUnit: "g" as const, source: food.source, referenceNutrients };
     setIngredients(current => foodTarget === null ? [...current.filter(item => item.name), next] : current.map((item, index) => index === foodTarget ? next : item));
     setFoodTarget(null);
     setFoodSearchOpen(false);
@@ -178,7 +192,6 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
   function addManualIngredient(ingredient: IngredientDraft) {
     setIngredients((current) => [...current.filter((item) => item.name), ingredient]);
     setShowManualFields(true);
-    setFoodSource(null);
     setFoodSearchOpen(false);
     setNeedsRecalculation(true);
   }
@@ -219,8 +232,8 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
     }
     try {
       setImageData(await compressImage(file));
+      setCatalogImageUrl(null);
       setAnalysis(null);
-      setFoodSource(null);
       if (photoWorkflow) {
         setShowManualFields(false);
         setNeedsRecalculation(false);
@@ -247,7 +260,6 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
       const next = result.analysis;
       setName(next.name);
       setMealType(next.mealType);
-      setFoodSource("ai-estimate");
       setIngredients(next.ingredients);
       setAnalysis(next);
       setShowManualFields(true);
@@ -339,7 +351,6 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
     );
     setImageData(meal.imageData ?? null);
     setAnalysis(null);
-    setFoodSource(null);
     setShowManualFields(true);
     setNeedsRecalculation(false);
     setMessage(null);
@@ -427,6 +438,7 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
                   type="button"
                   onClick={() => {
                     setImageData(null);
+                    setCatalogImageUrl(null);
                     setAnalysis(null);
                   }}
                 >
@@ -436,6 +448,7 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
             )}
           </div>
           <div className="meal-top-row">
+            {catalogImageUrl && <img className="catalog-food-image" src={catalogImageUrl} alt={`ภาพ ${name}`} />}
             <label className="compact-field">
               มื้ออาหาร
               <select

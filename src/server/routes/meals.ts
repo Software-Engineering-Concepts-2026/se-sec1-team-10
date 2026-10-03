@@ -141,6 +141,10 @@ export function registerMealRoutes(
       } else throw error;
     }
   });
+  app.get('/api/foods/catalog', requireAuth, async (req, res) => {
+    const { q } = foodSearchQuerySchema.parse(req.query);
+    res.json({ foods: await repository.searchFoods(res.locals.user.id, q) });
+  });
   app.get("/api/foods/search", requireAuth, async (req, res) => {
     if (!isNutritionConfigured(config.nutrition)) {
       res

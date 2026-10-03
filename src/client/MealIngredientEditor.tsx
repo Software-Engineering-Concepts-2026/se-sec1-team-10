@@ -61,7 +61,7 @@ export function MealIngredientEditor({ ingredients, analysis, needsRecalculation
     {ingredients.map((ingredient, index) => <article className="ingredient-row portion-row" key={`${ingredient.name}-${index}`}>
       <div className="ingredient-card-heading"><strong>{ingredient.name}</strong><strong className="ingredient-calories">{needsRecalculation ? "รอคำนวณ" : `${display(values[index].caloriesKcal)} kcal`}</strong></div>
       <label>ปริมาณ ({ingredient.unit === 'g' ? 'กรัม' : 'ส่วนเดิม'})<input aria-label={`ปริมาณส่วนประกอบ ${index + 1}`} type="number" min="0.01" max="10000" step="any" value={ingredient.amount || ''} onChange={event => onQuantityChange(index, event.target.value)} required /></label>
-      <small>{ingredient.source === 'ai-estimate' ? 'ค่าประมาณจาก AI' : ingredient.source === 'usda-fdc' ? 'USDA FoodData Central' : ingredient.source === 'manual' ? 'ข้อมูลที่กรอกเอง' : 'ข้อมูลเดิม · ไม่ทราบน้ำหนักเป็นกรัม'}</small>
+      <small>{ingredient.source === 'ai-estimate' ? 'ค่าประมาณจาก AI' : ingredient.source === 'usda-fdc' ? 'USDA FoodData Central' : ingredient.source === 'food-catalog' ? 'ฐานข้อมูลอาหาร' : ingredient.source === 'manual' ? 'ข้อมูลที่กรอกเอง' : 'ข้อมูลเดิม · ไม่ทราบน้ำหนักเป็นกรัม'}</small>
       <button className="remove-ingredient" type="button" aria-label={`ลบ ${ingredient.name}`} onClick={() => onRemove(index)}>ลบ</button>
     </article>)}
     {!ingredients.length && <p className="empty-state">ยังไม่มีส่วนประกอบ เพิ่มรายการหรือวิเคราะห์รูปอาหารเพื่อเริ่มต้น</p>}

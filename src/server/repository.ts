@@ -1,8 +1,11 @@
+import type { CatalogFood } from '../shared/foodCatalog.js';
+import { catalogFood, normalizeFoodSearch } from './foodCatalog.js';
 import { Prisma, type PrismaClient, type User } from '@prisma/client';
 import type { ExerciseInput, ExerciseRecord, GoalInput, MealInput, MealRecord, ProfileInput } from '../shared/contracts.js';
 import { calculatedIngredient, scaleReferenceNutrients } from './meal.js';
 
 export interface Repository {
+  searchFoods(userId: string, query: string): Promise<CatalogFood[]>;
   findUserByEmail(email: string): Promise<User | null>;
   findUserById(id: string): Promise<User | null>;
   createUser(data: { email: string; displayName: string; passwordHash: string }): Promise<User>;
@@ -36,8 +39,26 @@ export function prismaRepository(db: PrismaClient): Repository {
     id: string; userId: string; name: string; mealType: string; imageData: string | null; totalCalories: number;
     activityDate: Date; createdAt: Date; updatedAt: Date;
     ingredients: { id: string; mealLogId: string; name: string; carbsGrams: number; sugarGrams: number; proteinGrams: number; fatGrams: number; amount: number; unit: string; referenceAmount: number; referenceUnit: string; source: string; referenceCaloriesKcal: number | null; referenceCarbsGrams: number | null; referenceSugarGrams: number | null; referenceProteinGrams: number | null; referenceFatGrams: number | null }[];
-  }): MealRecord => ({ ...record, mealType: record.mealType as MealRecord['mealType'], activityDate: record.activityDate.toISOString().slice(0, 10), ingredients: record.ingredients.map(({ mealLogId: _mealLogId, referenceCaloriesKcal, referenceCarbsGrams, referenceSugarGrams, referenceProteinGrams, referenceFatGrams, unit, referenceUnit, source, ...ingredient }) => ({ ...ingredient, ...scaleReferenceNutrients({ caloriesKcal: referenceCaloriesKcal, carbsGrams: referenceCarbsGrams, sugarGrams: referenceSugarGrams, proteinGrams: referenceProteinGrams, fatGrams: referenceFatGrams }, ingredient.amount, ingredient.referenceAmount), unit: unit as 'g' | 'serving', referenceUnit: referenceUnit as 'g' | 'serving', source: source as 'usda-fdc' | 'ai-estimate' | 'legacy' | 'manual', referenceNutrients: { caloriesKcal: referenceCaloriesKcal, carbsGrams: referenceCarbsGrams, sugarGrams: referenceSugarGrams, proteinGrams: referenceProteinGrams, fatGrams: referenceFatGrams } })) });
+  }): MealRecord => ({ ...record, mealType: record.mealType as MealRecord['mealType'], activityDate: record.activityDate.toISOString().slice(0, 10), ingredients: record.ingredients.map(({ mealLogId: _mealLogId, referenceCaloriesKcal, referenceCarbsGrams, referenceSugarGrams, referenceProteinGrams, referenceFatGrams, unit, referenceUnit, source, ...ingredient }) => ({ ...ingredient, ...scaleReferenceNutrients({ caloriesKcal: referenceCaloriesKcal, carbsGrams: referenceCarbsGrams, sugarGrams: referenceSugarGrams, proteinGrams: referenceProteinGrams, fatGrams: referenceFatGrams }, ingredient.amount, ingredient.referenceAmount), unit: unit as 'g' | 'serving', referenceUnit: referenceUnit as 'g' | 'serving', source: source as MealRecord['ingredients'][number]['source'], referenceNutrients: { caloriesKcal: referenceCaloriesKcal, carbsGrams: referenceCarbsGrams, sugarGrams: referenceSugarGrams, proteinGrams: referenceProteinGrams, fatGrams: referenceFatGrams } })) });
   return {
+    async searchFoods(userId, query) {
+      const term = normalizeFoodSearch(query);
+      const foods = await db.food.findMany({
+        where: {
+          OR: [
+            { name: { contains: term, mode: 'insensitive' } },
+            { aliases: { has: term } },
+          ],
+          AND: [
+            { OR: [{ createdByUserId: userId }, { createdByUserId: null, isCustom: false }] },
+            { OR: [{ servingWeightGrams: { gt: 0 } }, { servingWeightGrams: null, servingUnit: 'g', servingAmount: { gt: 0 } }] },
+          ],
+        },
+        orderBy: [{ name: 'asc' }, { id: 'asc' }],
+        take: 30,
+      });
+      return foods.map(catalogFood).filter((food): food is CatalogFood => food !== null);
+    },
     findUserByEmail: email => db.user.findUnique({ where: { email } }),
     findUserById: id => db.user.findUnique({ where: { id } }),
     async createUser(data) {
