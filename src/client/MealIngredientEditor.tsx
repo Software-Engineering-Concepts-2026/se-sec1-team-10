@@ -35,8 +35,8 @@ export function MealIngredientEditor({ ingredients, analysis, needsRecalculation
     onEstimating(true);
     setError("");
     try {
-      const result = await api<{ ingredient: IngredientDraft }>("/foods/estimate", { name: name.trim(), amount: grams });
-      onAddManual(result.ingredient);
+      const result = await api<{ ingredient: IngredientDraft; catalogMatch?: IngredientDraft["catalogMatch"] }>("/foods/estimate", { name: name.trim(), amount: grams });
+      onAddManual({ ...result.ingredient, ...(result.catalogMatch ? { catalogMatch: result.catalogMatch } : {}) });
       setName("");
       setAmount("");
       setOpen(false);
@@ -61,14 +61,17 @@ export function MealIngredientEditor({ ingredients, analysis, needsRecalculation
     {ingredients.map((ingredient, index) => <article className="ingredient-row portion-row" key={`${ingredient.name}-${index}`}>
       <div className="ingredient-card-heading"><strong>{ingredient.name}</strong><strong className="ingredient-calories">{needsRecalculation ? "รอคำนวณ" : `${display(values[index].caloriesKcal)} kcal`}</strong></div>
       <label>ปริมาณ ({ingredient.unit === 'g' ? 'กรัม' : 'ส่วนเดิม'})<input aria-label={`ปริมาณส่วนประกอบ ${index + 1}`} type="number" min="0.01" max="10000" step="any" value={ingredient.amount || ''} onChange={event => onQuantityChange(index, event.target.value)} required /></label>
-      <small>{ingredient.source === 'ai-estimate' ? 'ค่าประมาณจาก AI' : ingredient.source === 'usda-fdc' ? 'USDA FoodData Central' : ingredient.source === 'manual' ? 'ข้อมูลที่กรอกเอง' : 'ข้อมูลเดิม · ไม่ทราบน้ำหนักเป็นกรัม'}</small>
+      <small>{ingredient.source === 'ai-estimate' ? 'ค่าประมาณจาก AI' : ingredient.source === 'usda-fdc' ? 'USDA FoodData Central' : ingredient.source === 'food-catalog' ? 'ฐานข้อมูลอาหาร' : ingredient.source === 'manual' ? 'ข้อมูลที่กรอกเอง' : 'ข้อมูลเดิม · ไม่ทราบน้ำหนักเป็นกรัม'}</small>
+      {ingredient.catalogMatch?.status === 'matched' && ingredient.catalogMatch.food && <small className="catalog-match-feedback">{ingredient.catalogMatch.food.sourceName ?? 'ฐานข้อมูลอาหาร'}{ingredient.catalogMatch.food.url && <> · <a href={ingredient.catalogMatch.food.url} target="_blank" rel="noreferrer">แหล่งข้อมูล</a></>}{ingredient.photoEstimate && <> · ปริมาณยังเป็นค่าประมาณจากภาพ</>}</small>}
+      {ingredient.catalogMatch && ingredient.catalogMatch.status !== 'matched' && <small className="catalog-match-warning" role="status">{ingredient.catalogMatch.status === 'ambiguous' ? 'ยังจับคู่กับฐานข้อมูลอาหารไม่ได้แน่ชัด' : ingredient.catalogMatch.status === 'incomplete' ? 'ข้อมูลสารอาหารในฐานข้อมูลยังไม่ครบ' : 'ไม่พบในฐานข้อมูลอาหาร'} · ยังคงเป็นค่าประมาณจาก AI สามารถลบหรือค้นหาจากฐานข้อมูลได้</small>}
+      {ingredient.photoEstimate && !ingredient.catalogMatch && ingredient.source === 'ai-estimate' && <small className="catalog-match-warning" role="status">ยังเป็นค่าประมาณจาก AI สามารถลบหรือค้นหาจากฐานข้อมูลได้</small>}
       <button className="remove-ingredient" type="button" aria-label={`ลบ ${ingredient.name}`} onClick={() => onRemove(index)}>ลบ</button>
     </article>)}
     {!ingredients.length && <p className="empty-state">ยังไม่มีส่วนประกอบ เพิ่มรายการหรือวิเคราะห์รูปอาหารเพื่อเริ่มต้น</p>}
     <button className="secondary add-ingredient" type="button" onClick={() => { setOpen(true); setError(''); }}>เพิ่มส่วนประกอบ</button>
     {open && <section className="manual-ingredient-form" aria-label="เพิ่มส่วนประกอบ" onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void add(); } }}>
       <div className="manual-ingredient-heading"><h3>เพิ่มส่วนประกอบ</h3><button type="button" disabled={busy} onClick={() => setOpen(false)}>ยกเลิก</button></div>
-      <p>ระบุชื่อและกรัม ให้ AI ประมาณสารอาหาร แล้วตรวจสอบก่อนบันทึก</p>
+      <p>ระบุชื่อและกรัม ระบบค้นหาในฐานข้อมูลอาหารก่อน หากไม่พบ AI จะประมาณสารอาหาร ตรวจสอบก่อนบันทึก</p>
       <label>ชื่อส่วนประกอบ<input autoFocus maxLength={120} disabled={busy} value={name} placeholder="เช่น ข้าวสวยสุก" onChange={event => setName(event.target.value)} /></label>
       <label>ปริมาณที่เพิ่ม (กรัม)<input type="number" min="0.01" max="10000" step="any" disabled={busy} value={amount} onChange={event => setAmount(event.target.value)} /></label>
       {error && <p className="feedback error" role="alert">{error}</p>}

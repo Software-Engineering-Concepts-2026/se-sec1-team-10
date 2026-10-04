@@ -50,7 +50,7 @@ const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 const nutrientValue = z.number().finite('สารอาหารต้องเป็นตัวเลข').min(0, 'ต้องไม่น้อยกว่า 0').max(10000, 'จำนวนมากเกินไป');
 const nullableNutrientValue = nutrientValue.nullable();
 export const foodUnitSchema = z.enum(['g', 'serving']);
-export const ingredientSourceSchema = z.enum(['usda-fdc', 'ai-estimate', 'legacy', 'manual']);
+export const ingredientSourceSchema = z.enum(['usda-fdc', 'ai-estimate', 'legacy', 'manual', 'food-catalog']);
 export const referenceNutrientsSchema = z.object({
   caloriesKcal: nullableNutrientValue,
   carbsGrams: nullableNutrientValue,

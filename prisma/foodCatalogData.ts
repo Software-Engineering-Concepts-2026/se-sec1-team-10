@@ -1,0 +1,153 @@
+export type CatalogFood = {
+  catalogKey: string;
+  name: string;
+  aliases: string[];
+  caloriesKcal: number;
+  carbsGrams: number | null;
+  sugarGrams: number | null;
+  proteinGrams: number | null;
+  fatGrams: number | null;
+  sourceName: string;
+  sourceUrl: string;
+};
+
+// USDA SR Legacy values per 100 g edible portion. Null means USDA does not
+// provide that nutrient for the selected record; zero is an explicit value.
+export const catalogFoods: CatalogFood[] = [
+  {
+    catalogKey: 'usda-sr-legacy-168462',
+    name: 'ปวยเล้งสด (Spinach, raw)',
+    aliases: ['spinach', 'raw spinach', 'ผักปวยเล้ง', 'ปวยเล้ง'],
+    caloriesKcal: 23, carbsGrams: 3.63, sugarGrams: 0.42, proteinGrams: 2.86, fatGrams: 0.39,
+    sourceName: 'USDA FoodData Central (SR Legacy, FDC 168462)',
+    sourceUrl: 'https://fdc.nal.usda.gov/food-details/168462/nutrients',
+  },
+  {
+    catalogKey: 'usda-sr-legacy-170393',
+    name: 'แครอทสด (Carrots, raw)',
+    aliases: ['carrot', 'raw carrot', 'แครอท', 'แครอทดิบ'],
+    caloriesKcal: 41, carbsGrams: 9.58, sugarGrams: 4.74, proteinGrams: 0.93, fatGrams: 0.24,
+    sourceName: 'USDA FoodData Central (SR Legacy, FDC 170393)',
+    sourceUrl: 'https://fdc.nal.usda.gov/food-details/170393/nutrients',
+  },
+  {
+    catalogKey: 'usda-sr-legacy-173944',
+    name: 'กล้วย (Bananas, raw)',
+    aliases: ['banana', 'raw banana', 'กล้วย', 'กล้วยสด'],
+    caloriesKcal: 89, carbsGrams: 22.84, sugarGrams: 12.23, proteinGrams: 1.09, fatGrams: 0.33,
+    sourceName: 'USDA FoodData Central (SR Legacy, FDC 173944)',
+    sourceUrl: 'https://fdc.nal.usda.gov/food-details/173944/nutrients',
+  },
+  {
+    catalogKey: 'usda-ndb-20045',
+    name: 'ข้าวขาวเมล็ดยาวหุงสุก (Rice, white, long-grain, regular, enriched, cooked)',
+    aliases: ['cooked white rice', 'white rice cooked', 'cooked rice', 'ข้าวสวย', 'ข้าวขาวหุงสุก', 'ข้าวหุงสุก'],
+    caloriesKcal: 130, carbsGrams: 28.17, sugarGrams: 0.05, proteinGrams: 2.69, fatGrams: 0.28,
+    sourceName: 'USDA Standard Reference Release 28 (NDB 20045)',
+    sourceUrl: 'https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg20.pdf#page=325',
+  },
+  {
+    catalogKey: 'usda-ndb-05064',
+    name: 'อกไก่ลอกหนังปรุงสุก อบ (Chicken, broilers or fryers, breast, meat only, cooked, roasted)',
+    aliases: ['roasted chicken breast', 'cooked chicken breast', 'อกไก่สุก', 'อกไก่อบ'],
+    caloriesKcal: 165, carbsGrams: 0, sugarGrams: 0, proteinGrams: 31.02, fatGrams: 3.57,
+    sourceName: 'USDA Standard Reference Release 28 (NDB 05064)',
+    sourceUrl: 'https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg05.pdf#page=118',
+  },
+  {
+    catalogKey: 'usda-ndb-01129',
+    name: 'ไข่ไก่ทั้งฟองต้มสุก (Egg, whole, cooked, hard-boiled)',
+    aliases: ['hard-boiled egg', 'boiled egg', 'ไข่ต้ม', 'ไข่ไก่ต้ม'],
+    caloriesKcal: 155, carbsGrams: 1.12, sugarGrams: 1.12, proteinGrams: 12.58, fatGrams: 10.61,
+    sourceName: 'USDA Standard Reference Release 28 (NDB 01129)',
+    sourceUrl: 'https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg01.pdf#page=384',
+  },
+  {
+    catalogKey: 'usda-ndb-01077',
+    name: 'นมโคเต็มมันเนย 3.25% (Milk, whole, 3.25% milkfat, with added vitamin D)',
+    aliases: ['whole milk', 'full-fat milk', 'นมสดเต็มมันเนย', 'นมโคเต็มมันเนย'],
+    caloriesKcal: 61, carbsGrams: 4.8, sugarGrams: 5.05, proteinGrams: 3.15, fatGrams: 3.25,
+    sourceName: 'USDA Standard Reference Release 28 (NDB 01077)',
+    sourceUrl: 'https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg01.pdf#page=632',
+  },
+  {
+    catalogKey: 'usda-ndb-19335',
+    name: 'น้ำตาลทรายขาว (Sugars, granulated)',
+    aliases: ['white sugar', 'granulated sugar', 'น้ำตาลทราย', 'น้ำตาลทรายขาว'],
+    caloriesKcal: 387, carbsGrams: 99.98, sugarGrams: 99.8, proteinGrams: 0, fatGrams: 0,
+    sourceName: 'USDA Standard Reference Release 28 (NDB 19335)',
+    sourceUrl: 'https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg19.pdf#page=736',
+  },
+  {
+    catalogKey: 'usda-ndb-04044',
+    name: 'น้ำมันถั่วเหลือง (Oil, soybean, salad or cooking)',
+    aliases: ['soybean oil', 'cooking oil soybean', 'น้ำมันถั่วเหลือง', 'น้ำมันปรุงอาหารถั่วเหลือง'],
+    caloriesKcal: 884, carbsGrams: 0, sugarGrams: 0, proteinGrams: 0, fatGrams: 100,
+    sourceName: 'USDA Standard Reference Release 28 (NDB 04044)',
+    sourceUrl: 'https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg04.pdf#page=331',
+  },
+  {
+    catalogKey: 'usda-ndb-11282',
+    name: 'หอมหัวใหญ่สด (Onions, raw)',
+    aliases: ['onion', 'raw onion', 'หอมหัวใหญ่', 'หัวหอม'],
+    caloriesKcal: 40, carbsGrams: 9.34, sugarGrams: 4.24, proteinGrams: 1.1, fatGrams: 0.1,
+    sourceName: 'USDA Standard Reference Release 28 (NDB 11282)',
+    sourceUrl: 'https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg11.pdf#page=1139',
+  },
+  {
+    catalogKey: 'usda-ndb-11215',
+    name: 'กระเทียมสด (Garlic, raw)',
+    aliases: ['garlic', 'raw garlic', 'กระเทียม', 'กระเทียมดิบ'],
+    caloriesKcal: 149, carbsGrams: 33.06, sugarGrams: 1, proteinGrams: 6.36, fatGrams: 0.5,
+    sourceName: 'USDA Standard Reference Release 28 (NDB 11215)',
+    sourceUrl: 'https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg11.pdf#page=777',
+  },
+  {
+    catalogKey: 'usda-ndb-11529',
+    name: 'มะเขือเทศแดงสุกสด (Tomatoes, red, ripe, raw, year round average)',
+    aliases: ['tomato', 'raw tomato', 'มะเขือเทศ', 'มะเขือเทศสด'],
+    caloriesKcal: 18, carbsGrams: 3.89, sugarGrams: 2.63, proteinGrams: 0.88, fatGrams: 0.2,
+    sourceName: 'USDA Standard Reference Release 28 (NDB 11529)',
+    sourceUrl: 'https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg11.pdf#page=2142',
+  },
+  {
+    catalogKey: 'usda-ndb-11205',
+    name: 'แตงกวาสดพร้อมเปลือก (Cucumber, with peel, raw)',
+    aliases: ['cucumber', 'raw cucumber with peel', 'แตงกวา', 'แตงกวาสด'],
+    caloriesKcal: 15, carbsGrams: 3.63, sugarGrams: 1.67, proteinGrams: 0.65, fatGrams: 0.11,
+    sourceName: 'USDA Standard Reference Release 28 (NDB 11205)',
+    sourceUrl: 'https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg11.pdf#page=713',
+  },
+  {
+    catalogKey: 'usda-ndb-02044',
+    name: 'ใบเบซิลสด (Basil, fresh)',
+    aliases: ['basil', 'fresh basil', 'sweet basil', 'ใบเบซิล', 'ใบเบซิลสด', 'เบซิลสด'],
+    caloriesKcal: 23, carbsGrams: 2.65, sugarGrams: 0.30, proteinGrams: 3.15, fatGrams: 0.64,
+    sourceName: 'USDA Standard Reference Release 28 (NDB 02044)',
+    sourceUrl: 'https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg02.pdf#page=1',
+  },
+  {
+    catalogKey: 'usda-ndb-11091',
+    name: 'บรอกโคลีต้มสุกสะเด็ดน้ำไม่ใส่เกลือ (Broccoli, cooked, boiled, drained, without salt)',
+    aliases: ['boiled broccoli', 'broccoli boiled without salt', 'บรอกโคลีต้ม', 'บรอกโคลีต้มสุก', 'บรอกโคลีต้มสุกสะเด็ดน้ำไม่ใส่เกลือ'],
+    caloriesKcal: 35, carbsGrams: 7.18, sugarGrams: 1.39, proteinGrams: 2.38, fatGrams: 0.41,
+    sourceName: 'USDA Standard Reference Release 28 (NDB 11091)',
+    sourceUrl: 'https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg11.pdf#page=257',
+  },
+  {
+    catalogKey: 'usda-ndb-11831',
+    name: 'เนื้อมันฝรั่งต้มทั้งเปลือกแล้วปอก ใส่เกลือ (Potatoes, boiled, cooked in skin, flesh, with salt)',
+    aliases: ['boiled potato flesh with salt', 'potato boiled in skin, flesh with salt', 'เนื้อมันฝรั่งต้มใส่เกลือ', 'เนื้อมันฝรั่งต้มทั้งเปลือกแล้วปอก'],
+    caloriesKcal: 87, carbsGrams: 20.13, sugarGrams: 0.91, proteinGrams: 1.87, fatGrams: 0.10,
+    sourceName: 'USDA Standard Reference Release 28 (NDB 11831)',
+    sourceUrl: 'https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg11.pdf#page=1449',
+  },
+  {
+    catalogKey: 'usda-ndb-16123',
+    name: 'โชยุจากถั่วเหลืองและข้าวสาลี (Soy sauce made from soy and wheat, shoyu)',
+    aliases: ['shoyu', 'soy and wheat shoyu', 'โชยุ', 'โชยุจากถั่วเหลืองและข้าวสาลี'],
+    caloriesKcal: 53, carbsGrams: 4.93, sugarGrams: 0.40, proteinGrams: 8.14, fatGrams: 0.57,
+    sourceName: 'USDA Standard Reference Release 28 (NDB 16123)',
+    sourceUrl: 'https://www.ars.usda.gov/ARSUserFiles/80400535/Data/SR/SR28/reports/sr28fg16.pdf#page=746',
+  },
+];

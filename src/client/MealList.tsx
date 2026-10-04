@@ -38,7 +38,7 @@ export function MealList({
               </small>
             </div>
             <div className="row-actions">
-              <button type="button" onClick={() => onEdit(meal)}>
+              <button type="button" disabled={busy} onClick={() => onEdit(meal)}>
                 แก้ไข
               </button>
               <button

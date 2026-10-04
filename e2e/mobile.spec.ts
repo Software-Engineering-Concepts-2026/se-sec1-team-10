@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
+import { mkdirSync } from 'node:fs';
 
 const user = { id: 'u1', email: 'food@example.com', displayName: 'Food tester', age: 30, weightKg: 70, heightCm: 175, bmi: 22.9 };
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
@@ -10,6 +11,8 @@ async function mockApi(page: Page, options: { aiConfigured?: boolean } = {}) {
   let analyzeCalls = 0;
   let mealSaveCalls = 0;
   let lastSavedIngredients: unknown[] = [];
+  const createdMealBodies: Record<string, unknown>[] = [];
+  const updatedMealIds: string[] = [];
   await page.route('**/api/**', async (route: Route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -28,7 +31,11 @@ async function mockApi(page: Page, options: { aiConfigured?: boolean } = {}) {
       const totalCalories = Math.round(ingredients.reduce((total, ingredient) => total + (typeof ingredient.caloriesKcal === 'number' ? ingredient.caloriesKcal : 0), 0));
       return { id, ...body, ingredients, totalCalories };
     };
-    if (path === '/api/meals/daily' && method === 'GET') return json({ date: url.searchParams.get('date'), meals, caloriesConsumed: caloriesConsumed() });
+    if (path === '/api/meals/daily' && method === 'GET') {
+      const date = url.searchParams.get('date');
+      const daily = (meals as { activityDate: string }[]).filter(meal => meal.activityDate === date);
+      return json({ date, meals: daily, caloriesConsumed: daily.reduce((total, meal) => total + (meal as { totalCalories: number }).totalCalories, 0) });
+    }
     if (path === '/api/meals/analyze' && method === 'POST') {
       analyzeCalls += 1;
       if (!options.aiConfigured) return json({ message: 'ยังไม่ได้เปิดใช้การวิเคราะห์รูปภาพอาหาร' }, 503);
@@ -37,14 +44,16 @@ async function mockApi(page: Page, options: { aiConfigured?: boolean } = {}) {
     if (path === '/api/meals' && method === 'POST') {
       mealSaveCalls += 1;
       const body = request.postDataJSON() as Record<string, unknown>;
+      createdMealBodies.push(body);
       lastSavedIngredients = body.ingredients as unknown[];
       const meal = calculateMeal(body, `m${nextMealId++}`);
-      meals = [meal];
+      meals = [...meals, meal];
       return json({ meal }, 201);
     }
     if (/^\/api\/meals\/[^/]+$/.test(path) && method === 'PUT') {
       const body = request.postDataJSON() as Record<string, unknown>;
       const id = path.split('/').at(-1);
+      updatedMealIds.push(id ?? '');
       const current = (meals as Record<string, unknown>[]).find(meal => meal.id === id);
       if (!current) return json({ message: 'not found' }, 404);
       lastSavedIngredients = body.ingredients as unknown[];
@@ -57,7 +66,7 @@ async function mockApi(page: Page, options: { aiConfigured?: boolean } = {}) {
       meals = (meals as Record<string, unknown>[]).filter(meal => meal.id !== id);
       return route.fulfill({ status: 204 });
     }
-    if (path === '/api/foods/search' && method === 'GET') return json({ foods: [{ fdcId: 123, name: 'Rice', dataType: 'Foundation', nutrientsPer100g: { caloriesKcal: 130, carbsGrams: 28, proteinGrams: 3, fatGrams: 0.3, sugarGrams: 0.1 }, source: 'usda-fdc', url: 'https://fdc.nal.usda.gov/food-details/123/nutrients' }] });
+    if (path === '/api/foods/catalog' && method === 'GET') return json({ foods: url.searchParams.get('q')?.toLowerCase().includes('rice') ? [{ id: 'rice', name: 'Rice', nutrientsPer100g: { caloriesKcal: 130, carbsGrams: 28, proteinGrams: 3, fatGrams: 0.3, sugarGrams: 0.1 }, source: 'food-catalog', sourceName: 'USDA FoodData Central', imageUrl: null, url: 'https://fdc.nal.usda.gov/food-details/123/nutrients' }] : [] });
     if (path === '/api/exercises/daily' && method === 'GET') return json({ date: url.searchParams.get('date'), exercises: [], caloriesConsumed: caloriesConsumed(), caloriesBurned: 0, netCalories: caloriesConsumed() });
     if (path === '/api/summary/weekly' && method === 'GET') return json({ startDate: '2026-09-08', endDate: '2026-09-14', days: [], caloriesConsumed: 0, caloriesBurned: 0 });
     if (path === '/api/health-history' && method === 'GET') return json({ points: [], rangeDays: 365, performanceTargetMs: 1500 });
@@ -66,7 +75,7 @@ async function mockApi(page: Page, options: { aiConfigured?: boolean } = {}) {
     if (path === '/api/goals' && method === 'PUT') return json({ user });
     return json({ message: `unmocked ${method} ${path}` }, 404);
   });
-  return { get analyzeCalls() { return analyzeCalls; }, get mealSaveCalls() { return mealSaveCalls; }, get lastSavedIngredients() { return lastSavedIngredients; } };
+  return { get analyzeCalls() { return analyzeCalls; }, get mealSaveCalls() { return mealSaveCalls; }, get lastSavedIngredients() { return lastSavedIngredients; }, createdMealBodies, updatedMealIds };
 }
 
 async function login(page: Page) {
@@ -77,14 +86,232 @@ async function login(page: Page) {
   await expect(page.getByRole('heading', { name: /สวัสดี/ })).toBeVisible();
 }
 
+async function openDiary(page: Page) {
+  await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'บันทึกอาหาร', exact: true })).toBeVisible();
+}
+
+async function openManualMeal(page: Page) {
+  await openDiary(page);
+  await page.getByRole('button', { name: /บันทึกอาหาร/ }).click();
+  await expect(page.getByRole('heading', { name: 'บันทึกอาหาร', exact: true })).toBeVisible();
+  await expect(page.getByLabel('ชื่ออาหาร')).toBeVisible();
+}
+
 async function openFoodSearch(page: Page) {
-  await page.getByRole('button', { name: 'เพิ่มรายการเอง', exact: true }).click();
+  const manualAction = page.getByRole('button', { name: /บันทึกอาหาร/ });
+  if (await manualAction.isVisible().catch(() => false)) await manualAction.click();
+  await expect(page.getByLabel('ชื่ออาหาร')).toBeVisible();
   await page.getByRole('button', { name: 'เพิ่มส่วนประกอบ', exact: true }).click();
   await page.getByRole('button', { name: 'ค้นหาจากฐานข้อมูลอาหาร', exact: true }).click();
   return page.getByRole('region', { name: 'เพิ่มส่วนประกอบจากฐานข้อมูล' });
 }
 
 test.describe('mobile navigation and food logging', () => {
+  test('shows elapsed analysis time, preserves failed drafts, and retries only on a manual click', async ({ page }) => {
+    const mock = await mockApi(page, { aiConfigured: true });
+    const requests: { imageData: string; correctedMealName?: string }[] = [];
+    let release!: () => void;
+    let gate = new Promise<void>(resolve => { release = resolve; });
+    const ingredient = { name: 'ข้าว', amount: 100, unit: 'g', referenceAmount: 100, referenceUnit: 'g', source: 'ai-estimate', referenceNutrients: { caloriesKcal: 130, carbsGrams: 28, sugarGrams: 0, proteinGrams: 3, fatGrams: 0.3 } };
+    await page.route('**/api/meals/analyze', async route => {
+      requests.push(route.request().postDataJSON());
+      if (requests.length === 1 || requests.length === 3) {
+        await gate;
+        return route.fulfill({ status: 504, json: { error: 'timeout', message: 'การวิเคราะห์ใช้เวลานานเกินไป กรุณาลองใหม่' } });
+      }
+      return route.fulfill({ json: { analysis: { name: 'ข้าวมันไก่', mealType: 'lunch', ingredients: [ingredient], portionDescription: 'หนึ่งจาน', source: 'ai-estimate', notes: [] } } });
+    });
+    await login(page);
+    await openDiary(page);
+    await page.getByRole('button', { name: /ถ่ายภาพอาหาร/ }).click();
+    await page.getByLabel('เลือกรูปอาหารจากอัลบั้ม').setInputFiles({ name: 'food.png', mimeType: 'image/png', buffer: png });
+    const analyze = page.getByRole('button', { name: 'วิเคราะห์รูป', exact: true });
+    await expect(analyze).toBeEnabled();
+    const name = page.getByLabel('ชื่ออาหาร', { exact: true });
+    await name.fill('ชื่อที่กรอกเอง');
+    const preview = page.getByRole('img', { name: 'ตัวอย่างรูปอาหาร' });
+    const originalImage = await preview.getAttribute('src');
+    await page.clock.install();
+    await analyze.click();
+    try {
+      await expect.poll(() => requests.length).toBe(1);
+      await page.clock.runFor(11_000);
+      await expect(page.locator('.meal-panel .analysis-note[role="status"]')).toContainText('11 วินาที');
+      await expect(page.locator('.meal-panel .analysis-note[role="status"]')).toContainText('ไม่ต้องกดวิเคราะห์ซ้ำ');
+      await page.getByRole('button', { name: 'กำลังวิเคราะห์…', exact: true }).evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
+      expect(requests).toHaveLength(1);
+      expect(mock.mealSaveCalls).toBe(0);
+    } finally { release(); }
+    await expect(page.getByRole('alert')).toContainText('โควตาอีก 1 ครั้ง');
+    await expect(name).toHaveValue('ชื่อที่กรอกเอง');
+    await expect(preview).toHaveAttribute('src', originalImage!);
+    await expect(analyze).toBeEnabled();
+    await page.clock.runFor(5000);
+    expect(requests).toHaveLength(1);
+    await expect(page.locator('.meal-panel .analysis-note[role="status"]')).toHaveCount(0);
+    await analyze.click();
+    await expect(name).toHaveValue('ข้าวมันไก่');
+    await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('100');
+    expect(requests).toHaveLength(2);
+    expect(mock.mealSaveCalls).toBe(0);
+
+    await name.fill('ข้าวผัด');
+    await page.getByLabel('ปริมาณส่วนประกอบ 1').fill('175');
+    gate = new Promise<void>(resolve => { release = resolve; });
+    const correction = page.getByRole('button', { name: 'วิเคราะห์ใหม่ตามชื่อที่แก้ไข', exact: true });
+    await correction.click();
+    try {
+      await expect.poll(() => requests.length).toBe(3);
+      await page.clock.runFor(10_000);
+      await expect(page.locator('.meal-panel .analysis-note[role="status"]')).toContainText('10 วินาที');
+      await expect(page.locator('.meal-panel .analysis-note[role="status"]')).toContainText('ไม่ต้องกดวิเคราะห์ซ้ำ');
+      await expect(page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true })).toBeDisabled();
+    } finally { release(); }
+    await expect(correction).toBeEnabled();
+    await expect(name).toHaveValue('ข้าวผัด');
+    await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('175');
+    await expect(preview).toHaveAttribute('src', originalImage!);
+    await page.clock.runFor(5000);
+    await expect(page.locator('.meal-panel .analysis-note[role="status"]')).toHaveCount(0);
+    expect(requests).toHaveLength(3);
+    expect(requests.every(item => item.imageData === originalImage)).toBe(true);
+    expect(mock.mealSaveCalls).toBe(0);
+  });
+
+  test('reanalyses the same photo with a corrected name, replaces only on success, and requires an explicit save', async ({ page }) => {
+    const mock = await mockApi(page, { aiConfigured: true });
+    const requests: { imageData: string; correctedMealName?: string }[] = [];
+    let releaseCorrection!: () => void;
+    const correctionGate = new Promise<void>(resolve => { releaseCorrection = resolve; });
+    const rice = { name: 'ข้าว', amount: 100, unit: 'g', referenceAmount: 100, referenceUnit: 'g', source: 'ai-estimate', referenceNutrients: { caloriesKcal: 130, carbsGrams: 28, sugarGrams: 0, proteinGrams: 3, fatGrams: 0.3 } };
+    const shrimp = { ...rice, name: 'กุ้ง', amount: 150, referenceNutrients: { ...rice.referenceNutrients, caloriesKcal: 100 } };
+    await page.route('**/api/meals/analyze', async route => {
+      requests.push(route.request().postDataJSON());
+      if (requests.length === 2) await correctionGate;
+      if (requests.length === 3) return route.fulfill({ status: 502, json: { message: 'วิเคราะห์รูปไม่สำเร็จ' } });
+      return route.fulfill({ json: { analysis: { name: 'ข้าวมันไก่', mealType: 'lunch', ingredients: requests.length === 1 ? [rice, { ...rice, name: 'ไก่' }] : [shrimp], portionDescription: 'ปริมาณประมาณจากภาพ', notes: [], source: 'ai-estimate' } } });
+    });
+    await page.setViewportSize({ width: 320, height: 844 });
+    await login(page);
+    await openDiary(page);
+    await page.getByRole('button', { name: /ถ่ายภาพอาหาร/ }).click();
+    await page.getByLabel('เลือกรูปอาหารจากอัลบั้ม').setInputFiles({ name: 'food.png', mimeType: 'image/png', buffer: png });
+    await page.getByRole('button', { name: 'วิเคราะห์รูป', exact: true }).click();
+    const name = page.getByLabel('ชื่ออาหาร', { exact: true });
+    const correction = page.getByRole('button', { name: 'วิเคราะห์ใหม่ตามชื่อที่แก้ไข', exact: true });
+    const rows = page.locator('.portion-row');
+    await expect(name).toHaveValue('ข้าวมันไก่');
+    await expect(rows).toHaveCount(2);
+    await expect(correction).toHaveCount(0);
+    await name.fill('ข้าวผัดกุ้ง');
+    await expect(correction).toBeEnabled();
+    await expect(page.locator('#meal-correction-warning')).toContainText('โควตาอีก 1 ครั้ง');
+    await expect(page.locator('#meal-correction-warning')).toContainText('แทนที่ส่วนประกอบเดิมทั้งหมด');
+    await name.fill(' ข้าวมันไก่ ');
+    await expect(correction).toHaveCount(0);
+    await name.fill('  ');
+    await expect(correction).toHaveCount(0);
+    await name.fill('ก');
+    await expect(correction).toBeDisabled();
+    await name.fill(' ข้าวผัดกุ้ง ');
+    await expect(correction).toBeEnabled();
+    expect(requests).toHaveLength(1);
+    expect(mock.mealSaveCalls).toBe(0);
+    await page.getByRole('combobox', { name: /มื้ออาหาร/ }).selectOption('dinner');
+    await page.getByLabel('ปริมาณส่วนประกอบ 1').fill('250');
+    try {
+      await correction.click();
+      await expect.poll(() => requests.length).toBe(2);
+      await expect(name).toBeDisabled();
+      await expect(page.getByRole('combobox', { name: /มื้ออาหาร/ })).toBeDisabled();
+      await expect(page.locator('.meal-panel input[type="date"]')).toBeDisabled();
+      await expect(page.locator('#meal-upload')).toBeDisabled();
+      await expect(page.getByRole('button', { name: 'ลบรูป', exact: true })).toBeDisabled();
+      await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toBeDisabled();
+      await expect(page.getByRole('button', { name: 'เพิ่มส่วนประกอบ', exact: true })).toBeDisabled();
+      await expect(page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true })).toBeDisabled();
+      await expect(rows).toHaveCount(2);
+      expect(mock.mealSaveCalls).toBe(0);
+    } finally {
+      releaseCorrection();
+    }
+    await expect(name).toHaveValue('ข้าวผัดกุ้ง');
+    await expect(name).toBeEnabled();
+    await expect(page.getByRole('combobox', { name: /มื้ออาหาร/ })).toHaveValue('dinner');
+    await expect(rows).toHaveCount(1);
+    await expect(rows.nth(0)).toContainText('กุ้ง');
+    await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('150');
+    await expect(page.getByRole('region', { name: 'สรุปโภชนาการมื้ออาหาร' })).toContainText('150');
+    await expect(correction).toHaveCount(0);
+    expect(requests[0].correctedMealName).toBeUndefined();
+    expect(requests[1]).toEqual({ imageData: requests[0].imageData, correctedMealName: 'ข้าวผัดกุ้ง' });
+    expect(mock.mealSaveCalls).toBe(0);
+
+    await name.fill('กุ้งผัด');
+    await page.getByLabel('ปริมาณส่วนประกอบ 1').fill('175');
+    await correction.click();
+    await expect(page.getByRole('alert')).toContainText('วิเคราะห์รูปไม่สำเร็จ');
+    await expect(name).toHaveValue('กุ้งผัด');
+    await expect(correction).toBeEnabled();
+    await expect(rows).toHaveCount(1);
+    await expect(rows.nth(0)).toContainText('กุ้ง');
+    await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('175');
+    await expect(page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true })).toBeDisabled();
+    expect(requests[2]).toEqual({ imageData: requests[0].imageData, correctedMealName: 'กุ้งผัด' });
+    expect(mock.mealSaveCalls).toBe(0);
+    await name.fill('ข้าวผัดกุ้ง');
+    await expect(correction).toHaveCount(0);
+    await name.fill('ชื่อที่แก้เอง');
+    await expect(correction).toBeEnabled();
+    await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่', exact: true }).click();
+    await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
+    await expect.poll(() => mock.mealSaveCalls).toBe(1);
+    expect(requests).toHaveLength(3);
+    expect(mock.createdMealBodies[0]).toMatchObject({ name: 'ชื่อที่แก้เอง', mealType: 'dinner', imageData: requests[0].imageData, ingredients: [{ name: 'กุ้ง', amount: 175 }] });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+
+  test('keeps catalog provenance with each ingredient after removal and a manual addition', async ({ page }) => {
+    const mock = await mockApi(page, { aiConfigured: true });
+    const catalog = { id: 'rice', name: 'Rice', source: 'food-catalog', sourceName: 'Verified reference', url: 'https://example.org/rice', imageUrl: null, nutrientsPer100g: { caloriesKcal: 130, carbsGrams: 28, sugarGrams: 0, proteinGrams: 3, fatGrams: 0.3 } };
+    const rice = { name: 'Rice', amount: 200, unit: 'g', referenceAmount: 100, referenceUnit: 'g', source: 'food-catalog', referenceNutrients: catalog.nutrientsPer100g };
+    const sauce = { name: 'Sauce', amount: 20, unit: 'g', referenceAmount: 20, referenceUnit: 'g', source: 'ai-estimate', referenceNutrients: { caloriesKcal: 40, carbsGrams: 10, sugarGrams: 2, proteinGrams: 0, fatGrams: 0 } };
+    await page.route('**/api/meals/analyze', route => route.fulfill({ json: { analysis: { name: 'Rice with sauce', mealType: 'lunch', ingredients: [rice, sauce], portionDescription: 'Estimated plate', notes: [], source: 'ai-estimate', catalogMatches: [{ index: 0, name: 'Rice', status: 'matched', food: catalog }, { index: 1, name: 'Sauce', status: 'not-found' }] } } }));
+    await page.route('**/api/foods/estimate', route => route.fulfill({ json: { ingredient: { ...rice, amount: 50 }, catalogMatch: { index: 0, name: 'Rice', status: 'matched', food: catalog } } }));
+    await page.setViewportSize({ width: 320, height: 844 });
+    await login(page);
+    await openDiary(page);
+    await page.getByRole('button', { name: /ถ่ายภาพอาหาร/ }).click();
+    await page.getByRole('button', { name: 'เลือกจากอัลบั้ม', exact: true }).click();
+    await page.getByLabel('เลือกรูปอาหารจากอัลบั้ม').setInputFiles({ name: 'food.png', mimeType: 'image/png', buffer: png });
+    await page.getByRole('button', { name: 'วิเคราะห์รูป' }).click();
+    const rows = page.locator('.portion-row');
+    await expect(rows.nth(0)).toContainText('Verified reference');
+    await expect(rows.nth(0)).toContainText('ปริมาณยังเป็นค่าประมาณจากภาพ');
+    await expect(rows.nth(0).getByRole('link', { name: 'แหล่งข้อมูล' })).toHaveAttribute('href', catalog.url);
+    await expect(rows.nth(1)).toContainText('ไม่พบในฐานข้อมูลอาหาร');
+    await page.getByRole('button', { name: 'ลบ Rice', exact: true }).click();
+    await expect(rows).toHaveCount(1);
+    await expect(rows.nth(0)).toContainText('ไม่พบในฐานข้อมูลอาหาร');
+    await expect(rows.nth(0)).not.toContainText('Verified reference');
+    await page.getByRole('button', { name: 'เพิ่มส่วนประกอบ', exact: true }).click();
+    await page.getByLabel('ชื่อส่วนประกอบ', { exact: true }).fill('Rice');
+    await page.getByLabel('ปริมาณที่เพิ่ม (กรัม)').fill('50');
+    await page.getByRole('button', { name: 'ประมาณและเพิ่มส่วนประกอบ' }).click();
+    await expect(rows.nth(1)).toContainText('Verified reference');
+    await expect(rows.nth(1)).not.toContainText('ปริมาณยังเป็นค่าประมาณจากภาพ');
+    await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
+    await expect(page.getByRole('region', { name: 'สรุปโภชนาการมื้ออาหาร' })).toContainText('105');
+    await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
+    await expect(page.locator('.meal-list article')).toContainText('105 kcal');
+    expect(mock.createdMealBodies[0].ingredients).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'Rice', source: 'food-catalog', amount: 50 })]));
+    for (const ingredient of mock.createdMealBodies[0].ingredients as Record<string, unknown>[]) {
+      expect(ingredient).not.toHaveProperty('catalogMatch');
+      expect(ingredient).not.toHaveProperty('photoEstimate');
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
   test('keeps logout disabled until a profile save completes', async ({ page }) => {
     await mockApi(page);
     let releaseSave!: () => void;
@@ -170,7 +397,7 @@ test.describe('mobile navigation and food logging', () => {
     await mockApi(page, { aiConfigured: true });
     await page.setViewportSize({ width: 320, height: 800 });
     await login(page);
-    await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+    await openDiary(page);
     await page.screenshot({ path: 'test-results/mobile-food.png', fullPage: true });
     const dimensions = await page.evaluate(() => ({ width: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth }));
     expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.width + 1);
@@ -180,11 +407,13 @@ test.describe('mobile navigation and food logging', () => {
     const mock = await mockApi(page, { aiConfigured: true });
     await page.setViewportSize({ width: 390, height: 844 });
     await login(page);
-    await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
-    await page.setInputFiles('#meal-upload', { name: 'food.png', mimeType: 'image/png', buffer: png });
+    await openDiary(page);
+    await page.getByRole('button', { name: /ถ่ายภาพอาหาร/ }).click();
+    await page.getByRole('button', { name: 'เลือกจากอัลบั้ม', exact: true }).click();
+    await page.getByLabel('เลือกรูปอาหารจากอัลบั้ม').setInputFiles({ name: 'food.png', mimeType: 'image/png', buffer: png });
     await expect(page.getByRole('button', { name: 'วิเคราะห์รูป' })).toBeVisible();
     await page.getByRole('button', { name: 'วิเคราะห์รูป' }).click();
-    await expect(page.getByText('ค่าประมาณจาก AI')).toBeVisible();
+    await expect(page.getByText('ค่าประมาณจาก AI', { exact: true })).toBeVisible();
     expect(mock.analyzeCalls).toBe(1);
     expect(mock.mealSaveCalls).toBe(0);
     await page.getByLabel('ปริมาณส่วนประกอบ 1').fill('50');
@@ -210,8 +439,10 @@ test.describe('mobile navigation and food logging', () => {
     const mock = await mockApi(page, { aiConfigured: false });
     await page.setViewportSize({ width: 390, height: 844 });
     await login(page);
-    await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
-    await page.setInputFiles('#meal-upload', { name: 'food.png', mimeType: 'image/png', buffer: png });
+    await openDiary(page);
+    await page.getByRole('button', { name: /ถ่ายภาพอาหาร/ }).click();
+    await page.getByRole('button', { name: 'เลือกจากอัลบั้ม', exact: true }).click();
+    await page.getByLabel('เลือกรูปอาหารจากอัลบั้ม').setInputFiles({ name: 'food.png', mimeType: 'image/png', buffer: png });
     await page.getByRole('button', { name: 'วิเคราะห์รูป' }).click();
     await expect(page.getByRole('alert')).toContainText('คุณยังกรอกข้อมูลเองแล้วบันทึกได้');
     await page.getByLabel('ชื่ออาหาร').fill('อาหารกรอกเอง');
@@ -227,6 +458,51 @@ test.describe('mobile navigation and food logging', () => {
     expect(mock.mealSaveCalls).toBe(1);
   });
 
+  test('keeps album upload usable when camera permission is denied', async ({ page }) => {
+    const mock = await mockApi(page, { aiConfigured: true });
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'mediaDevices', {
+        configurable: true,
+        value: { getUserMedia: async () => { throw new DOMException('Permission denied', 'NotAllowedError'); } },
+      });
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await login(page);
+    await openDiary(page);
+    await page.getByRole('button', { name: /ถ่ายภาพอาหาร/ }).click();
+    await expect(page.getByText('เปิดกล้องไม่ได้ กรุณาอนุญาตการใช้กล้อง หรือเลือกรูปจากอัลบั้ม', { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'เลือกจากอัลบั้ม', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'เลือกจากอัลบั้ม', exact: true }).click();
+    await page.getByLabel('เลือกรูปอาหารจากอัลบั้ม').setInputFiles({ name: 'food.png', mimeType: 'image/png', buffer: png });
+    await expect(page.getByRole('img', { name: 'ตัวอย่างรูปอาหาร' })).toBeVisible();
+    expect(mock.analyzeCalls).toBe(0);
+  });
+
+  test('releases the camera stream when leaving the camera screen', async ({ page }) => {
+    await mockApi(page);
+    await page.addInitScript(() => {
+      const stream = document.createElement('canvas').captureStream();
+      const track = stream.getVideoTracks()[0];
+      Object.assign(window, { cameraTrackStops: 0 });
+      const stop = track.stop.bind(track);
+      track.stop = () => {
+        (window as unknown as { cameraTrackStops: number }).cameraTrackStops += 1;
+        stop();
+      };
+      Object.defineProperty(navigator, 'mediaDevices', {
+        configurable: true,
+        value: { getUserMedia: async () => stream },
+      });
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await login(page);
+    await openDiary(page);
+    await page.getByRole('button', { name: /ถ่ายภาพอาหาร/ }).click();
+    await expect(page.getByRole('button', { name: 'ถ่ายภาพ', exact: true })).toBeEnabled();
+    await page.getByRole('button', { name: /กลับไปบันทึก/ }).click();
+    await expect.poll(() => page.evaluate(() => (window as unknown as { cameraTrackStops: number }).cameraTrackStops)).toBe(1);
+  });
+
   test('renders the same authenticated app at desktop width', async ({ page }) => {
     await mockApi(page, { aiConfigured: true });
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -238,26 +514,78 @@ test.describe('mobile navigation and food logging', () => {
     await page.screenshot({ path: 'test-results/desktop-same-app.png', fullPage: true });
   });
 
-  test('searches USDA food, applies a 200g portion, and marks the source', async ({ page }) => {
-    await mockApi(page, { aiConfigured: true });
+  test('searches catalog food, applies a 200g portion, and marks the source', async ({ page }) => {
+    const mock = await mockApi(page, { aiConfigured: true });
     await page.setViewportSize({ width: 390, height: 844 });
     await login(page);
-    await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+    await openManualMeal(page);
     const foodSearch = await openFoodSearch(page);
     await foodSearch.getByRole('textbox', { name: 'ค้นหาอาหาร' }).fill('rice');
     await foodSearch.getByLabel('ปริมาณ (ก.)').fill('200');
     await page.getByRole('button', { name: 'ค้นหา', exact: true }).click();
     await page.getByRole('button', { name: /Rice/ }).click();
-    await expect(page.getByText('USDA FoodData Central', { exact: true })).toBeVisible();
+    await page.getByLabel('ชื่ออาหาร').fill('มื้อพร้อมรูป');
+    await expect(page.getByText('ฐานข้อมูลอาหาร', { exact: true })).toBeVisible();
     await expect(page.locator('.portion-row strong').first()).toHaveText('Rice');
     await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('200');
+    await page.setInputFiles('#meal-upload', { name: 'food.png', mimeType: 'image/png', buffer: png });
+    await expect(page.getByLabel('ชื่ออาหาร')).toHaveValue('มื้อพร้อมรูป');
+    await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('200');
+    await expect(page.getByRole('button', { name: 'วิเคราะห์รูป' })).toHaveCount(0);
+    expect(mock.analyzeCalls).toBe(0);
+    await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
+    await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
+    expect(mock.analyzeCalls).toBe(0);
+    expect(mock.createdMealBodies[0]).toMatchObject({ name: 'มื้อพร้อมรูป', ingredients: [{ source: 'food-catalog', amount: 200 }] });
+    expect(mock.createdMealBodies[0].imageData).toEqual(expect.any(String));
+  });
+
+  test('searches the diary catalog and saves a reduced gram quantity without AI', async ({ page }) => {
+    const mock = await mockApi(page);
+    await page.setViewportSize({ width: 320, height: 844 });
+    await login(page);
+    await openDiary(page);
+    await page.getByLabel('ค้นหาประวัติอาหาร').fill('rice');
+    await expect(page.getByRole('heading', { name: 'ประวัติอาหาร', exact: true })).toBeVisible();
+    const catalog = page.getByRole('region', { name: 'ฐานข้อมูลอาหาร', exact: true });
+    await expect(catalog.getByText('Rice', { exact: true })).toBeVisible();
+    await expect(catalog.getByRole('link', { name: 'แหล่งข้อมูล' })).toHaveAttribute('href', 'https://fdc.nal.usda.gov/food-details/123/nutrients');
+    await catalog.getByRole('button', { name: 'ใช้ Rice', exact: true }).click();
+    await expect(page.getByLabel('ชื่ออาหาร')).toHaveValue('Rice');
+    await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('100');
+    await page.getByLabel('ปริมาณส่วนประกอบ 1').fill('50');
+    await expect(page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true })).toBeDisabled();
+    await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
+    await expect(page.getByRole('region', { name: 'สรุปโภชนาการมื้ออาหาร' })).toContainText('65');
+    await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
+    await expect(page.locator('.meal-list article')).toContainText('65 kcal');
+    expect(mock.createdMealBodies[0]).toMatchObject({ ingredients: [{ source: 'food-catalog', amount: 50, referenceAmount: 100, unit: 'g' }] });
+    expect(mock.analyzeCalls).toBe(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+
+  test('shows unknown nutrients without enabling an incomplete catalog food', async ({ page }) => {
+    await mockApi(page);
+    await page.route('**/api/foods/catalog?*', route => route.fulfill({ json: { foods: [{ id: 'unknown', name: 'Unknown food', source: 'food-catalog', sourceName: 'Reference', url: null, imageUrl: null, nutrientsPer100g: { caloriesKcal: null, carbsGrams: 10, sugarGrams: null, proteinGrams: 3, fatGrams: 1 } }] } }));
+    await login(page);
+    await openDiary(page);
+    await page.getByLabel('ค้นหาประวัติอาหาร').fill('unknown');
+    const catalog = page.getByRole('region', { name: 'ฐานข้อมูลอาหาร', exact: true });
+    await expect(catalog.getByRole('button', { name: /Unknown food/ })).toBeDisabled();
+    await expect(catalog).toContainText('สารอาหารไม่ครบ');
+    await page.getByRole('button', { name: /บันทึกอาหาร/ }).click();
+    const foodSearch = await openFoodSearch(page);
+    await foodSearch.getByRole('textbox', { name: 'ค้นหาอาหาร' }).fill('unknown');
+    await foodSearch.getByRole('button', { name: 'ค้นหา', exact: true }).click();
+    await expect(foodSearch.getByRole('button', { name: /Unknown food/ })).toBeDisabled();
+    await expect(foodSearch).toContainText('ไม่ทราบ kcal');
   });
 
   test('edits, deletes, and finds a saved meal in history', async ({ page }) => {
     await mockApi(page, { aiConfigured: true });
     await page.setViewportSize({ width: 390, height: 844 });
     await login(page);
-    await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
+    await openManualMeal(page);
     const foodSearch = await openFoodSearch(page);
     await foodSearch.getByRole('textbox', { name: 'ค้นหาอาหาร' }).fill('rice');
     await foodSearch.getByLabel('ปริมาณ (ก.)').fill('100');
@@ -271,13 +599,69 @@ test.describe('mobile navigation and food logging', () => {
     await page.getByLabel('ชื่ออาหาร').fill('มื้อแก้ไข');
     await page.getByRole('button', { name: 'บันทึกการแก้ไข', exact: true }).click();
     await expect(page.getByText('มื้อแก้ไข')).toBeVisible();
-    await page.getByRole('tab', { name: 'ประวัติ', exact: true }).click();
-    await expect(page.locator('.history-panel').getByText('มื้อแก้ไข')).toBeVisible();
-    await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
-    await page.getByRole('tab', { name: 'อาหาร', exact: true }).click();
+    await page.getByRole('button', { name: /กลับไปบันทึก/ }).click();
+    await page.getByRole('button', { name: 'ดูทั้งหมด', exact: true }).click();
+    await expect(page.locator('.diary-meal-history').getByText('มื้อแก้ไข')).toBeVisible();
+    await page.getByRole('button', { name: /กลับไปบันทึก/ }).click();
+    await page.getByRole('button', { name: /บันทึกอาหาร/ }).click();
     await page.getByRole('button', { name: 'ลบ', exact: true }).click();
-    await expect(page.getByText('ยังไม่มีรายการอาหารในวันนี้')).toBeVisible();
-    await page.getByRole('tab', { name: 'ประวัติ', exact: true }).click();
-    await expect(page.getByText('ไม่พบรายการในช่วงวันที่เลือก')).toBeVisible();
+    await expect(page.locator('.meal-list').getByText('ยังไม่มีรายการอาหารในวันนี้')).toBeVisible();
+    await page.getByRole('button', { name: /กลับไปบันทึก/ }).click();
+    await page.getByRole('button', { name: 'ดูทั้งหมด', exact: true }).click();
+    await expect(page.getByText('ยังไม่มีประวัติอาหารที่ตรงกับการค้นหา')).toBeVisible();
+  });
+
+  test('reuses a searched history meal as a new meal on the selected date without changing its source', async ({ page }) => {
+    const mock = await mockApi(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await login(page);
+    await openDiary(page);
+    const selectedDate = '2026-09-27';
+    await expect(page.locator('.diary-date-card')).toHaveCount(0);
+    await page.getByRole('button', { name: /บันทึกอาหาร/ }).click();
+    await page.locator('.meal-panel').getByLabel('วันที่', { exact: true }).fill(selectedDate);
+    const foodSearch = await openFoodSearch(page);
+    await foodSearch.getByRole('textbox', { name: 'ค้นหาอาหาร' }).fill('rice');
+    await foodSearch.getByLabel('ปริมาณ (ก.)').fill('120');
+    await foodSearch.getByRole('button', { name: 'ค้นหา', exact: true }).click();
+    await foodSearch.getByRole('button', { name: /Rice/ }).click();
+    await page.getByLabel('ชื่ออาหาร').fill('ข้าวสำหรับทดสอบประวัติ');
+    await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
+    await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
+    expect(mock.createdMealBodies[0]).toMatchObject({
+      name: 'ข้าวสำหรับทดสอบประวัติ',
+      activityDate: selectedDate,
+      ingredients: [{ source: 'food-catalog', amount: 120 }],
+    });
+
+    await page.getByRole('button', { name: /กลับไปบันทึก/ }).click();
+
+    await page.getByRole('button', { name: 'ดูทั้งหมด', exact: true }).click();
+    await page.getByLabel('ค้นหาประวัติอาหาร').fill('ข้าวสำหรับทดสอบประวัติ');
+    const history = page.locator('.diary-meal-history');
+    await expect(history).toContainText(selectedDate);
+    await history.getByRole('button', { name: /บันทึกมื้อนี้อีกครั้ง/ }).click();
+    await expect(page.getByLabel('ชื่ออาหาร')).toHaveValue('ข้าวสำหรับทดสอบประวัติ');
+    await expect(page.getByLabel('ปริมาณส่วนประกอบ 1')).toHaveValue('120');
+    await expect(page.getByText('ฐานข้อมูลอาหาร', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
+    await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
+
+    expect(mock.updatedMealIds).toEqual([]);
+    expect(mock.createdMealBodies).toHaveLength(2);
+    expect(mock.createdMealBodies[1]).toMatchObject({
+      name: 'ข้าวสำหรับทดสอบประวัติ',
+      activityDate: selectedDate,
+      ingredients: [{ source: 'food-catalog', amount: 120 }],
+    });
+    await page.getByRole('button', { name: /กลับไปบันทึก/ }).click();
+    mkdirSync('.local/screenshots', { recursive: true });
+    await page.screenshot({ path: '.local/screenshots/diary-landing-390.png', fullPage: true });
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.screenshot({ path: '.local/screenshots/diary-landing-320.png', fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole('button', { name: 'ดูทั้งหมด', exact: true }).click();
+    await page.getByLabel('ค้นหาประวัติอาหาร').fill('ข้าวสำหรับทดสอบประวัติ');
+    await expect(page.locator('.diary-meal-history').getByRole('button', { name: /บันทึกมื้อนี้อีกครั้ง/ })).toHaveCount(2);
   });
 });
