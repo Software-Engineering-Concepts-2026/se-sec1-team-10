@@ -11,6 +11,8 @@ import { calculateMeal } from '../server/meal.js';
 import { COOKIE_NAME, SESSION_MS, tokenService, verifyPassword } from '../server/security.js';
 
 class MemoryRepository implements Repository {
+  async lookupFoodReferences() { return []; }
+  async searchFoods() { return []; }
   users = new Map<string, User>();
   sessions = new Map<string, { id: string; userId: string; expiresAt: Date }>();
   exercises = new Map<string, ExerciseRecord>();

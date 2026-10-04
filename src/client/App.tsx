@@ -6,27 +6,12 @@ import { DashboardPanel } from "./DashboardPanel";
 import { ReminderObserver } from "./reminders";
 import { AccountPanel } from "./AccountPanel";
 import { FeedbackMessage, Field, type Feedback } from "./FormFeedback";
-const ExercisePanel = lazy(() =>
-  import("./ExercisePanel").then((module) => ({
-    default: module.ExercisePanel,
-  })),
-);
-const MealPanel = lazy(() =>
-  import("./MealPanel").then((module) => ({ default: module.MealPanel })),
+const DiaryPanel = lazy(() =>
+  import("./DiaryPanel").then((module) => ({ default: module.DiaryPanel })),
 );
 const WeeklySummaryPanel = lazy(() =>
   import("./WeeklySummaryPanel").then((module) => ({
     default: module.WeeklySummaryPanel,
-  })),
-);
-const FoodHistoryPanel = lazy(() =>
-  import("./FoodHistoryPanel").then((module) => ({
-    default: module.FoodHistoryPanel,
-  })),
-);
-const FavoriteMealsPanel = lazy(() =>
-  import("./FavoriteMealsPanel").then((module) => ({
-    default: module.FavoriteMealsPanel,
   })),
 );
 const HealthTrendPanel = lazy(() =>
@@ -109,9 +94,6 @@ export function App() {
   const [mobileSection, setMobileSection] = useState<MobileSection>("today");
   const [visitedSections, setVisitedSections] = useState<Set<MobileSection>>(
     () => new Set(["today"]),
-  );
-  const [diaryView, setDiaryView] = useState<"food" | "activity" | "history">(
-    "food",
   );
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -435,55 +417,7 @@ export function App() {
                 <div
                   className={`mobile-page ${mobileSection === "diary" ? "is-active" : ""}`}
                 >
-                  <div
-                    className="diary-switcher"
-                    role="tablist"
-                    aria-label="หมวดบันทึก"
-                  >
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={diaryView === "food"}
-                      className={diaryView === "food" ? "active" : ""}
-                      onClick={() => setDiaryView("food")}
-                    >
-                      อาหาร
-                    </button>
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={diaryView === "activity"}
-                      className={diaryView === "activity" ? "active" : ""}
-                      onClick={() => setDiaryView("activity")}
-                    >
-                      กิจกรรม
-                    </button>
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={diaryView === "history"}
-                      className={diaryView === "history" ? "active" : ""}
-                      onClick={() => setDiaryView("history")}
-                    >
-                      ประวัติ
-                    </button>
-                  </div>
-                  <div
-                    className={`diary-view ${diaryView === "food" ? "is-active" : ""}`}
-                  >
-                    <MealPanel userId={user.id} />
-                    <FavoriteMealsPanel userId={user.id} />
-                  </div>
-                  <div
-                    className={`diary-view ${diaryView === "activity" ? "is-active" : ""}`}
-                  >
-                    <ExercisePanel user={user} />
-                  </div>
-                  <div
-                    className={`diary-view ${diaryView === "history" ? "is-active" : ""}`}
-                  >
-                    <FoodHistoryPanel />
-                  </div>
+                  <DiaryPanel user={user} active={mobileSection === "diary"} />
                 </div>
               </Suspense>
             )}

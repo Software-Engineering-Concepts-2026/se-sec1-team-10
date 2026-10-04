@@ -958,6 +958,72 @@
     padding-right: 16px;
   }
 }
+
+/* Diary landing and photo capture flow */
+.diary-panel { color: #282632; }
+.diary-title { padding: 10px 4px 18px; }
+.diary-title > span { color: #e88173; font-size: 10px; letter-spacing: .16em; font-weight: 700; }
+.diary-title h1, .diary-route-title { margin: 5px 0; font-size: 27px; letter-spacing: -.04em; }
+.diary-title p { margin: 0; color: #8f8990; font-size: 13px; }
+.diary-date-card { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; border-radius: 18px; background: #fff; box-shadow: 0 5px 20px #4836310b; }
+.diary-date-card > button { display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 13px; background: #fff4f0; color: #d77b6a; font-size: 25px; }
+.diary-date-card label { position: relative; display: flex; align-items: center; justify-content: center; gap: 9px; color: #403a40; font-size: 13px; font-weight: 650; }
+.diary-date-card svg { width: 18px; height: 18px; color: #d77b6a; }
+.diary-date-card input { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
+.diary-actions { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; margin: 15px 0 24px; }
+.diary-action { display: grid; align-content: start; justify-items: start; min-width: 0; min-height: 128px; padding: 12px 10px; border: 0; border-radius: 18px; text-align: left; color: #42383a; }
+.diary-action > span { display: grid; place-items: center; width: 34px; height: 34px; margin-bottom: 10px; border-radius: 12px; background: #ffffffa8; }
+.diary-action svg { width: 19px; height: 19px; }
+.diary-action strong { font-size: 14px; line-height: 1.4; }
+.diary-action small { margin-top: 4px; color: #777174; font-size: 11px; line-height: 1.4; }
+.diary-action.photo { background: #fff0e9; color: #ca6955; }
+.diary-action.food { background: #f1f0ff; color: #7168a6; }
+.diary-action.activity { background: #eaf5ef; color: #53856b; }
+.diary-history-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.diary-history-head h1, .diary-history-head h2 { margin: 0; font-size: 19px; }
+.diary-history-head p { margin: 4px 0 0; color: #989197; font-size: 11px; }
+.diary-link { border: 0; background: transparent; color: #d77968; font-size: 12px; font-weight: 650; white-space: nowrap; }
+.diary-search { display: flex; align-items: center; gap: 8px; min-height: 45px; padding: 0 12px; border: 1px solid #f0ecec; border-radius: 13px; background: #fff; }
+.diary-search svg { flex: 0 0 18px; width: 18px; height: 18px; color: #a69ea4; }
+.diary-search input { width: 100%; min-width: 0; padding: 9px 0; border: 0; outline: 0; background: transparent; font-size: 16px; }
+.diary-meal-history { margin-top: 10px; padding: 0 13px; border-radius: 18px; background: #fff; }
+.diary-catalog-results { margin-top: 22px; }
+.diary-catalog-results > [role="status"], .diary-catalog-results > .diary-empty { margin: 0; padding: 8px 2px; color: #8f8990; font-size: 12px; }
+.diary-catalog-unavailable { color: #ad534b !important; }
+.catalog-food-image { width: 64px; height: 64px; flex: 0 0 64px; border-radius: 12px; object-fit: cover; }
+.diary-meal-row { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 12px 0; border-bottom: 1px solid #f3eff0; }
+.diary-meal-row:last-child { border-bottom: 0; }
+.diary-meal-row > img, .diary-meal-image { display: grid; place-items: center; flex: 0 0 47px; width: 47px; height: 47px; overflow: hidden; border-radius: 13px; object-fit: cover; background: #fff3ee; color: #dc8b78; }
+.diary-meal-image svg { width: 22px; height: 22px; }
+.diary-meal-info { min-width: 0; flex: 1; }
+.diary-meal-info strong, .diary-meal-info span, .diary-meal-info small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.diary-meal-info strong { font-size: 15px; }
+.diary-meal-info span { margin-top: 3px; color: #706971; font-size: 13px; }
+.diary-meal-info small { margin-top: 2px; color: #706971; font-size: 12px; }
+.diary-meal-row > button { flex: 0 0 44px; width: 44px; height: 44px; border: 0; border-radius: 12px; background: #fff1ec; color: #d87866; font-size: 22px; }
+.diary-empty, .diary-error { padding: 14px; color: #968f95; font-size: 12px; }
+.diary-error { color: #ad534b; }
+.diary-back { display: inline-flex; align-items: center; gap: 7px; min-height: 42px; margin: 0 0 8px; padding: 0 4px; border: 0; background: transparent; color: #9b7774; font-size: 12px; }
+.diary-back svg { width: 18px; height: 18px; }
+.diary-route-title { margin-bottom: 12px; }
+.diary-camera { position: relative; min-height: min(64vh, 520px); overflow: hidden; border-radius: 24px; background: #211f25; }
+.diary-camera video { display: block; width: 100%; height: min(64vh, 520px); object-fit: cover; }
+.diary-camera-placeholder { position: absolute; inset: 0; display: grid; place-items: center; padding: 28px; color: #fff; text-align: center; font-size: 13px; }
+.diary-camera-error { color: #a6574d; font-size: 12px; text-align: center; }
+.diary-camera-controls { display: flex; align-items: center; justify-content: space-between; min-height: 90px; padding: 12px 20px; }
+.diary-gallery { display: grid; justify-items: center; gap: 3px; width: 76px; border: 0; background: transparent; color: #766b70; font-size: 9px; }
+.diary-gallery svg { width: 24px; height: 24px; }
+.diary-shutter { display: grid; place-items: center; width: 64px; height: 64px; border: 3px solid #e5a092; border-radius: 50%; background: #fff; }
+.diary-shutter span { width: 46px; height: 46px; border-radius: 50%; background: #dd7d6e; }
+.diary-shutter:disabled { opacity: .45; }
+.diary-camera-spacer { width: 76px; }
+.diary-file-input { display: none; }
+@media (max-width: 360px) {
+  .diary-actions { gap: 6px; }
+  .diary-action { min-height: 122px; padding: 10px 7px; }
+  .diary-action strong { font-size: 11px; }
+  .diary-action small { font-size: 8px; }
+}
 .portion-row {
   grid-template-columns: 1fr 100px;
 }
@@ -991,6 +1057,10 @@
 .nutrition-card { display: grid; gap: 0.15rem; min-width: 0; padding: 0.7rem 0.55rem; border: 1px solid var(--line, #d8dee8); border-radius: 0.8rem; }
 .nutrition-card strong { overflow-wrap: anywhere; font-size: 1.05rem; }
 .ingredient-row.portion-row { display: grid; gap: 0.55rem; padding: 0.9rem; border: 1px solid var(--line, #d8dee8); border-radius: 1rem; background: var(--surface, #fff); }
+.catalog-match-feedback, .catalog-match-warning { display: block; line-height: 1.45; }
+.catalog-match-feedback { color: var(--muted, #596579); }
+.catalog-match-warning { color: #8a4b00; font-weight: 600; }
+.catalog-match-feedback a { color: inherit; }
 .ingredient-card-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; }
 .ingredient-card-heading > strong:first-child { overflow-wrap: anywhere; }
 .ingredient-calories { white-space: nowrap; color: var(--accent, #3867d6); }

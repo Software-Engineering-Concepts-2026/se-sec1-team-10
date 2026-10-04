@@ -6,6 +6,7 @@ import {
   type FormEvent,
 } from "react";
 import { mealSchema, type PublicMeal } from "../shared/contracts";
+import type { CatalogFood, CatalogMatch } from "../shared/foodCatalog";
 import { api, ApiError } from "./api";
 import type { FavoriteMeal } from "./FavoriteMealsPanel";
 import { rememberFavorite } from "./favorites";
@@ -30,16 +31,27 @@ type Analysis = {
   portionDescription: string;
   source: "ai-estimate";
   notes: string[];
+  catalogMatches?: CatalogMatch[];
 };
 
-export function MealPanel({ userId }: { userId: string }) {
-  const [date, setDate] = useState(localDate);
+type MealPanelProps = {
+  userId: string;
+  selectedDate?: string;
+  onDateChange?: (date: string) => void;
+  initialMode?: "manual" | "photo";
+  initialImage?: string | null;
+  initialMeal?: PublicMeal | null;
+  initialCatalogFood?: CatalogFood | null;
+};
+
+export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "manual", initialImage = null, initialMeal = null, initialCatalogFood = null }: MealPanelProps) {
+  const [date, setDate] = useState(selectedDate ?? localDate);
   const [meals, setMeals] = useState<DailyMeals | null>(null);
   const [name, setName] = useState("");
   const [mealType, setMealType] = useState("breakfast");
   const [ingredients, setIngredients] = useState<IngredientDraft[]>([]);
   const [estimatingIngredient, setEstimatingIngredient] = useState(false);
-  const [imageData, setImageData] = useState<string | null>(null);
+  const [imageData, setImageData] = useState<string | null>(initialImage);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{
@@ -48,15 +60,54 @@ export function MealPanel({ userId }: { userId: string }) {
   } | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
-  const [showManualFields, setShowManualFields] = useState(false);
-  const [foodSource, setFoodSource] = useState<
-    "usda-fdc" | "ai-estimate" | null
-  >(null);
+  const analyzingRef = useRef(false);
+  const [analysisElapsedSeconds, setAnalysisElapsedSeconds] = useState(0);
+  const analysisTimerRef = useRef<number | null>(null);
+  const [preparingImage, setPreparingImage] = useState(false);
+  const [showManualFields, setShowManualFields] = useState(initialMode === "manual");
+  const [catalogImageUrl, setCatalogImageUrl] = useState<string | null>(null);
   const [needsRecalculation, setNeedsRecalculation] = useState(false);
   const [foodTarget, setFoodTarget] = useState<number | null>(null);
   const [foodSearchOpen, setFoodSearchOpen] = useState(false);
   const cameraInput = useRef<HTMLInputElement>(null);
   const uploadInput = useRef<HTMLInputElement>(null);
+  const photoWorkflow = initialMode === "photo";
+
+  useEffect(() => () => {
+    if (analysisTimerRef.current !== null) window.clearInterval(analysisTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    if (selectedDate) setDate(selectedDate);
+  }, [selectedDate]);
+
+  useEffect(() => {
+    if (!initialMeal) return;
+    setName(initialMeal.name);
+    setMealType(initialMeal.mealType);
+    setIngredients(initialMeal.ingredients.map(({ id: _id, caloriesKcal: _calories, carbsGrams: _carbs, sugarGrams: _sugar, proteinGrams: _protein, fatGrams: _fat, ...item }) => item));
+    setImageData(initialMeal.imageData ?? null);
+    setEditingId(null);
+    setAnalysis(null);
+    setShowManualFields(true);
+    setNeedsRecalculation(false);
+    setMessage({ text: `เติมข้อมูล ${initialMeal.name} แล้ว ตรวจสอบปริมาณก่อนบันทึกได้เลย`, error: false });
+  }, [initialMeal]);
+
+  useEffect(() => {
+    if (!initialCatalogFood) return;
+    const food = initialCatalogFood;
+    setName(food.name.slice(0, 120));
+    setMealType("breakfast");
+    setIngredients([{ name: food.name.slice(0, 120), amount: 100, unit: "g", referenceAmount: 100, referenceUnit: "g", source: "food-catalog", referenceNutrients: food.nutrientsPer100g }]);
+    setCatalogImageUrl(food.imageUrl);
+    setImageData(null);
+    setEditingId(null);
+    setAnalysis(null);
+    setShowManualFields(true);
+    setNeedsRecalculation(false);
+    setMessage({ text: `เพิ่ม ${food.name} จำนวน 100 กรัมแล้ว ปรับปริมาณก่อนบันทึกได้`, error: false });
+  }, [initialCatalogFood]);
 
   async function load() {
     try {
@@ -79,8 +130,8 @@ export function MealPanel({ userId }: { userId: string }) {
     setMealType("breakfast");
     setIngredients([]);
     setImageData(null);
+    setCatalogImageUrl(null);
     setAnalysis(null);
-    setFoodSource(null);
     setShowManualFields(false);
     setEditingId(null);
     setNeedsRecalculation(false);
@@ -91,13 +142,13 @@ export function MealPanel({ userId }: { userId: string }) {
   useEffect(() => {
     const selectFavorite = (event: Event) => {
       const favorite = (event as CustomEvent<FavoriteMeal>).detail;
-      if (!favorite) return;
+      if (!favorite || analyzingRef.current) return;
       setName(favorite.name);
       setMealType(favorite.mealType);
       setIngredients(favorite.ingredients);
       setImageData(null);
+      setCatalogImageUrl(null);
       setAnalysis(null);
-      setFoodSource(null);
       setShowManualFields(true);
       setEditingId(null);
       setNeedsRecalculation(false);
@@ -128,8 +179,8 @@ export function MealPanel({ userId }: { userId: string }) {
   }
   function recalculate() {
     const valid = mealSchema.safeParse({ name: name || 'มื้ออาหาร', mealType, activityDate: date, ingredients });
-    if (!valid.success || ingredients.some(item => Object.values(item.referenceNutrients).some(value => value === null))) {
-      setMessage({ text: 'กรุณาเพิ่มส่วนประกอบที่มีข้อมูลครบ และระบุกรัมมากกว่า 0 ก่อนคำนวณ', error: true });
+    if (!valid.success) {
+      setMessage({ text: 'กรุณาระบุปริมาณกรัมมากกว่า 0 ก่อนคำนวณ', error: true });
       return;
     }
     setNeedsRecalculation(false);
@@ -140,9 +191,8 @@ export function MealPanel({ userId }: { userId: string }) {
   }
   function applyFood(food: FoodSearchResult, quantityGrams: number) {
     const referenceNutrients = { caloriesKcal: food.nutrientsPer100g.caloriesKcal ?? null, carbsGrams: food.nutrientsPer100g.carbsGrams ?? null, sugarGrams: food.nutrientsPer100g.sugarGrams ?? null, proteinGrams: food.nutrientsPer100g.proteinGrams ?? null, fatGrams: food.nutrientsPer100g.fatGrams ?? null };
-    setFoodSource("usda-fdc");
     setShowManualFields(true);
-    const next = { name: food.name.slice(0, 120), amount: quantityGrams, unit: "g" as const, referenceAmount: 100, referenceUnit: "g" as const, source: "usda-fdc" as const, referenceNutrients };
+    const next = { name: food.name.slice(0, 120), amount: quantityGrams, unit: "g" as const, referenceAmount: 100, referenceUnit: "g" as const, source: food.source, referenceNutrients };
     setIngredients(current => foodTarget === null ? [...current.filter(item => item.name), next] : current.map((item, index) => index === foodTarget ? next : item));
     setFoodTarget(null);
     setFoodSearchOpen(false);
@@ -151,7 +201,6 @@ export function MealPanel({ userId }: { userId: string }) {
   function addManualIngredient(ingredient: IngredientDraft) {
     setIngredients((current) => [...current.filter((item) => item.name), ingredient]);
     setShowManualFields(true);
-    setFoodSource(null);
     setFoodSearchOpen(false);
     setNeedsRecalculation(true);
   }
@@ -184,43 +233,60 @@ export function MealPanel({ userId }: { userId: string }) {
     return result;
   }
   async function chooseImage(event: ChangeEvent<HTMLInputElement>) {
+    if (analyzingRef.current || busy || preparingImage) return;
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       setMessage({ text: "เลือกรูปภาพอาหารที่ถูกต้อง", error: true });
       return;
     }
+    setPreparingImage(true);
     try {
       setImageData(await compressImage(file));
+      setIngredients((current) => current.map(({ catalogMatch: _match, photoEstimate: _photo, ...item }) => item));
+      setCatalogImageUrl(null);
       setAnalysis(null);
-      setFoodSource(null);
-      setShowManualFields(false);
-      setNeedsRecalculation(false);
-      setMessage({
-        text: "เตรียมรูปแล้ว กดวิเคราะห์เพื่อรับค่าประมาณ",
-        error: false,
-      });
+      if (photoWorkflow) {
+        setShowManualFields(false);
+        setNeedsRecalculation(false);
+        setMessage({ text: "เตรียมรูปแล้ว กดวิเคราะห์เพื่อรับค่าประมาณ", error: false });
+      } else {
+        setShowManualFields(true);
+        setMessage({ text: "แนบรูปแล้ว กรอกรายการอาหารและส่วนประกอบได้เลย", error: false });
+      }
     } catch (error) {
       setMessage({
         text: error instanceof Error ? error.message : "เตรียมรูปไม่ได้",
         error: true,
       });
+    } finally {
+      setPreparingImage(false);
     }
   }
-  async function analyzeImage() {
-    if (!imageData || analyzing) return;
+  async function analyzeImage(correctedMealName?: string) {
+    if (!imageData || analyzingRef.current || busy || preparingImage || estimatingIngredient) return;
+    if (correctedMealName !== undefined && (correctedMealName.length < 2 || correctedMealName.length > 120)) return;
+    analyzingRef.current = true;
     setAnalyzing(true);
+    setAnalysisElapsedSeconds(0);
+    const started = Date.now();
+    analysisTimerRef.current = window.setInterval(() => setAnalysisElapsedSeconds(Math.floor((Date.now() - started) / 1000)), 1000);
     setMessage(null);
     try {
       const result = await api<{ analysis: Analysis }>("/meals/analyze", {
         imageData,
+        ...(correctedMealName !== undefined ? { correctedMealName } : {}),
       });
       const next = result.analysis;
-      setName(next.name);
-      setMealType(next.mealType);
-      setFoodSource("ai-estimate");
-      setIngredients(next.ingredients);
-      setAnalysis(next);
+      const matches = new Map((next.catalogMatches ?? []).map((match) => [match.index, match]));
+      setName(correctedMealName ?? next.name);
+      if (correctedMealName === undefined) setMealType(next.mealType);
+      setIngredients(next.ingredients.map((ingredient, index) => ({
+        ...ingredient,
+        ...(matches.has(index) ? { catalogMatch: matches.get(index) } : {}),
+        photoEstimate: true,
+      })));
+      setAnalysis({ ...next, name: correctedMealName ?? next.name });
       setShowManualFields(true);
       setNeedsRecalculation(false);
       setMessage({
@@ -231,17 +297,20 @@ export function MealPanel({ userId }: { userId: string }) {
       setMessage({
         text:
           error instanceof ApiError
-            ? `${error.message} คุณยังกรอกข้อมูลเองแล้วบันทึกได้`
-            : "วิเคราะห์รูปไม่ได้ คุณยังกรอกข้อมูลเองแล้วบันทึกได้",
+            ? `${error.message} รูปและข้อมูลที่กรอกยังอยู่ การกดวิเคราะห์อีกครั้งจะใช้โควตาอีก 1 ครั้ง หรือกรอกข้อมูลเองแล้วบันทึกได้`
+            : "วิเคราะห์รูปไม่ได้ รูปและข้อมูลที่กรอกยังอยู่ กดวิเคราะห์เพื่อลองใหม่จะใช้โควตาอีก 1 ครั้ง หรือกรอกข้อมูลเองแล้วบันทึกได้",
         error: true,
       });
     } finally {
+      if (analysisTimerRef.current !== null) window.clearInterval(analysisTimerRef.current);
+      analysisTimerRef.current = null;
+      analyzingRef.current = false;
       setAnalyzing(false);
     }
   }
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy || estimatingIngredient || !ingredients.length) return;
+    if (busy || analyzingRef.current || preparingImage || estimatingIngredient || !ingredients.length) return;
     if (needsRecalculation) {
       setMessage({
         text: "ข้อมูลเปลี่ยนแล้ว กรุณากดคำนวณสารอาหารใหม่ก่อนบันทึก",
@@ -256,7 +325,7 @@ export function MealPanel({ userId }: { userId: string }) {
       mealType,
       activityDate: date,
       imageData,
-      ingredients,
+      ingredients: ingredients.map(({ catalogMatch: _catalogMatch, photoEstimate: _photoEstimate, ...ingredient }) => ingredient),
     };
     try {
       const result = await api<{ meal: PublicMeal }>(
@@ -286,6 +355,7 @@ export function MealPanel({ userId }: { userId: string }) {
     }
   }
   async function remove(id: string) {
+    if (analyzingRef.current) return;
     setBusy(true);
     try {
       await api(`/meals/${id}`, {}, "DELETE");
@@ -302,6 +372,7 @@ export function MealPanel({ userId }: { userId: string }) {
     }
   }
   function edit(meal: PublicMeal) {
+    if (analyzingRef.current) return;
     setEditingId(meal.id);
     setName(meal.name);
     setMealType(meal.mealType);
@@ -310,7 +381,6 @@ export function MealPanel({ userId }: { userId: string }) {
     );
     setImageData(meal.imageData ?? null);
     setAnalysis(null);
-    setFoodSource(null);
     setShowManualFields(true);
     setNeedsRecalculation(false);
     setMessage(null);
@@ -329,8 +399,9 @@ export function MealPanel({ userId }: { userId: string }) {
           วันที่
           <input
             type="date"
+            disabled={busy || analyzing || preparingImage}
             value={date}
-            onChange={(event) => setDate(event.target.value)}
+              onChange={(event) => { setDate(event.target.value); onDateChange?.(event.target.value); }}
           />
         </label>
       </div>
@@ -342,8 +413,12 @@ export function MealPanel({ userId }: { userId: string }) {
           {message.text}
         </div>
       )}
+      {analyzing && <p className="analysis-note" role="status" aria-live="polite">
+        กำลังวิเคราะห์… {analysisElapsedSeconds} วินาที
+        {analysisElapsedSeconds >= 10 && ' บริการ AI อาจใช้เวลาสักครู่ กรุณารอ ไม่ต้องกดวิเคราะห์ซ้ำ'}
+      </p>}
       <form className="meal-form" onSubmit={save}>
-        <fieldset disabled={busy || analyzing}>
+        <fieldset disabled={busy || analyzing || preparingImage}>
           <div className="image-picker">
             <input
               ref={cameraInput}
@@ -386,18 +461,20 @@ export function MealPanel({ userId }: { userId: string }) {
             )}
             {imageData && (
               <div className="image-actions">
-                <button
+                {photoWorkflow && !analysis && <button
                   className="secondary"
                   type="button"
+                  disabled={estimatingIngredient}
                   onClick={() => void analyzeImage()}
                 >
                   {analyzing ? "กำลังวิเคราะห์…" : "วิเคราะห์รูป"}
-                </button>
+                </button>}
                 <button
                   className="text-button"
                   type="button"
                   onClick={() => {
                     setImageData(null);
+                    setCatalogImageUrl(null);
                     setAnalysis(null);
                   }}
                 >
@@ -407,6 +484,7 @@ export function MealPanel({ userId }: { userId: string }) {
             )}
           </div>
           <div className="meal-top-row">
+            {catalogImageUrl && <img className="catalog-food-image" src={catalogImageUrl} alt={`ภาพ ${name}`} />}
             <label className="compact-field">
               มื้ออาหาร
               <select
@@ -431,7 +509,15 @@ export function MealPanel({ userId }: { userId: string }) {
               />
             </label>
           </div>
-          {!showManualFields && !analysis && (
+          {analysis && imageData && name.trim() && name.trim() !== analysis.name && (
+            <div className="analysis-note">
+              <p id="meal-correction-warning">วิเคราะห์รูปเดิมตามชื่อที่แก้ไข จะใช้โควตาอีก 1 ครั้งและแทนที่ส่วนประกอบเดิมทั้งหมด รวมถึงปริมาณที่แก้ไว้ กรุณาตรวจสอบก่อนบันทึก หากต้องการแก้เฉพาะชื่อ สามารถบันทึกได้เลย</p>
+              <button className="secondary" type="button" aria-describedby="meal-correction-warning" disabled={estimatingIngredient || name.trim().length < 2 || name.trim().length > 120} onClick={() => void analyzeImage(name.trim())}>
+                {analyzing ? "กำลังวิเคราะห์…" : "วิเคราะห์ใหม่ตามชื่อที่แก้ไข"}
+              </button>
+            </div>
+          )}
+          {!showManualFields && !analysis && photoWorkflow && (
             <button
               className="secondary manual-entry-button"
               type="button"
@@ -462,7 +548,7 @@ export function MealPanel({ userId }: { userId: string }) {
           )}
           {(showManualFields || analysis) && (
             <div className="meal-actions">
-              <button className="primary" type="submit" disabled={busy || estimatingIngredient || needsRecalculation || !ingredients.length}>
+              <button className="primary" type="submit" disabled={busy || analyzing || preparingImage || estimatingIngredient || needsRecalculation || !ingredients.length}>
                 {busy
                   ? "กำลังบันทึก…"
                   : editingId
@@ -480,7 +566,7 @@ export function MealPanel({ userId }: { userId: string }) {
       </form>
       <MealList
         meals={meals}
-        busy={busy}
+        busy={busy || analyzing || preparingImage}
         onEdit={edit}
         onRemove={(id) => void remove(id)}
       />

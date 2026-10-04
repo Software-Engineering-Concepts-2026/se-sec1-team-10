@@ -1,5 +1,6 @@
-from src.fizzbuzz import fizzbuzz
 import pytest
+
+from src.fizzbuzz import fizzbuzz
 
 
 def test_fizzbuzz_rejects_boolean_input():

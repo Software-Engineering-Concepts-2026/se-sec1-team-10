@@ -19,6 +19,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:dev": "prisma migrate dev",
+    "db:seed": "node --env-file=.env --import tsx prisma/seed.ts",
     "db:local": "node scripts/local-db.mjs start",
     "db:local:stop": "node scripts/local-db.mjs stop"
   },
