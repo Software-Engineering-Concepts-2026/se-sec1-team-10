@@ -20,15 +20,15 @@ LifeBalance ช่วยลดความยุ่งยากจากกา�
 
 - Git
 - Node.js 22.12+
-- Docker Desktop หรือ Docker Engine พร้อม Docker Compose
+- PostgreSQL ที่ตั้งค่าใช้งานได้ (หรือ Docker Desktop/Engine พร้อม Compose เพื่อเปิดฐานข้อมูลในเครื่อง)
 
 ### Running the Application
 
-เครื่องที่เตรียม PostgreSQL แบบพกพาไว้แล้วเปิดด้วย `npm run db:local` และ `npm run dev` ได้ ดู [วิธีเปิดและทดสอบบนเครื่องนี้](docs/local-testing.md) โดยเก็บค่าจริงใน `.env` เดิม ไม่ต้องคัดลอกทับใหม่
+เตรียม `.env` ให้ชี้ไปยัง PostgreSQL ที่ใช้ และเก็บ connection string กับ secret ไว้ในไฟล์นี้เท่านั้น หากใช้ฐานข้อมูลร่วมของทีมที่เตรียม schema แล้ว ไม่ต้องรัน migration หรือ seed ซ้ำ หากใช้ PostgreSQL ใหม่ในเครื่อง สามารถเปิดด้วย Docker Compose ได้ ดู [วิธีเปิดและทดสอบในเครื่อง](docs/local-testing.md)
 
 1. **ติดตั้ง dependencies:**
     ```bash
-    npm install
+    npm ci
     ```
 
 2. **สร้างไฟล์ environment จากตัวอย่าง:**
@@ -37,7 +37,7 @@ LifeBalance ช่วยลดความยุ่งยากจากกา�
     ```
     จากนั้นแก้ `JWT_SECRET` ใน `.env` เป็นค่าสุ่มที่มีความยาวอย่างน้อย 32 ตัวอักษร
 
-3. **เปิด PostgreSQL และเตรียม schema:**
+3. **ถ้าใช้ PostgreSQL ในเครื่อง ให้เปิดฐานข้อมูลและเตรียม schema:**
     ```bash
     docker compose up -d db
     npm run db:migrate
@@ -81,7 +81,7 @@ NUTRITION_API_KEY=
 npm run test:e2e
 ```
 
-ชุดทดสอบ UI เปิดเว็บชั่วคราวที่ port 5174 และจำลองคำตอบ API จึงไม่ใช้ key หรือโควตา AI ดูขอบเขตผลทดสอบใน [รายงานทดสอบ](docs/test-report-mobile.md)
+ชุดทดสอบ UI เปิดเว็บชั่วคราวที่ port 5174 และจำลอง API จึงไม่ใช้ฐานข้อมูล, key หรือโควตา AI ชุด browser tests นี้และ unit/build checks ทำงานใน CI ด้วย ส่วนการทดสอบแบบ live ใช้ฐานข้อมูลจริงและไม่ทำงานใน CI จึงควรใช้ฐานข้อมูลทดสอบแยก ดูรายละเอียดที่ [คู่มือทดสอบในเครื่อง](docs/local-testing.md) และ [รายงานทดสอบ](docs/test-report-mobile.md)
 
 ขณะนี้ระบบรองรับการสมัครสมาชิก, เข้าสู่ระบบ, ออกจากระบบ, แก้ไขข้อมูลสุขภาพส่วนตัว, บันทึกอาหารพร้อมส่วนประกอบและรูปประกอบ, และบันทึกการออกกำลังกาย ระบบคำนวณ BMI, แคลอรีจากสารอาหาร, แคลอรีที่เผาผลาญ และ Net Calories รายวันให้อัตโนมัติ
 

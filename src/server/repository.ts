@@ -21,7 +21,7 @@ export interface Repository {
   createExercise(userId: string, data: ExerciseInput, weightKg: number, caloriesBurned: number): Promise<ExerciseRecord>;
   updateExercise(id: string, userId: string, data: ExerciseInput, weightKg: number, caloriesBurned: number): Promise<ExerciseRecord | null>;
   deleteExercise(id: string, userId: string): Promise<boolean>;
-  listMeals(userId: string, start: Date, end: Date): Promise<MealRecord[]>;
+  listMeals(userId: string, start: Date, end: Date, page?: { query?: string; offset: number; limit: number }): Promise<MealRecord[]>;
   createMeal(userId: string, data: MealInput, totalCalories: number): Promise<MealRecord>;
   updateMeal(id: string, userId: string, data: MealInput, totalCalories: number): Promise<MealRecord | null>;
   deleteMeal(id: string, userId: string): Promise<boolean>;
@@ -133,9 +133,16 @@ export function prismaRepository(db: PrismaClient): Repository {
     async deleteExercise(id, userId) {
       return (await db.exerciseLog.deleteMany({ where: { id, userId } })).count === 1;
     },
-    async listMeals(userId, start, end) {
+    async listMeals(userId, start, end, page) {
       const records = await db.mealLog.findMany({
-        where: { userId, activityDate: { gte: start, lt: end } }, orderBy: [{ activityDate: 'desc' }, { createdAt: 'desc' }], include: { ingredients: true },
+        where: {
+          userId,
+          activityDate: { gte: start, lt: end },
+          ...(page?.query ? { name: { contains: page.query, mode: 'insensitive' as const } } : {}),
+        },
+        orderBy: [{ activityDate: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
+        include: { ingredients: true },
+        ...(page ? { skip: page.offset, take: page.limit } : {}),
       });
       return records.map(mealRecord);
     },

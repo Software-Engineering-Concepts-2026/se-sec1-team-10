@@ -39,6 +39,13 @@ export const dailyExerciseQuerySchema = z.object({
   date: dateSchema,
 });
 export const historyQuerySchema = z.object({ from: dateSchema, to: dateSchema }).refine(value => value.from <= value.to, 'ช่วงวันที่ไม่ถูกต้อง');
+export const pagedMealHistoryQuerySchema = z.object({
+  from: dateSchema,
+  to: dateSchema,
+  q: z.string().trim().max(80).optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  offset: z.coerce.number().int().min(0).max(100000).default(0),
+}).refine(value => value.from <= value.to, 'ช่วงวันที่ไม่ถูกต้อง');
 export type ExerciseInput = z.infer<typeof exerciseSchema>;
 export type ExerciseRecord = ExerciseInput & {
   id: string; userId: string; weightKg: number; caloriesBurned: number;
