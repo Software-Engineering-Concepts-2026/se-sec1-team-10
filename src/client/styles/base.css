@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-  --color-forest: #244c40;
-  --color-paper: #f7f8f2;
+  --color-forest: #3cb371;
+  --color-paper: #f7eae0;
 }
 :root {
+  --color-ink: #5e3122;
   font-family: "Leelawadee UI", "Tahoma", sans-serif;
-  color: #243d34;
-  background: #f7f8f2;
+  color: var(--color-ink);
+  background: var(--color-paper);
   font-synthesis: none;
 }
 * {
@@ -56,14 +57,14 @@ a {
   place-items: center;
   width: 38px;
   height: 38px;
-  background: #244c40;
+  background: #3cb371;
   border-radius: 12px 12px 12px 2px;
   color: #d8ecab;
   margin-right: 12px;
   font-size: 23px;
 }
 .brand-dot {
-  color: #94a75c;
+  color: #3cb371;
 }
 .topbar-note {
   margin-left: auto;
@@ -73,7 +74,7 @@ a {
 .text-button {
   background: none;
   border: 0;
-  color: #244c40;
+  color: #3cb371;
   font-size: 13px;
   padding: 10px;
 }
@@ -99,7 +100,7 @@ a {
   margin: 18px 0;
 }
 .accent {
-  color: #749254;
+  color: #3cb371;
 }
 .intro p {
   font-size: 15px;
@@ -235,7 +236,7 @@ fieldset {
   background: #fafbf8;
   border: 1px solid #e0e6d8;
   border-radius: 10px;
-  color: #243d34;
+  color: #5e3122;
   padding: 14px;
   outline: none;
   font-size: 14px;
@@ -244,14 +245,14 @@ fieldset {
   color: #a3aa9d;
 }
 .field input:focus {
-  border-color: #718b5b;
-  box-shadow: 0 0 0 3px #718b5b16;
+  border-color: #3cb371;
+  box-shadow: 0 0 0 3px #3cb71126;
 }
 .field input[aria-invalid="true"] {
   border-color: #be6457;
 }
 .primary {
-  background: #244c40;
+  background: #3cb371;
   color: #fff;
   border: 0;
   border-radius: 11px;
@@ -261,11 +262,11 @@ fieldset {
   margin-top: 7px;
 }
 .primary:hover {
-  background: #183d30;
+  background: #329b62;
 }
 button:focus-visible,
 a:focus-visible {
-  outline: 3px solid #adba77;
+  outline: 3px solid #3cb371;
   outline-offset: 4px;
 }
 .privacy-note {
@@ -472,8 +473,8 @@ dd {
   padding: 12px 18px;
 }
 .secondary {
-  border: 1px solid #b9c7ae;
-  color: #365643;
+  border: 1px solid #3cb371;
+  color: #329b62;
   background: white;
   border-radius: 9px;
   padding: 11px 15px;
