@@ -66,8 +66,12 @@ class MemoryRepository implements Repository {
     const current = this.exercises.get(id);
     return !!current && current.userId === userId && this.exercises.delete(id);
   }
-  async listMeals(userId: string, start: Date, end: Date) {
-    return [...this.meals.values()].filter(item => item.userId === userId && item.activityDate >= start.toISOString().slice(0, 10) && item.activityDate < end.toISOString().slice(0, 10));
+  async listMeals(userId: string, start: Date, end: Date, page?: { query?: string; offset: number; limit: number }) {
+    const matches = [...this.meals.values()].filter(item => item.userId === userId &&
+      item.activityDate >= start.toISOString().slice(0, 10) && item.activityDate < end.toISOString().slice(0, 10) &&
+      (!page?.query || item.name.toLocaleLowerCase().includes(page.query.toLocaleLowerCase())));
+    matches.sort((a, b) => b.activityDate.localeCompare(a.activityDate) || b.createdAt.getTime() - a.createdAt.getTime() || b.id.localeCompare(a.id));
+    return page ? matches.slice(page.offset, page.offset + page.limit) : matches;
   }
   async createMeal(userId: string, data: MealInput, totalCalories: number) {
     const now = new Date();
@@ -308,6 +312,22 @@ describe('food calories', () => {
     const second = await signIn('food-second@example.com');
     await request(app).delete(`/api/meals/${created.body.meal.id}`).set('Origin', origin).set('Cookie', second).send({}).expect(404);
     await request(app).get('/api/meals/daily?date=2026-09-11').set('Cookie', second).expect(200).expect({ date: '2026-09-11', meals: [], caloriesConsumed: 0 });
+  });
+  it('searches meal history in bounded pages without exposing another account', async () => {
+    const first = await signIn();
+    for (const name of ['ข้าวมันไก่', 'ข้าวไข่เจียว', 'สลัด']) {
+      await request(app).post('/api/meals').set('Origin', origin).set('Cookie', first).send({ ...meal, name }).expect(201);
+    }
+    const base = '/api/meals/history?from=2026-09-01&to=2026-09-30&q=ข้าว&limit=1';
+    const firstPage = await request(app).get(`${base}&offset=0`).set('Cookie', first).expect(200);
+    const secondPage = await request(app).get(`${base}&offset=1`).set('Cookie', first).expect(200);
+    expect(firstPage.body.hasMore).toBe(true);
+    expect(secondPage.body.hasMore).toBe(false);
+    expect(firstPage.body.meals).toHaveLength(1);
+    expect(secondPage.body.meals).toHaveLength(1);
+    expect([firstPage.body.meals[0].name, secondPage.body.meals[0].name].sort()).toEqual(['ข้าวมันไก่', 'ข้าวไข่เจียว'].sort());
+    await request(app).get(`${base}&offset=0`).set('Cookie', await signIn('history-second@example.com')).expect(200).expect({ meals: [], hasMore: false });
+    await request(app).get(`${base}&offset=0&limit=51`).set('Cookie', first).expect(400);
   });
   it('uses standard macronutrient energy values without double-counting sugar', () => {
     expect(calculateMeal(mealSchema.parse(meal)).totalCalories).toBe(462);

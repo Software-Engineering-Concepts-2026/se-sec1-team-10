@@ -3,6 +3,7 @@ import { rateLimit } from "express-rate-limit";
 import {
   dailyExerciseQuerySchema,
   historyQuerySchema,
+  pagedMealHistoryQuerySchema,
   mealSchema,
 } from "../../shared/contracts.js";
 import {
@@ -60,6 +61,16 @@ export function registerMealRoutes(
     });
   });
   app.get("/api/meals/history", requireAuth, async (req, res) => {
+    if (req.query.limit !== undefined || req.query.offset !== undefined || req.query.q !== undefined) {
+      const query = pagedMealHistoryQuerySchema.parse(req.query);
+      const { start } = dateBounds(query.from);
+      const { end } = dateBounds(query.to);
+      const entries = await repository.listMeals(res.locals.user.id, start, end, {
+        query: query.q, offset: query.offset, limit: query.limit + 1,
+      });
+      res.json({ meals: entries.slice(0, query.limit).map(publicMeal), hasMore: entries.length > query.limit });
+      return;
+    }
     const query = historyQuerySchema.parse(req.query);
     const { start } = dateBounds(query.from);
     const { end } = dateBounds(query.to);

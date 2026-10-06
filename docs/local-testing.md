@@ -1,27 +1,38 @@
-# ทดสอบ LifeBalance บนเครื่องนี้
+# เปิดและทดสอบ LifeBalance ในเครื่อง
 
-ตอนนี้เปิดแอปที่ http://127.0.0.1:5173 ได้ โดยใช้ PostgreSQL จริงบน localhost:5432 และฐานข้อมูล lifebalance
+แอปต้องใช้ PostgreSQL ส่วนการวิเคราะห์รูปและการค้นข้อมูลจาก USDA เป็นตัวเลือกเสริม ให้ตั้งค่าใน `.env` ของเครื่องโดยไม่ส่งค่าจริงให้ผู้อื่น
 
-## เปิดอีกครั้งหลังปิดเครื่อง
+## เตรียมฐานข้อมูล
+
+เลือกใช้ฐานข้อมูลที่ทีมจัดเตรียมให้ หรือเปิด PostgreSQL ในเครื่องด้วย Docker:
 
 ```sh
-npm run db:local
+docker compose up -d db
+```
+
+ตั้ง `DATABASE_URL` ใน `.env` ให้ชี้ไปยังฐานข้อมูลที่เลือก และตั้ง `JWT_SECRET` เป็นค่าสุ่มยาวอย่างน้อย 32 ตัวอักษร สำหรับฐานข้อมูลใหม่ให้เตรียม Prisma และ schema:
+
+```sh
+npm ci
+npm run db:generate
+npm run db:migrate
+```
+
+ฐานข้อมูลร่วมของทีมที่เตรียม schema ไว้แล้วไม่ต้องรัน migration หรือ seed ซ้ำ หากใช้ฐานข้อมูลใหม่หรือฐานข้อมูล Docker ให้รัน migration ก่อนใช้งาน และรัน seed เฉพาะเมื่อต้องการข้อมูลตัวอย่าง (`npm run db:seed`)
+
+## เปิดแอป
+
+```sh
 npm run dev
 ```
 
-คำสั่ง db:local ใช้ PostgreSQL แบบพกพาที่เตรียมไว้ใน `.local/postgresql` และข้อมูลใน `.local/postgresql-data` ของเครื่องนี้ โฟลเดอร์เหล่านี้ไม่ส่งขึ้น Git และไม่ใช่สิ่งที่เครื่องเพื่อนจะได้จากการ clone
-
-เครื่องอื่นให้ใช้ `docker compose up -d db` ตาม docker/README.md ตั้ง DATABASE_URL ใน .env แล้วรัน `npm run db:generate` และ `npm run db:migrate` ก่อนเปิดแอป หากอัปเดตโค้ดที่มี migration ใหม่ เครื่องนี้ก็ต้องรัน db:migrate เช่นกัน
-
-หยุดฐานข้อมูลแบบพกพาด้วย `npm run db:local:stop` หลังหยุด API ไม่ต้องลบโฟลเดอร์ข้อมูล
-
-PostgreSQL แบบพกพาดาวน์โหลดจาก [EDB](https://www.enterprisedb.com/download-postgresql-binaries) ซึ่งเป็นแหล่ง Windows binaries ที่ [PostgreSQL แนะนำ](https://www.postgresql.org/download/windows/) และตั้งให้รับเฉพาะการเชื่อมต่อภายในเครื่อง
+หน้าเว็บอยู่ที่ `http://127.0.0.1:5173` และ API อยู่ที่ `http://127.0.0.1:3000`
 
 ## การทดสอบ
 
-- `npm test`: ชุดทดสอบปกติ ไม่ต้องมีฐานข้อมูล
-- `npm run test:e2e`: เบราว์เซอร์กับ API จำลอง
-- `npm run test:e2e:live`: เบราว์เซอร์กับฐานข้อมูลจริง ต้องเปิด API และเว็บบน 127.0.0.1:5173 ก่อน ชุดทดสอบสร้างบัญชีสุ่มและลบเฉพาะบัญชีนั้นเมื่อจบ
-- การทดสอบฐานข้อมูลจริง: ตั้ง TEST_DATABASE_URL ให้ชี้ฐานข้อมูลทดสอบที่ลง migration แล้ว จากนั้นรัน npm test ทั้งชุด บัญชีทดสอบใช้ชื่อสุ่มและลบเฉพาะบัญชีที่ทดสอบสร้างขึ้น
+- `npm run build` ตรวจ TypeScript และสร้างเว็บกับ API
+- `npm test` รัน unit และ API tests; ชุดนี้ไม่ต้องใช้ฐานข้อมูลจริง
+- `npm run test:e2e` รันเบราว์เซอร์กับ API จำลองที่ port 5174 โดยไม่ใช้ AI key, โควตา หรือฐานข้อมูล
+- `npm run test:e2e:live` ใช้แอปและ PostgreSQL จริงที่ตั้งค่าไว้ใน `.env` จึงอาจสร้างบัญชีทดสอบและเปลี่ยนข้อมูลในฐานข้อมูลนั้น ให้ใช้ฐานข้อมูลทดสอบแยกต่างหากเท่านั้น ชุดนี้ไม่ได้รันใน CI
 
-อย่าเผยแพร่ .env หรือใส่ key จริงใน .env.example รูปทดสอบและผลจาก AI ที่อยู่ใน .local ไม่ถูก commit
+อย่าเผยแพร่ `.env` หรือใส่รหัสผ่าน, connection string, API key หรือ secret จริงในเอกสารและ `.env.example`

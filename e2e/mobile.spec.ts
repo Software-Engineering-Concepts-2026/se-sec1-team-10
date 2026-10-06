@@ -4,15 +4,16 @@ import { mkdirSync } from 'node:fs';
 const user = { id: 'u1', email: 'food@example.com', displayName: 'Food tester', age: 30, weightKg: 70, heightCm: 175, bmi: 22.9 };
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
 
-async function mockApi(page: Page, options: { aiConfigured?: boolean } = {}) {
+async function mockApi(page: Page, options: { aiConfigured?: boolean; historyMeals?: Record<string, unknown>[] } = {}) {
   let loggedIn = false;
-  let meals: unknown[] = [];
+  let meals: unknown[] = options.historyMeals ?? [];
   let nextMealId = 1;
   let analyzeCalls = 0;
   let mealSaveCalls = 0;
   let lastSavedIngredients: unknown[] = [];
   const createdMealBodies: Record<string, unknown>[] = [];
   const updatedMealIds: string[] = [];
+  const historyCalls: { q: string; limit: number; offset: number }[] = [];
   await page.route('**/api/**', async (route: Route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -33,8 +34,8 @@ async function mockApi(page: Page, options: { aiConfigured?: boolean } = {}) {
     };
     if (path === '/api/meals/daily' && method === 'GET') {
       const date = url.searchParams.get('date');
-      const daily = (meals as { activityDate: string }[]).filter(meal => meal.activityDate === date);
-      return json({ date, meals: daily, caloriesConsumed: daily.reduce((total, meal) => total + (meal as { totalCalories: number }).totalCalories, 0) });
+      const daily = (meals as { activityDate: string; totalCalories: number }[]).filter(meal => meal.activityDate === date);
+      return json({ date, meals: daily, caloriesConsumed: daily.reduce((total, meal) => total + meal.totalCalories, 0) });
     }
     if (path === '/api/meals/analyze' && method === 'POST') {
       analyzeCalls += 1;
@@ -70,12 +71,25 @@ async function mockApi(page: Page, options: { aiConfigured?: boolean } = {}) {
     if (path === '/api/exercises/daily' && method === 'GET') return json({ date: url.searchParams.get('date'), exercises: [], caloriesConsumed: caloriesConsumed(), caloriesBurned: 0, netCalories: caloriesConsumed() });
     if (path === '/api/summary/weekly' && method === 'GET') return json({ startDate: '2026-09-08', endDate: '2026-09-14', days: [], caloriesConsumed: 0, caloriesBurned: 0 });
     if (path === '/api/health-history' && method === 'GET') return json({ points: [], rangeDays: 365, performanceTargetMs: 1500 });
-    if (path === '/api/meals/history' && method === 'GET') return json({ meals });
+    if (path === '/api/meals/history' && method === 'GET') {
+      const q = (url.searchParams.get('q') ?? '').trim();
+      const limit = Number(url.searchParams.get('limit') ?? 20);
+      const offset = Number(url.searchParams.get('offset') ?? 0);
+      historyCalls.push({ q, limit, offset });
+      const filtered = (meals as Record<string, unknown>[]).filter(meal => {
+        const activityDate = String(meal.activityDate ?? '');
+        return (!q || String(meal.name ?? '').toLocaleLowerCase().includes(q.toLocaleLowerCase()))
+          && (!url.searchParams.get('from') || activityDate >= String(url.searchParams.get('from')))
+          && (!url.searchParams.get('to') || activityDate <= String(url.searchParams.get('to')));
+      });
+      const pageMeals = filtered.slice(offset, offset + limit);
+      return json({ meals: pageMeals, hasMore: offset + pageMeals.length < filtered.length });
+    }
     if (path === '/api/profile' && method === 'PUT') return json({ user });
     if (path === '/api/goals' && method === 'PUT') return json({ user });
     return json({ message: `unmocked ${method} ${path}` }, 404);
   });
-  return { get analyzeCalls() { return analyzeCalls; }, get mealSaveCalls() { return mealSaveCalls; }, get lastSavedIngredients() { return lastSavedIngredients; }, createdMealBodies, updatedMealIds };
+  return { get analyzeCalls() { return analyzeCalls; }, get mealSaveCalls() { return mealSaveCalls; }, get lastSavedIngredients() { return lastSavedIngredients; }, createdMealBodies, updatedMealIds, historyCalls };
 }
 
 async function login(page: Page) {
@@ -444,7 +458,8 @@ test.describe('mobile navigation and food logging', () => {
     await page.getByRole('button', { name: 'เลือกจากอัลบั้ม', exact: true }).click();
     await page.getByLabel('เลือกรูปอาหารจากอัลบั้ม').setInputFiles({ name: 'food.png', mimeType: 'image/png', buffer: png });
     await page.getByRole('button', { name: 'วิเคราะห์รูป' }).click();
-    await expect(page.getByRole('alert')).toContainText('คุณยังกรอกข้อมูลเองแล้วบันทึกได้');
+    await expect(page.getByRole('alert')).toContainText('ยังไม่ได้เปิดใช้การวิเคราะห์รูปภาพอาหาร');
+    await expect(page.getByRole('alert')).toContainText('กรอกข้อมูลเองแล้วบันทึกได้');
     await page.getByLabel('ชื่ออาหาร').fill('อาหารกรอกเอง');
     await expect(page.getByLabel('ชื่ออาหาร')).toHaveValue('อาหารกรอกเอง');
     const foodSearch = await openFoodSearch(page);
@@ -609,6 +624,38 @@ test.describe('mobile navigation and food logging', () => {
     await page.getByRole('button', { name: /กลับไปบันทึก/ }).click();
     await page.getByRole('button', { name: 'ดูทั้งหมด', exact: true }).click();
     await expect(page.getByText('ยังไม่มีประวัติอาหารที่ตรงกับการค้นหา')).toBeVisible();
+  });
+
+  test('searches paged meal history and loads the next page', async ({ page }) => {
+    const today = new Date();
+    today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+    const activityDate = today.toISOString().slice(0, 10);
+    const historyMeals = Array.from({ length: 25 }, (_, index) => ({
+      id: `history-${index + 1}`,
+      name: index === 24 ? 'Special noodle bowl' : `History meal ${index + 1}`,
+      mealType: 'lunch',
+      activityDate,
+      totalCalories: 130,
+      ingredients: [{ name: 'Rice', amount: 100, unit: 'g', caloriesKcal: 130 }],
+      imageData: null,
+    }));
+    const mock = await mockApi(page, { historyMeals });
+    await login(page);
+    await openDiary(page);
+    await page.getByRole('button', { name: 'ดูทั้งหมด', exact: true }).click();
+    await page.getByLabel('ค้นหาประวัติอาหาร').fill('noodle');
+    const history = page.locator('.diary-meal-history');
+    await expect(history.getByText('Special noodle bowl')).toBeVisible();
+    await expect(history.locator('article')).toHaveCount(1);
+    expect(mock.historyCalls).toContainEqual({ q: 'noodle', limit: 20, offset: 0 });
+
+    await page.getByLabel('ค้นหาประวัติอาหาร').fill('');
+    await expect(history.locator('article')).toHaveCount(20);
+    await expect(page.getByRole('button', { name: 'ดูประวัติเพิ่ม', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'ดูประวัติเพิ่ม', exact: true }).click();
+    await expect(history.locator('article')).toHaveCount(25);
+    await expect(page.getByRole('button', { name: 'ดูประวัติเพิ่ม', exact: true })).toHaveCount(0);
+    expect(mock.historyCalls).toContainEqual({ q: '', limit: 20, offset: 20 });
   });
 
   test('reuses a searched history meal as a new meal on the selected date without changing its source', async ({ page }) => {
