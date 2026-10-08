@@ -1,5 +1,5 @@
 import type { RequestHandler } from "express";
-import type { PublicUser } from "../../shared/contracts.js";
+import type { PublicUser, PublicUserData } from "../../shared/contracts.js";
 import type { AiConfiguration } from "../ai.js";
 import type { NutritionConfiguration } from "../nutrition.js";
 import type { Repository } from "../repository.js";
@@ -16,7 +16,7 @@ export type RouteContext = {
     secure: boolean;
     path: string;
   };
-  publicUser: (user: Omit<PublicUser, "bmi">) => PublicUser;
+  publicUser: (user: PublicUserData) => PublicUser;
 };
 
 export function createRequireAuth(context: RouteContext): RequestHandler {

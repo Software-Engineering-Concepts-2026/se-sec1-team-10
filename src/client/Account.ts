@@ -27,5 +27,6 @@ export const accountApi = {
 	register: (details: AccountRegistration) => api<AccountResponse>('/auth/register', details),
 	login: (credentials: AccountCredentials) => api<AccountResponse>('/auth/login', credentials),
 	updateProfile: (profile: AccountProfile) => api<AccountResponse>('/profile', profile, 'PUT'),
+	updateAvatar: (avatarImageData: string | null) => api<AccountResponse>('/profile/avatar', { avatarImageData }, 'PUT'),
 	logout: () => api<void>('/auth/logout', {}),
 };

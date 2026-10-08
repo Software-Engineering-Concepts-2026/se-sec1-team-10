@@ -1,39 +1,47 @@
-# Git
-.git
-.gitignore
-
-# Environment / secrets
+# Secrets and local environment files
 .env
 .env.*
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+service-account*.json
 
-# Python virtual environment
-.venv/
-venv/
-env/
-
-# Python cache
-__pycache__/
-*.pyc
-*.pyo
-
-# IDE / OS
-.vscode/
-.idea/
-.DS_Store
-
-# Node.js
-node_modules/
-
-# Logs
+# Source control, local dependencies, and generated output
+.git
+.gitignore
+node_modules
+dist
+.local
+.venv
+venv
+env
+ENV
+__pycache__
+*.py[cod]
 *.log
 
-# Tests / coverage
-tests/
-coverage/
+# Tests and generated test artifacts
+**/tests
+**/*.test.*
+**/*.spec.*
+coverage
+test-results
+playwright-report
+.pytest_cache
+.hypothesis
+.ruff_cache
+.coverage
 
-# Documentation / prototypes
-docs/
-prototypes/
-
-# Markdown files
+# Local tooling and documentation
+.vscode
+.idea
+docs
+prototypes
+e2e
+e2e-live
+.codex-remote-attachments
+.profile-photo-playwright.config.ts
+prisma/prisma
 *.md

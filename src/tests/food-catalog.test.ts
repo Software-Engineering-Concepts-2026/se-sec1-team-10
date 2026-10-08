@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Food } from '@prisma/client';
 import { catalogFood, normalizeFoodSearch } from '../server/foodCatalog.js';
+import { catalogFoods } from '../../prisma/foodCatalogData.js';
 
 const food: Food = {
   id: 'rice', name: 'Rice', aliases: ['ข้าวสวย'], caloriesKcal: 260, carbsGrams: 56, sugarGrams: null,
@@ -29,5 +30,25 @@ describe('food catalog gram references', () => {
   it('rejects a zero or invalid weight', () => {
     expect(catalogFood({ ...food, servingWeightGrams: 0 })).toBeNull();
     expect(catalogFood({ ...food, servingWeightGrams: Infinity })).toBeNull();
+  });
+  it('keeps sourced catalog keys unique and all gram references complete', () => {
+    expect(catalogFoods).toHaveLength(25);
+    expect(new Set(catalogFoods.map(item => item.catalogKey)).size).toBe(catalogFoods.length);
+    for (const item of catalogFoods) {
+      for (const value of [item.caloriesKcal, item.carbsGrams, item.sugarGrams, item.proteinGrams, item.fatGrams]) {
+        expect(Number.isFinite(value)).toBe(true);
+        expect(value).toBeGreaterThanOrEqual(0);
+      }
+      expect(new URL(item.sourceUrl).hostname).toMatch(/(^|\.)usda\.gov$/);
+    }
+  });
+  it('separates cooked and raw pork references and scales each measured portion', () => {
+    const raw = catalogFoods.find(item => item.catalogKey === 'usda-ndb-10060')!;
+    const cooked = catalogFoods.find(item => item.catalogKey === 'usda-ndb-10061')!;
+    expect(cooked.aliases).not.toContain('สันในหมูดิบ');
+    expect(raw.caloriesKcal).toBe(109);
+    expect(cooked).toMatchObject({ caloriesKcal: 143, proteinGrams: 26.17 });
+    const normalized = catalogFood({ ...food, ...cooked, servingAmount: 100, servingWeightGrams: 100 });
+    expect(normalized?.nutrientsPer100g).toMatchObject({ caloriesKcal: 143, proteinGrams: 26.17 });
   });
 });

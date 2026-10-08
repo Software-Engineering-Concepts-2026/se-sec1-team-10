@@ -1,0 +1,10 @@
+.profile-avatar { display: inline-flex; flex: 0 0 auto; overflow: hidden; align-items: center; justify-content: center; border-radius: 50%; background: #e7f6ec; color: #00764b; font-weight: 700; }
+.profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.profile-photo-editor { display: flex; align-items: center; gap: 1rem; margin: .75rem 0 1rem; }
+.profile-photo-preview { width: 88px; height: 88px; }
+.profile-photo-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.profile-photo-file { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.profile-photo-file:focus-visible + span { outline: 2px solid currentColor; outline-offset: 2px; }
+.profile-photo-error { color: #b42318; }
+.profile-photo-actions label:focus-within { outline: 2px solid currentColor; outline-offset: 2px; }
+.account-profile-avatar { margin: 0 auto .75rem; }

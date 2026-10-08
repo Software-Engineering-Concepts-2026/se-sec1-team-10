@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "ES2022", "module": "NodeNext", "moduleResolution": "NodeNext",
     "strict": true, "skipLibCheck": true, "esModuleInterop": true,
+    "noUnusedLocals": true, "noUnusedParameters": true,
     "outDir": "dist", "rootDir": "src", "types": ["node"]
   },
   "include": ["src/server", "src/shared"]

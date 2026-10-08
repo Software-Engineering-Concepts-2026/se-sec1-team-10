@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api, ApiError } from "./api";
+import { UiIcon } from "./Ui";
 import { scaled, type IngredientDraft } from "./mealHelpers";
 
 const display = (value: number | null) => value === null ? "ไม่ทราบ" : String(Math.round(value * 10) / 10);
@@ -50,7 +51,7 @@ export function MealIngredientEditor({ ingredients, analysis, needsRecalculation
 
   return <>
     <section className="meal-nutrition-overview" aria-label="สรุปโภชนาการมื้ออาหาร">
-      <div className="meal-total-calories"><span>พลังงานรวม</span><strong>{needsRecalculation ? "รอคำนวณใหม่" : display(total('caloriesKcal'))}</strong><small>กิโลแคลอรี</small></div>
+      <div className="meal-total-calories"><span>พลังงานรวม</span><strong>{needsRecalculation ? "รอคำนวณใหม่" : display(total('caloriesKcal'))}</strong><small>kcal</small></div>
       <div className="nutrition-summary-grid">
         {([['คาร์โบไฮเดรต', 'carbsGrams'], ['โปรตีน', 'proteinGrams'], ['ไขมัน', 'fatGrams']] as const).map(([label, key]) =>
           <div className="nutrition-card" key={key}><span>{label}</span><strong>{needsRecalculation ? "—" : display(total(key))}</strong><small>กรัม</small></div>)}
@@ -59,16 +60,23 @@ export function MealIngredientEditor({ ingredients, analysis, needsRecalculation
     {analysis && <details className="analysis-note"><summary>รายละเอียดการประมาณจาก AI</summary><p>{analysis.portionDescription}</p>{analysis.notes.map(note => <small key={note}>{note}</small>)}</details>}
     <div className="nutrient-heading"><h3>ส่วนประกอบ</h3><span>{ingredients.length} รายการ</span></div>
     {ingredients.map((ingredient, index) => <article className="ingredient-row portion-row" key={`${ingredient.name}-${index}`}>
-      <div className="ingredient-card-heading"><strong>{ingredient.name}</strong><strong className="ingredient-calories">{needsRecalculation ? "รอคำนวณ" : `${display(values[index].caloriesKcal)} kcal`}</strong></div>
-      <label>ปริมาณ ({ingredient.unit === 'g' ? 'กรัม' : 'ส่วนเดิม'})<input aria-label={`ปริมาณส่วนประกอบ ${index + 1}`} type="number" min="0.01" max="10000" step="any" value={ingredient.amount || ''} onChange={event => onQuantityChange(index, event.target.value)} required /></label>
-      <small>{ingredient.source === 'ai-estimate' ? 'ค่าประมาณจาก AI' : ingredient.source === 'usda-fdc' ? 'USDA FoodData Central' : ingredient.source === 'food-catalog' ? 'ฐานข้อมูลอาหาร' : ingredient.source === 'manual' ? 'ข้อมูลที่กรอกเอง' : 'ข้อมูลเดิม · ไม่ทราบน้ำหนักเป็นกรัม'}</small>
-      {ingredient.catalogMatch?.status === 'matched' && ingredient.catalogMatch.food && <small className="catalog-match-feedback">{ingredient.catalogMatch.food.sourceName ?? 'ฐานข้อมูลอาหาร'}{ingredient.catalogMatch.food.url && <> · <a href={ingredient.catalogMatch.food.url} target="_blank" rel="noreferrer">แหล่งข้อมูล</a></>}{ingredient.photoEstimate && <> · ปริมาณยังเป็นค่าประมาณจากภาพ</>}</small>}
-      {ingredient.catalogMatch && ingredient.catalogMatch.status !== 'matched' && <small className="catalog-match-warning" role="status">{ingredient.catalogMatch.status === 'ambiguous' ? 'ยังจับคู่กับฐานข้อมูลอาหารไม่ได้แน่ชัด' : ingredient.catalogMatch.status === 'incomplete' ? 'ข้อมูลสารอาหารในฐานข้อมูลยังไม่ครบ' : 'ไม่พบในฐานข้อมูลอาหาร'} · ยังคงเป็นค่าประมาณจาก AI สามารถลบหรือค้นหาจากฐานข้อมูลได้</small>}
-      {ingredient.photoEstimate && !ingredient.catalogMatch && ingredient.source === 'ai-estimate' && <small className="catalog-match-warning" role="status">ยังเป็นค่าประมาณจาก AI สามารถลบหรือค้นหาจากฐานข้อมูลได้</small>}
+      <div className="ingredient-card-heading">
+        <div className="ingredient-card-title"><strong>{ingredient.name}</strong><strong className="ingredient-calories">{needsRecalculation ? "รอคำนวณ" : `${display(values[index].caloriesKcal)} kcal`}</strong></div>
+      </div>
+      <label><input aria-label={`ปริมาณส่วนประกอบ ${index + 1}`} type="number" min="0.01" max="10000" step="any" value={ingredient.amount || ''} onChange={event => onQuantityChange(index, event.target.value)} required /><span>{ingredient.unit === 'g' ? 'กรัม' : 'ส่วนเดิม'}</span></label>
+      <div className="ingredient-card-meta">
+        <small className="ingredient-source-badge">{ingredient.source === 'ai-estimate' ? 'ค่าประมาณ AI' : ingredient.source === 'usda-fdc' ? 'USDA' : ingredient.source === 'food-catalog' ? 'ฐานข้อมูล' : ingredient.source === 'manual' ? 'กรอกเอง' : 'ข้อมูลเดิม'}</small>
+        <details className="ingredient-provenance"><summary>รายละเอียด</summary>
+          {ingredient.catalogMatch?.status === 'matched' && ingredient.catalogMatch.food && <small className="catalog-match-feedback">{ingredient.catalogMatch.food.sourceName ?? 'ฐานข้อมูลอาหาร'}{ingredient.catalogMatch.food.url && <> · <a href={ingredient.catalogMatch.food.url} target="_blank" rel="noreferrer">แหล่งข้อมูล</a></>}{ingredient.photoEstimate && <> · ปริมาณยังเป็นค่าประมาณจากภาพ</>}</small>}
+          {ingredient.catalogMatch && ingredient.catalogMatch.status !== 'matched' && <small className="catalog-match-warning" role="status">{ingredient.catalogMatch.status === 'ambiguous' ? 'ยังจับคู่กับฐานข้อมูลอาหารไม่ได้แน่ชัด' : ingredient.catalogMatch.status === 'incomplete' ? 'ข้อมูลสารอาหารในฐานข้อมูลยังไม่ครบ' : 'ไม่พบในฐานข้อมูลอาหาร'} ค่านี้ยังเป็นค่าประมาณจาก AI คุณแก้ไขหรือลบส่วนประกอบได้</small>}
+          {ingredient.photoEstimate && !ingredient.catalogMatch && ingredient.source === 'ai-estimate' && <small className="catalog-match-warning" role="status">ปริมาณเป็นค่าประมาณจากภาพ คุณแก้ไขหรือลบส่วนประกอบได้</small>}
+          {!ingredient.catalogMatch && !ingredient.photoEstimate && <small>{ingredient.source === 'manual' ? 'สารอาหารที่กรอกเอง' : ingredient.source === 'usda-fdc' ? 'สารอาหารจาก USDA FoodData Central' : ingredient.source === 'food-catalog' ? 'สารอาหารจากฐานข้อมูลอาหาร' : ['ai-estimate'].includes(ingredient.source) ? 'สารอาหารเป็นค่าประมาณจาก AI' : 'ข้อมูลเดิม · ไม่ทราบน้ำหนักเป็นกรัม'}</small>}
+        </details>
+      </div>
       <button className="remove-ingredient" type="button" aria-label={`ลบ ${ingredient.name}`} onClick={() => onRemove(index)}>ลบ</button>
     </article>)}
-    {!ingredients.length && <p className="empty-state">ยังไม่มีส่วนประกอบ เพิ่มรายการหรือวิเคราะห์รูปอาหารเพื่อเริ่มต้น</p>}
-    <button className="secondary add-ingredient" type="button" onClick={() => { setOpen(true); setError(''); }}>เพิ่มส่วนประกอบ</button>
+    {!ingredients.length && <p className="empty-state">เพิ่มส่วนประกอบเพื่อคำนวณพลังงาน</p>}
+    <button className="secondary add-ingredient" type="button" onClick={() => { setOpen(true); setError(''); }}><UiIcon name="plus" size={16} />เพิ่มส่วนประกอบ</button>
     {open && <section className="manual-ingredient-form" aria-label="เพิ่มส่วนประกอบ" onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void add(); } }}>
       <div className="manual-ingredient-heading"><h3>เพิ่มส่วนประกอบ</h3><button type="button" disabled={busy} onClick={() => setOpen(false)}>ยกเลิก</button></div>
       <p>ระบุชื่อและกรัม ระบบค้นหาในฐานข้อมูลอาหารก่อน หากไม่พบ AI จะประมาณสารอาหาร ตรวจสอบก่อนบันทึก</p>
@@ -79,6 +87,6 @@ export function MealIngredientEditor({ ingredients, analysis, needsRecalculation
       <button type="button" className="text-button" disabled={busy} onClick={() => { setOpen(false); onAdd(); }}>ค้นหาจากฐานข้อมูลอาหาร</button>
     </section>}
     {needsRecalculation && <p className="feedback" role="status">ข้อมูลเปลี่ยนแล้ว กรุณาคำนวณสารอาหารใหม่</p>}
-    <button className="secondary manual-entry-button" type="button" onClick={onRecalculate} disabled={!ingredients.length || busy}>คำนวณสารอาหารใหม่</button>
+    <button className="secondary manual-entry-button" type="button" aria-label="คำนวณสารอาหารใหม่" onClick={onRecalculate} disabled={!ingredients.length || busy}>คำนวณใหม่</button>
   </>;
 }

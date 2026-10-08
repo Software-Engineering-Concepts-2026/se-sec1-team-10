@@ -1,11 +1,18 @@
 @import "tailwindcss";
 
 @theme {
-  --color-forest: #3cb371;
-  --color-paper: #f7eae0;
+  --color-forest: #238337;
+  --color-paper: #f3fbf2;
 }
 :root {
-  --color-ink: #5e3122;
+  color-scheme: only light;
+  --color-ink: #192b20;
+  --color-muted: #596c60;
+  --color-line: #dcebdc;
+  --color-primary: #238337;
+  --color-primary-soft: #e8f7e4;
+  --color-surface: #ffffff;
+  --color-ring-track: #dcebdc;
   font-family: "Leelawadee UI", "Tahoma", sans-serif;
   color: var(--color-ink);
   background: var(--color-paper);
@@ -43,7 +50,7 @@ a {
   display: flex;
   align-items: center;
   gap: 24px;
-  border-bottom: 1px solid #dfe4d9;
+  border-bottom: 1px solid var(--color-line);
 }
 .brand {
   display: inline-flex;
@@ -57,14 +64,18 @@ a {
   place-items: center;
   width: 38px;
   height: 38px;
-  background: #3cb371;
+  background: var(--color-primary);
   border-radius: 12px 12px 12px 2px;
   color: #d8ecab;
   margin-right: 12px;
   font-size: 23px;
 }
+.brand-icon svg {
+  width: 24px;
+  height: 24px;
+}
 .brand-dot {
-  color: #3cb371;
+  color: var(--color-primary);
 }
 .topbar-note {
   margin-left: auto;
@@ -74,7 +85,7 @@ a {
 .text-button {
   background: none;
   border: 0;
-  color: #3cb371;
+  color: var(--color-primary);
   font-size: 13px;
   padding: 10px;
 }
@@ -100,7 +111,7 @@ a {
   margin: 18px 0;
 }
 .accent {
-  color: #3cb371;
+  color: var(--color-primary);
 }
 .intro p {
   font-size: 15px;
@@ -233,10 +244,10 @@ fieldset {
 .field input {
   width: 100%;
   min-width: 0;
-  background: #fafbf8;
-  border: 1px solid #e0e6d8;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
   border-radius: 10px;
-  color: #5e3122;
+  color: var(--color-ink);
   padding: 14px;
   outline: none;
   font-size: 14px;
@@ -245,14 +256,14 @@ fieldset {
   color: #a3aa9d;
 }
 .field input:focus {
-  border-color: #3cb371;
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px #3cb71126;
 }
 .field input[aria-invalid="true"] {
   border-color: #be6457;
 }
 .primary {
-  background: #3cb371;
+  background: var(--color-primary);
   color: #fff;
   border: 0;
   border-radius: 11px;
@@ -262,11 +273,11 @@ fieldset {
   margin-top: 7px;
 }
 .primary:hover {
-  background: #329b62;
+  background: #238337;
 }
 button:focus-visible,
 a:focus-visible {
-  outline: 3px solid #3cb371;
+  outline: 3px solid var(--color-primary);
   outline-offset: 4px;
 }
 .privacy-note {
@@ -420,7 +431,7 @@ dd {
 .compact-field input,
 .compact-field select {
   min-width: 0;
-  border: 1px solid #dfe6d9;
+  border: 1px solid var(--color-line);
   border-radius: 9px;
   background: #fafbf8;
   color: #243d34;
@@ -473,9 +484,9 @@ dd {
   padding: 12px 18px;
 }
 .secondary {
-  border: 1px solid #3cb371;
-  color: #329b62;
-  background: white;
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-surface);
   border-radius: 9px;
   padding: 11px 15px;
   white-space: nowrap;

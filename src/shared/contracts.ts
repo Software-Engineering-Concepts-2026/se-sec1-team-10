@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { activityOptions } from './activities.js';
+import { activityLevels, formulaSexes, goalModes, targetModes, type GoalSettings } from './goals.js';
 
 export const loginSchema = z.object({
   email: z.string().trim().email('กรุณากรอกอีเมลให้ถูกต้อง').max(254).transform(v => v.toLowerCase()),
@@ -14,22 +15,50 @@ export const profileSchema = z.object({
   weightKg: z.number().positive('น้ำหนักต้องมากกว่า 0').max(500),
   heightCm: z.number().min(30, 'ส่วนสูงต้องไม่น้อยกว่า 30 ซม.').max(250),
 }).strict();
+export const profileAvatarSchema = z.object({
+  avatarImageData: z.string().regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/, 'รูปโปรไฟล์ไม่ถูกต้อง').max(150_000, 'รูปโปรไฟล์มีขนาดใหญ่เกินไป').nullable(),
+}).strict();
 
 export type ProfileInput = z.infer<typeof profileSchema>;
 export type PublicUser = {
   id: string; email: string; displayName: string;
   age: number | null; weightKg: number | null; heightCm: number | null;
   bmi: number | null;
+  avatarImageData?: string | null;
   targetWeightKg?: number | null; dailyCalorieTarget?: number | null;
+  goalSettings?: GoalSettings | null;
 };
-export const goalSchema = z.object({ targetWeightKg: z.number().positive().max(500), dailyCalorieTarget: z.number().int().min(1).max(100000) }).strict();
+export type PublicUserData = Omit<PublicUser, 'bmi' | 'goalSettings'> & { goalSettings?: unknown };
+export const goalSettingsInputSchema = z.object({
+  mode: z.enum(goalModes), formulaSex: z.enum(formulaSexes), activityLevel: z.enum(activityLevels), targetMode: z.enum(targetModes),
+}).strict();
+export const savedGoalSettingsSchema = goalSettingsInputSchema.extend({
+  tdeeKcal: z.number().int().min(1000).max(10000),
+  profileSnapshot: z.object({ age: z.number().min(18).max(120), weightKg: z.number().positive(), heightCm: z.number().positive() }).strict(),
+  startWeightKg: z.number().positive(), updatedAt: z.iso.datetime(),
+}).strict();
+export const goalSchema = z.object({
+  targetWeightKg: z.number().positive().max(500),
+  dailyCalorieTarget: z.number().int().min(1000, 'เป้าหมายพลังงานต้องไม่น้อยกว่า 1,000 kcal').max(10000).optional(),
+  goalSettings: goalSettingsInputSchema.optional(),
+}).strict().superRefine((data, context) => {
+  if ((!data.goalSettings || data.goalSettings.targetMode === 'manual') && data.dailyCalorieTarget == null) context.addIssue({ code: 'custom', path: ['dailyCalorieTarget'], message: 'กรุณาระบุเป้าหมายพลังงาน' });
+});
 export type GoalInput = z.infer<typeof goalSchema>;
+export type SavedGoalInput = { targetWeightKg: number; dailyCalorieTarget: number; goalSettings?: GoalSettings | null };
 
 const activityIds = activityOptions.map(activity => activity.id) as [string, ...string[]];
 export const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'กรุณาระบุวันที่ให้ถูกต้อง').refine(value => {
   const date = new Date(`${value}T00:00:00.000Z`);
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }, 'กรุณาระบุวันที่ให้ถูกต้อง');
+export const weightLogSchema = z.object({
+  date: dateSchema,
+  weightKg: z.number().finite('น้ำหนักต้องเป็นตัวเลข').positive('น้ำหนักต้องมากกว่า 0').max(500, 'น้ำหนักต้องไม่เกิน 500 กก.'),
+}).strict();
+export type WeightLogInput = z.infer<typeof weightLogSchema>;
+export type WeightLogRecord = { id: string; weightKg: number; heightCm: number; loggedAt: Date };
+export type PublicWeightLog = { id: string; date: string; weightKg: number; heightCm: number; bmi: number | null };
 export const exerciseSchema = z.object({
   activityType: z.enum(activityIds, { error: 'กรุณาเลือกกิจกรรม' }),
   durationMinutes: z.number().int('ระยะเวลาต้องเป็นจำนวนเต็ม').min(1, 'ระยะเวลาต้องอย่างน้อย 1 นาที').max(1440),

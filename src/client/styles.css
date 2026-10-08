@@ -2,4 +2,10 @@
 /* Ordered entry point: keep later files last because they contain intentional mobile overrides. */
 @import "./styles/base.css";
 @import "./styles/panels.css";
+@import "./styles/goals.css";
 @import "./styles/mobile-overrides.css";
+@import "./styles/reference.css";
+@import "./profile-photo.css";
+@import "./styles/theme-premium.css";
+@import "./styles/mockup-refresh.css";
+/* The shared meal editor overrides load last from main.tsx, as a separate HMR module. */

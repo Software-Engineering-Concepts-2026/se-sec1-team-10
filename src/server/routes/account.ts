@@ -4,8 +4,12 @@ import {
   goalSchema,
   loginSchema,
   profileSchema,
+  profileAvatarSchema,
   registerSchema,
+  savedGoalSettingsSchema,
+  type SavedGoalInput,
 } from "../../shared/contracts.js";
+import { estimateGoal, goalEstimateIssue } from "../../shared/goals.js";
 import {
   COOKIE_NAME,
   SESSION_MS,
@@ -13,6 +17,7 @@ import {
   verifyPassword,
 } from "../security.js";
 import type { RouteContext } from "./context.js";
+import { weightDate, weightTimestamp } from '../weight.js';
 
 export function registerAccountRoutes(
   app: Express,
@@ -82,15 +87,43 @@ export function registerAccountRoutes(
   });
   app.put("/api/profile", requireAuth, async (req, res) => {
     const data = profileSchema.parse(req.body);
-    const user = await repository.updateProfile(res.locals.user.id, data);
-    await repository.addWeightLog(user.id, data.weightKg, data.heightCm);
+    const user = await repository.updateProfile(res.locals.user.id, data, weightTimestamp(weightDate(now()), now()));
     res.json({ user: publicUser(user), message: "บันทึกข้อมูลส่วนตัวแล้ว" });
   });
+  app.put("/api/profile/avatar", requireAuth, async (req, res) => {
+    const { avatarImageData } = profileAvatarSchema.parse(req.body);
+    const user = await repository.updateAvatar(res.locals.user.id, avatarImageData);
+    res.json({ user: publicUser(user), message: "บันทึกรูปโปรไฟล์แล้ว" });
+  });
   app.put("/api/goals", requireAuth, async (req, res) => {
-    const user = await repository.updateGoals(
-      res.locals.user.id,
-      goalSchema.parse(req.body),
-    );
+    const input = goalSchema.parse(req.body);
+    const profile = res.locals.user;
+    const previous = savedGoalSettingsSchema.safeParse(profile.goalSettings).data;
+    const data: SavedGoalInput = { targetWeightKg: input.targetWeightKg, dailyCalorieTarget: input.dailyCalorieTarget ?? 0 };
+    if (input.goalSettings) {
+      const issue = goalEstimateIssue(profile, input.goalSettings.mode);
+      const estimate = estimateGoal(profile, input.goalSettings);
+      if (issue || !estimate) {
+        res.status(400).json({ message: issue ?? 'ข้อมูลร่างกายนี้อยู่นอกช่วงที่ระบบประมาณพลังงานได้ กรุณาตรวจข้อมูลส่วนตัว', errors: { goalSettings: [issue ?? 'ไม่สามารถประมาณ TDEE ได้'] } });
+        return;
+      }
+      if (input.goalSettings.mode === 'lose' && input.targetWeightKg / (profile.heightCm / 100) ** 2 < 18.5) {
+        res.status(400).json({ message: 'น้ำหนักเป้าหมายสำหรับการลดน้ำหนักต้องไม่ทำให้ BMI ต่ำกว่า 18.5', errors: { targetWeightKg: ['กรุณาตรวจน้ำหนักเป้าหมาย'] } });
+        return;
+      }
+      data.dailyCalorieTarget = input.goalSettings.targetMode === 'recommended' ? estimate.targetKcal : input.dailyCalorieTarget!;
+      data.goalSettings = {
+        ...input.goalSettings,
+        tdeeKcal: estimate.tdeeKcal,
+        profileSnapshot: { age: profile.age, weightKg: profile.weightKg, heightCm: profile.heightCm },
+        startWeightKg: previous && previous.mode === input.goalSettings.mode && profile.targetWeightKg === input.targetWeightKg ? previous.startWeightKg : profile.weightKg,
+        updatedAt: now().toISOString(),
+      };
+    } else if (previous) {
+      // Older clients can edit a target without silently reverting its intake semantics.
+      data.goalSettings = { ...previous, targetMode: 'manual', updatedAt: now().toISOString() };
+    }
+    const user = await repository.updateGoals(profile.id, data);
     res.json({ user: publicUser(user), message: "บันทึกเป้าหมายแล้ว" });
   });
 }

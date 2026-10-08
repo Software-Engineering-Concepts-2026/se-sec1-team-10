@@ -6,6 +6,8 @@ import { DashboardPanel } from "./DashboardPanel";
 import { ReminderObserver } from "./reminders";
 import { AccountPanel } from "./AccountPanel";
 import { FeedbackMessage, Field, type Feedback } from "./FormFeedback";
+import { BrandMark, BrandWordmark, LeafBackdrop, UiIcon } from './Ui';
+import { ProfileAvatar } from './ProfileAvatar';
 const DiaryPanel = lazy(() =>
   import("./DiaryPanel").then((module) => ({ default: module.DiaryPanel })),
 );
@@ -30,13 +32,13 @@ function MobileNav({
   onChange: (section: MobileSection) => void;
 }) {
   const items: { id: MobileSection; icon: string; label: string }[] = [
-    { id: "today", icon: "home", label: "วันนี้" },
+    { id: "today", icon: "home", label: "หน้าแรก" },
     { id: "diary", icon: "plus", label: "บันทึก" },
     { id: "progress", icon: "chart", label: "ความคืบหน้า" },
     { id: "account", icon: "user", label: "บัญชี" },
   ];
   return (
-    <nav className="mobile-nav" aria-label="เมนูหลัก">
+    <nav className="mobile-nav ref-nav" aria-label="เมนูหลัก">
       {items.map((item) => (
         <button
           key={item.id}
@@ -45,39 +47,11 @@ function MobileNav({
           aria-current={active === item.id ? "page" : undefined}
           onClick={() => onChange(item.id)}
         >
-          <span className="nav-icon" aria-hidden="true">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-            >
-              <use href={`#icon-${item.icon}`} />
-            </svg>
-          </span>
+          <UiIcon name={item.icon} />
           {item.label}
         </button>
       ))}
     </nav>
-  );
-}
-function IconSprite() {
-  return (
-    <svg aria-hidden="true" width="0" height="0" className="icon-sprite">
-      <symbol id="icon-home" viewBox="0 0 24 24">
-        <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10Z" />
-      </symbol>
-      <symbol id="icon-plus" viewBox="0 0 24 24">
-        <path d="M12 5v14M5 12h14" />
-      </symbol>
-      <symbol id="icon-chart" viewBox="0 0 24 24">
-        <path d="M5 19V9m7 10V5m7 14v-7" />
-      </symbol>
-      <symbol id="icon-user" viewBox="0 0 24 24">
-        <circle cx="12" cy="8" r="3.5" />
-        <path d="M5 20c.7-3.4 3-5 7-5s6.3 1.6 7 5" />
-      </symbol>
-    </svg>
   );
 }
 function asFeedback(error: unknown): Feedback {
@@ -103,6 +77,8 @@ export function App() {
     );
     setMobileSection(section);
   }
+
+  useEffect(() => { window.scrollTo(0, 0); }, [mobileSection]);
 
   async function loadSession() {
     setLoading(true);
@@ -184,26 +160,14 @@ export function App() {
   }
 
   return (
-    <div className="app-shell">
-      <IconSprite />
-      <header className="topbar">
-        <a className="brand" href="/" aria-label="LifeBalance หน้าหลัก">
-          <span className="brand-icon" aria-hidden="true">
-            lb
-          </span>
-          LifeBalance<span className="brand-dot">.</span>
-        </a>
-        <span className="topbar-note">สุขภาพที่ดี เริ่มจากทุกวัน</span>
-        {user && (
-          <button className="text-button" onClick={logout} disabled={busy}>
-            ออกจากระบบ ↗
-          </button>
-        )}
-      </header>
+    <div className={`app-shell ref-app ${!user ? 'ref-guest' : ''}`}>
+
       <main>
         {loading ? (
-          <div className="loading" role="status">
-            กำลังโหลดข้อมูล…
+          <div className="loading ref-boot" role="status">
+            <BrandMark large /><h1>กำลังเชื่อมต่อ</h1>
+            <span className="ref-spinner" aria-hidden="true" />
+            <p>กำลังตรวจสอบข้อมูลของคุณ กรุณารอสักครู่…</p>
           </div>
         ) : bootError ? (
           <section className="card connection-error">
@@ -214,77 +178,19 @@ export function App() {
             </button>
           </section>
         ) : !user ? (
-          <div className="auth-layout">
-            <section className="intro">
-              <span className="eyebrow">YOUR EVERYDAY WELLBEING</span>
-              <h1>
-                ดูแลตัวเอง
-                <br />
-                ให้เป็นเรื่อง<span className="accent">ง่าย</span>
-              </h1>
-              <p>
-                เริ่มต้นดูแลสุขภาพในแบบของคุณ
-                <br />
-                ด้วยข้อมูลส่วนตัวที่พร้อมสำหรับทุกก้าวต่อไป
-              </p>
-              <div className="balance-art" aria-hidden="true">
-                <div className="orbit orbit-one" />
-                <div className="orbit orbit-two" />
-                <div className="art-center">
-                  สมดุลที่ดี
-                  <br />
-                  <strong>เริ่มที่คุณ</strong>
-                </div>
-                <span className="art-leaf leaf-one" />
-                <span className="art-leaf leaf-two" />
-                <span className="art-dot" />
-              </div>
-              <span className="intro-footer">
-                ทีละก้าว · ในทุกวัน · ในแบบของคุณ
-              </span>
-            </section>
-            <section className="card auth-card" aria-labelledby="auth-title">
-              <div
-                className="mode-switch"
-                aria-label="เลือกเข้าสู่ระบบหรือสมัครสมาชิก"
-              >
-                <button
-                  aria-pressed={mode === "login"}
-                  disabled={busy}
-                  onClick={() => {
-                    setMode("login");
-                    setFeedback(null);
-                  }}
-                >
-                  เข้าสู่ระบบ
-                </button>
-                <button
-                  aria-pressed={mode === "register"}
-                  disabled={busy}
-                  onClick={() => {
-                    setMode("register");
-                    setFeedback(null);
-                  }}
-                >
-                  สมัครสมาชิก
-                </button>
-              </div>
-              <span className="eyebrow card-eyebrow">
-                LET’S FIND YOUR BALANCE
-              </span>
-              <h2 id="auth-title">
-                {mode === "login" ? "ยินดีต้อนรับกลับมา" : "เริ่มต้นดูแลตัวเอง"}
-              </h2>
-              <p className="muted">
-                {mode === "login"
-                  ? "เข้าสู่ระบบเพื่อจัดการข้อมูลสุขภาพของคุณ"
-                  : "สร้างบัญชีของคุณ ใช้เวลาเพียงนิดเดียว"}
-              </p>
+          <div className="ref-auth">
+            <LeafBackdrop />
+            <a className="ref-auth-brand" href="/" aria-label="LifeBalance หน้าหลัก"><BrandMark large /><BrandWordmark /><span>ดูแลสุขภาพให้สมดุล<br />ในแบบของคุณ</span></a>
+
+            <section className="ref-auth-form" aria-labelledby="auth-title">
+
+              <h2 id="auth-title" className="ref-auth-title">{mode === 'login' ? 'ยินดีต้อนรับกลับมา' : 'เริ่มต้นดูแลตัวเอง'}</h2>
               <FeedbackMessage value={feedback} />
               <form key={mode} onSubmit={authenticate}>
                 <fieldset disabled={busy}>
                   {mode === "register" && (
                     <Field
+                      icon="user"
                       name="displayName"
                       label="ชื่อที่ใช้แสดง"
                       autoComplete="nickname"
@@ -294,6 +200,7 @@ export function App() {
                     />
                   )}
                   <Field
+                    icon="mail"
                     name="email"
                     label="อีเมล"
                     type="email"
@@ -303,6 +210,8 @@ export function App() {
                     error={feedback?.fields?.email}
                   />
                   <Field
+                    icon="lock"
+                    revealPassword
                     name="password"
                     label="รหัสผ่าน"
                     type="password"
@@ -316,6 +225,8 @@ export function App() {
                   />
                   {mode === "register" && (
                     <Field
+                      icon="lock"
+                      revealPassword
                       name="confirmPassword"
                       label="ยืนยันรหัสผ่าน"
                       type="password"
@@ -335,12 +246,7 @@ export function App() {
                   </button>
                 </fieldset>
               </form>
-              <div className="privacy-note">
-                <span aria-hidden="true">◇</span>{" "}
-                ข้อมูลสุขภาพเป็นเรื่องส่วนตัวของคุณ
-                <br />
-                <small>ระบบออกจากเซสชันเมื่อไม่ใช้งาน 30 นาที</small>
-              </div>
+              <p className="ref-auth-switch">{mode === 'login' ? 'ยังไม่มีบัญชี?' : 'มีบัญชีอยู่แล้ว?'}{' '}<button className="text-button" disabled={busy} onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setFeedback(null); }}>{mode === 'login' ? 'สมัครสมาชิก' : 'เข้าสู่ระบบ'}</button></p>
             </section>
           </div>
         ) : (
@@ -349,21 +255,11 @@ export function App() {
             <div
               className={`mobile-page ${mobileSection === "today" ? "is-active" : ""}`}
             >
-              <section className="profile-heading">
-                <span className="eyebrow">YOUR DAILY BALANCE</span>
-                <h1>
-                  สวัสดี, {user.displayName} <span>✦</span>
-                </h1>
-                <p className="muted">วันนี้ดูแลตัวเองได้อีกนิดนะ</p>
+              <section className="ref-heading ref-greeting">
+                <div className="ref-greeting-copy"><BrandMark /><h1>สวัสดีครับ<br />{user.displayName} <UiIcon name="leaf" size={19} /></h1></div>
+                <button type="button" className="ref-avatar" aria-label="เปิดบัญชีของคุณ" onClick={() => navigate('account')}><ProfileAvatar user={user} size={44} /></button>
               </section>
               <DashboardPanel user={user} />
-              <button
-                type="button"
-                className="mobile-quick-log"
-                onClick={() => navigate("diary")}
-              >
-                ＋ บันทึกอาหารของวันนี้
-              </button>
             </div>
             {visitedSections.has("account") && (
               <div
@@ -374,6 +270,7 @@ export function App() {
                   busy={busy}
                   setBusy={setBusy}
                   onUserChanged={setUser}
+                  onLogout={logout}
                 />
               </div>
             )}
@@ -391,15 +288,8 @@ export function App() {
                 <div
                   className={`mobile-page ${mobileSection === "progress" ? "is-active" : ""}`}
                 >
-                  <section className="profile-heading">
-                    <span className="eyebrow">YOUR PROGRESS</span>
-                    <h1>ความคืบหน้าของคุณ</h1>
-                    <p className="muted">
-                      ติดตามแนวโน้มและผลลัพธ์จากเป้าหมายที่ตั้งไว้
-                    </p>
-                  </section>
-                  <HealthTrendPanel />
-                  <WeeklySummaryPanel />
+                  <HealthTrendPanel user={user} onUserChanged={setUser} onOpenAccount={() => navigate("account")} />
+                  <WeeklySummaryPanel user={user} />
                 </div>
               </Suspense>
             )}
@@ -425,10 +315,7 @@ export function App() {
           </div>
         )}
       </main>
-      <footer className="site-footer">
-        <span>LifeBalance © 2026</span>
-        <span>พื้นที่เล็ก ๆ สำหรับสุขภาพที่ดีของคุณ</span>
-      </footer>
+
     </div>
   );
 }

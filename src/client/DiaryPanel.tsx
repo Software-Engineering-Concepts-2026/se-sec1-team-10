@@ -4,6 +4,8 @@ import type { PublicUser } from "../shared/contracts";
 import type { CatalogFood } from "../shared/foodCatalog";
 import { api, ApiError } from "./api";
 import { localDate } from "./mealHelpers";
+import { formatDisplayDate } from "./formatDisplay";
+import { UiIcon } from "./Ui";
 
 const MealPanel = lazy(() => import("./MealPanel").then((m) => ({ default: m.MealPanel })));
 const ExercisePanel = lazy(() => import("./ExercisePanel").then((m) => ({ default: m.ExercisePanel })));
@@ -32,19 +34,24 @@ function Icon({ name }: { name: "camera" | "meal" | "activity" | "calendar" | "b
 export function DiaryPanel({ user, active }: { user: PublicUser; active: boolean }) {
   const [date, setDate] = useState(localDate);
   const [route, setRoute] = useState<Route>("home");
+  const returnRoute = useRef<Route>("home");
+  useEffect(() => { window.scrollTo(0, 0); }, [route]);
   const [query, setQuery] = useState("");
   const [meals, setMeals] = useState<PublicMeal[]>([]);
   const [error, setError] = useState("");
+  const [saveNotice, setSaveNotice] = useState("");
   const [historyOffset, setHistoryOffset] = useState(0);
   const [historyHasMore, setHistoryHasMore] = useState(false);
-  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const [historyVersion, setHistoryVersion] = useState(0);
   const [photoData, setPhotoData] = useState<string | null>(null);
   const [pendingMeal, setPendingMeal] = useState<PublicMeal | null>(null);
+  const [editingHistoryMeal, setEditingHistoryMeal] = useState(false);
   const [pendingCatalogFood, setPendingCatalogFood] = useState<CatalogFood | null>(null);
   const [catalogFoods, setCatalogFoods] = useState<CatalogFood[]>([]);
   const [catalogBusy, setCatalogBusy] = useState(false);
   const [catalogError, setCatalogError] = useState("");
+  const [catalogVersion, setCatalogVersion] = useState(0);
   const catalogRequestRef = useRef(0);
   const [cameraError, setCameraError] = useState("");
   const [cameraReady, setCameraReady] = useState(false);
@@ -67,7 +74,8 @@ export function DiaryPanel({ user, active }: { user: PublicUser; active: boolean
     let alive = true;
     const from = route === "history" || query.trim() ? "2000-01-01" : shiftDate(localDate(), -30);
     const to = localDate();
-    const path = `/meals/history?from=${from}&to=${to}&limit=${historyPageSize}&offset=${historyOffset}&q=${encodeURIComponent(query.trim())}`;
+    const searchTerm = query.trim();
+    const path = `/meals/history?from=${from}&to=${to}&limit=${historyPageSize}&offset=${historyOffset}&q=${encodeURIComponent(searchTerm)}`;
     setHistoryLoading(true);
     const timer = window.setTimeout(() => {
       void api<{ meals: PublicMeal[]; hasMore?: boolean }>(path)
@@ -102,7 +110,7 @@ export function DiaryPanel({ user, active }: { user: PublicUser; active: boolean
         .finally(() => { if (request === catalogRequestRef.current) setCatalogBusy(false); });
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [query, route]);
+  }, [query, route, catalogVersion]);
 
   useEffect(() => {
     if (route !== "camera" || !active) return;
@@ -133,13 +141,34 @@ export function DiaryPanel({ user, active }: { user: PublicUser; active: boolean
   function updateQuery(value: string) {
     catalogRequestRef.current += 1;
     setCatalogFoods([]); setCatalogError(""); setCatalogBusy(false);
-    setMeals([]); setError(""); setHistoryHasMore(false); setHistoryOffset(0); setQuery(value);
+    setMeals([]); setError(""); setHistoryHasMore(false); setHistoryOffset(0); setHistoryLoading(true); setQuery(value);
   }
   function reuse(meal: PublicMeal) {
+    returnRoute.current = route === "history" ? "history" : "home";
+    setEditingHistoryMeal(false);
     setPendingCatalogFood(null);
     setPendingMeal(meal);
     setPhotoData(null);
     setRoute("manual");
+  }
+  function editMeal(meal: PublicMeal) {
+    returnRoute.current = route === "history" ? "history" : "home";
+    setEditingHistoryMeal(true); setPendingCatalogFood(null); setPendingMeal(meal); setPhotoData(null); setRoute("manual");
+  }
+  async function deleteMeal(meal: PublicMeal) {
+    if (!window.confirm(`ลบ ${meal.name} จากประวัติอาหารหรือไม่`)) return;
+    try {
+      await api(`/meals/${meal.id}`, {}, "DELETE");
+      setSaveNotice("ลบรายการอาหารแล้ว");
+      setHistoryOffset(0); setHistoryVersion(version => version + 1);
+      window.dispatchEvent(new Event("daily-calories-updated"));
+    } catch (cause) {
+      setError(cause instanceof ApiError ? cause.message : "ลบรายการอาหารไม่ได้");
+    }
+  }
+  function mealSaved(message: string) {
+    setSaveNotice(message); setPendingMeal(null); setPendingCatalogFood(null); setEditingHistoryMeal(false); setPhotoData(null);
+    setHistoryOffset(0); setHistoryVersion(version => version + 1); setRoute(returnRoute.current);
   }
   function chooseCatalogFood(food: CatalogFood) {
     setPendingMeal(null); setPendingCatalogFood(food); setPhotoData(null); setRoute("manual");
@@ -183,29 +212,31 @@ export function DiaryPanel({ user, active }: { user: PublicUser; active: boolean
       setPhotoData(compressed); setRoute("manual");
     } catch { if (request === photoRequestRef.current) setCameraError("เตรียมรูปไม่ได้ กรุณาเลือกรูปอื่น"); }
   }
-  const goHome = () => { photoRequestRef.current += 1; setPendingMeal(null); setPendingCatalogFood(null); setHistoryOffset(0); setRoute("home"); setPhotoData(null); };
+  const goHome = () => { photoRequestRef.current += 1; setPendingMeal(null); setPendingCatalogFood(null); setHistoryOffset(0); setPhotoData(null); returnRoute.current = "home"; setDate(localDate()); setRoute("home"); };
   const historyFooter = <>
     {historyLoading && <p role="status">กำลังโหลดประวัติอาหาร…</p>}
     {error && <button type="button" className="diary-link" disabled={historyLoading} onClick={() => setHistoryVersion(version => version + 1)}>ลองโหลดอีกครั้ง</button>}
     {historyHasMore && !error && <button type="button" className="diary-link" disabled={historyLoading} onClick={() => setHistoryOffset(offset => offset + historyPageSize)}>ดูประวัติเพิ่ม</button>}
   </>;
+  const retryCatalog = () => setCatalogVersion(version => version + 1);
 
-  return <section className="diary-panel" aria-label="บันทึกอาหาร">
+  return <section className={`diary-panel${route === 'home' ? ' ref-diary-home' : ''}${route === 'camera' ? ' diary-camera-active' : ''}`} aria-label="บันทึกอาหาร">
     {route === "home" && <>
-      <header className="diary-title"><span>DIARY</span><h1>บันทึกอาหาร</h1><p>เก็บทุกมื้อและกิจกรรมของคุณไว้ที่เดียว</p></header>
+      <header className="diary-title"><h1>บันทึกอาหาร</h1><p>ค้นหาอาหารและบันทึกมื้อของคุณ</p></header>
+      {saveNotice && <p className="feedback success" role="status">{saveNotice}</p>}
       <label className="diary-search"><Icon name="search"/><input aria-label="ค้นหาประวัติอาหาร" value={query} maxLength={80} onChange={(e) => updateQuery(e.target.value)} placeholder="ค้นหาประวัติหรือฐานข้อมูลอาหาร"/></label>
       <div className="diary-actions" aria-label="สร้างบันทึก">
-        <button className="diary-action photo" type="button" onClick={openCamera}><span><Icon name="camera"/></span><strong>ถ่ายภาพอาหาร</strong><small>ใช้กล้องหรืออัลบั้ม</small></button>
-        <button className="diary-action food" type="button" onClick={() => { setPhotoData(null); setPendingMeal(null); setPendingCatalogFood(null); setRoute("manual"); }}><span><Icon name="meal"/></span><strong>บันทึกอาหาร</strong><small>กรอกรายการด้วยตัวเอง</small></button>
-        <button className="diary-action activity" type="button" onClick={() => setRoute("activity")}><span><Icon name="activity"/></span><strong>บันทึกกิจกรรม</strong><small>บันทึกการเคลื่อนไหว</small></button>
+        <button className="diary-action photo" type="button" onClick={() => { returnRoute.current = "home"; openCamera(); }}><span><UiIcon name="camera"/></span><strong>ถ่ายภาพอาหาร</strong><small>ใช้กล้องหรืออัลบั้ม</small></button>
+        <button className="diary-action food" type="button" onClick={() => { returnRoute.current = "home"; setPhotoData(null); setPendingMeal(null); setPendingCatalogFood(null); setRoute("manual"); }}><span><UiIcon name="edit"/></span><strong>บันทึกอาหาร</strong><small>กรอกรายการด้วยตัวเอง</small></button>
+        <button className="diary-action activity" type="button" onClick={() => { returnRoute.current = "home"; setRoute("activity"); }}><span><UiIcon name="run"/></span><strong>บันทึกกิจกรรม</strong><small>บันทึกการเคลื่อนไหว</small></button>
       </div>
-      <div className="diary-history-head"><div><h2>ประวัติอาหาร</h2><p>{query.trim() ? "ค้นหาประวัติทั้งหมด" : "รายการย้อนหลัง 30 วัน"}</p></div><button type="button" className="diary-link" onClick={() => { setHistoryOffset(0); setRoute("history"); }}>ดูทั้งหมด <span aria-hidden="true">→</span></button></div>
-      <MealHistory meals={meals} error={error} onReuse={reuse} emptyMessage={query.trim() ? "ไม่พบอาหารในประวัติที่ตรงกับการค้นหา" : undefined}/>
+      <div className="diary-history-head"><div><h2>{query.trim() ? "ประวัติอาหาร" : "ประวัติล่าสุด"}</h2><p>{query.trim() ? "ผลจากประวัติอาหาร" : "มื้ออาหารที่บันทึกไว้"}</p></div><button type="button" className="diary-link" onClick={() => { setHistoryOffset(0); setRoute("history"); }}>ดูทั้งหมด <span aria-hidden="true">→</span></button></div>
+      <MealHistory meals={meals} error={error} loading={historyLoading} onReuse={reuse} onEdit={editMeal} onDelete={deleteMeal} emptyMessage={query.trim() ? "ไม่พบอาหารในประวัติที่ตรงกับการค้นหา" : undefined}/>
       {historyFooter}
       {query.trim() && <section className="diary-catalog-results" aria-label="ฐานข้อมูลอาหาร">
         <div className="diary-history-head"><div><h2>ฐานข้อมูลอาหาร</h2><p>อาหารอ้างอิงจากแค็ตตาล็อกและแหล่งข้อมูลที่แสดงในแต่ละรายการ</p></div></div>
         {catalogBusy && <p role="status">กำลังค้นหาฐานข้อมูลอาหาร…</p>}
-        {catalogError && <p className="diary-error" role="alert">{catalogError}</p>}
+        {catalogError && <div className="diary-catalog-error"><p className="diary-error" role="alert">{catalogError}</p><button type="button" className="diary-link" disabled={catalogBusy} onClick={retryCatalog}>ลองค้นหาอีกครั้ง</button></div>}
         {!catalogBusy && !catalogError && catalogFoods.length === 0 && query.trim().length >= 2 && <p className="diary-empty">ไม่พบอาหารในฐานข้อมูล</p>}
         <div className="diary-meal-history">{catalogFoods.map(food => { const complete = Object.values(food.nutrientsPer100g).every(value => typeof value === "number"); return <article className="diary-meal-row" key={food.id}>
           {food.imageUrl ? <img src={food.imageUrl} alt=""/> : <span className="diary-meal-image"><Icon name="meal"/></span>}
@@ -216,17 +247,18 @@ export function DiaryPanel({ user, active }: { user: PublicUser; active: boolean
     </>}
     {route === "manual" && <>
       <button type="button" className="diary-back" onClick={goHome}><Icon name="back"/> กลับไปบันทึก</button>
-      <h1 className="diary-route-title">บันทึกอาหาร</h1>
-      <Suspense fallback={<p role="status">กำลังเปิดแบบฟอร์ม…</p>}><MealPanel key={pendingCatalogFood?.id ?? "diary-meal"} userId={user.id} selectedDate={date} initialMode={photoData ? "photo" : "manual"} initialImage={photoData} initialMeal={pendingMeal} initialCatalogFood={pendingCatalogFood} onDateChange={setDate}/></Suspense>
+      <Suspense fallback={<p role="status">กำลังเปิดแบบฟอร์ม…</p>}><MealPanel key={pendingMeal?.id ?? pendingCatalogFood?.id ?? "diary-meal"} userId={user.id} selectedDate={editingHistoryMeal ? pendingMeal?.activityDate ?? date : date} initialMode={photoData ? "photo" : "manual"} initialImage={photoData} initialMeal={pendingMeal} initialEdit={editingHistoryMeal} initialCatalogFood={pendingCatalogFood} onDateChange={value => { if (!editingHistoryMeal) setDate(value); }} showDailyList={false} onSaved={mealSaved}/></Suspense>
     </>}
     {route === "camera" && <>
       <button type="button" className="diary-back" onClick={goHome}><Icon name="back"/> กลับไปบันทึก</button>
       <h1 className="diary-route-title">ถ่ายภาพอาหาร</h1>
       <div className="diary-camera">
         <video ref={videoRef} playsInline muted aria-label="ภาพจากกล้อง"/>
-        {!cameraReady && <div className="diary-camera-placeholder" role="status">{cameraError || "กำลังเปิดกล้อง…"}</div>}
+        <div className="diary-camera-frame" aria-hidden="true" />
+        <p className="diary-camera-hint">จัดอาหารให้อยู่ในกรอบ</p>
+        {!cameraReady && !cameraError && <div className="diary-camera-placeholder" role="status">กำลังเปิดกล้อง…</div>}
+        {cameraError && <p className="diary-camera-error" role="status">{cameraError}</p>}
       </div>
-      {cameraError && <p className="diary-camera-error" role="status">{cameraError}</p>}
       <div className="diary-camera-controls">
         <button type="button" className="diary-gallery" onClick={() => uploadRef.current?.click()}><Icon name="gallery"/><span>เลือกจากอัลบั้ม</span></button>
         <button type="button" className="diary-shutter" aria-label="ถ่ายภาพ" disabled={!cameraReady} onClick={capture}><span/></button>
@@ -234,16 +266,19 @@ export function DiaryPanel({ user, active }: { user: PublicUser; active: boolean
       </div>
       <input ref={uploadRef} className="diary-file-input" type="file" accept="image/*" aria-label="เลือกรูปอาหารจากอัลบั้ม" onChange={(e) => { choosePhoto(e.target.files?.[0]); e.currentTarget.value = ""; }}/>
     </>}
-    {route === "activity" && <><button type="button" className="diary-back" onClick={goHome}><Icon name="back"/> กลับไปบันทึก</button><Suspense fallback={<p role="status">กำลังเปิดกิจกรรม…</p>}><ExercisePanel user={user}/></Suspense></>}
-    {route === "history" && <><button type="button" className="diary-back" onClick={goHome}><Icon name="back"/> กลับไปบันทึก</button><div className="diary-history-head"><h1>ประวัติอาหาร</h1><button type="button" className="diary-link" onClick={goHome}>เสร็จสิ้น</button></div><label className="diary-search"><Icon name="search"/><input aria-label="ค้นหาประวัติอาหาร" value={query} maxLength={80} onChange={(e) => updateQuery(e.target.value)} placeholder="ค้นหาอาหารในประวัติ"/></label><MealHistory meals={meals} error={error} onReuse={reuse} emptyMessage="ยังไม่มีประวัติอาหารที่ตรงกับการค้นหา"/>{historyFooter}</>}
+    {route === "activity" && <><button type="button" className="diary-back" onClick={goHome}><Icon name="back"/> กลับไปบันทึก</button><Suspense fallback={<p role="status">กำลังเปิดกิจกรรม…</p>}><ExercisePanel key={date} user={user} initialDate={date} onSaved={mealSaved}/></Suspense></>}
+    {route === "history" && <><button type="button" className="diary-back" onClick={goHome}><Icon name="back"/> กลับไปบันทึก</button><div className="diary-history-head"><h1>ประวัติอาหาร</h1><button type="button" className="diary-link" onClick={goHome}>เสร็จสิ้น</button></div>{saveNotice && <p className="feedback success" role="status">{saveNotice}</p>}<label className="diary-search"><Icon name="search"/><input aria-label="ค้นหาประวัติอาหาร" value={query} maxLength={80} onChange={(e) => updateQuery(e.target.value)} placeholder="ค้นหาอาหารในประวัติ"/></label><MealHistory meals={meals} error={error} loading={historyLoading} onReuse={reuse} onEdit={editMeal} onDelete={deleteMeal} emptyMessage="ยังไม่มีประวัติอาหารที่ตรงกับการค้นหา"/>{historyFooter}</>}
   </section>;
 }
 
-function MealHistory({ meals, error, onReuse, emptyMessage = "ยังไม่มีรายการอาหารในช่วง 30 วันที่ผ่านมา" }: { meals: PublicMeal[]; error: string; onReuse: (meal: PublicMeal) => void; emptyMessage?: string }) {
-  if (!meals.length) return error ? <p className="diary-error" role="alert">{error}</p> : <p className="diary-empty">{emptyMessage}</p>;
-  return <>{error && <p className="diary-error" role="alert">{error}</p>}<div className="diary-meal-history">{meals.map((meal) => <article className="diary-meal-row" key={meal.id}>
-    {meal.imageData ? <img src={meal.imageData} alt=""/> : <span className="diary-meal-image"><Icon name="meal"/></span>}
-    <div className="diary-meal-info"><strong>{meal.name}</strong><span>{meal.ingredients.reduce((sum, item) => sum + item.amount, 0)} กรัม · {Math.round(meal.totalCalories)} kcal</span><small>{meal.activityDate} · {({ breakfast: "เช้า", lunch: "กลางวัน", dinner: "เย็น", snack: "ของว่าง" } as Record<string, string>)[meal.mealType] ?? meal.mealType}</small></div>
-    <button type="button" aria-label={`บันทึกมื้อนี้อีกครั้ง: ${meal.name}`} onClick={() => onReuse(meal)}>+</button>
-  </article>)}</div></>;
+function MealHistory({ meals, error, loading = false, onReuse, onEdit, onDelete, emptyMessage = "ยังไม่มีรายการอาหารในช่วง 30 วันที่ผ่านมา" }: { meals: PublicMeal[]; error: string; loading?: boolean; onReuse: (meal: PublicMeal) => void; onEdit: (meal: PublicMeal) => void; onDelete: (meal: PublicMeal) => void; emptyMessage?: string }) {
+  if (!meals.length) return error ? <p className="diary-error" role="alert">{error}</p> : loading ? null : <p className="diary-empty">{emptyMessage}</p>;
+  const groups = meals.reduce<Record<string, PublicMeal[]>>((all, meal) => { (all[meal.activityDate] ??= []).push(meal); return all; }, {});
+  return <>{error && <p className="diary-error" role="alert">{error}</p>}<div className="diary-meal-history">{Object.entries(groups).map(([date, items]) => <section className="diary-date-group" key={date} aria-label={date}>
+    <h3>{formatDisplayDate(date)}</h3>{items.map((meal) => <article className="diary-meal-row" key={meal.id}>
+      {meal.imageData ? <img src={meal.imageData} alt=""/> : <span className="diary-meal-image"><Icon name="meal"/></span>}
+      <div className="diary-meal-info"><strong>{meal.name}</strong><span>{meal.ingredients.length > 0 && meal.ingredients.every(item => item.unit === "g") ? `${meal.ingredients.reduce((sum, item) => sum + item.amount, 0)} กรัม · ` : ""}{Math.round(meal.totalCalories)} kcal</span><small>{({ breakfast: "เช้า", lunch: "กลางวัน", dinner: "เย็น", snack: "ของว่าง" } as Record<string, string>)[meal.mealType] ?? meal.mealType}</small></div>
+      <div className="row-actions"><button type="button" aria-label={`แก้ไข ${meal.name}`} onClick={() => onEdit(meal)}><UiIcon name="edit" size={17}/></button><button type="button" aria-label={`ลบ ${meal.name}`} onClick={() => onDelete(meal)}><UiIcon name="trash" size={17}/></button></div>
+      <button type="button" aria-label={`บันทึกมื้อนี้อีกครั้ง: ${meal.name}`} onClick={() => onReuse(meal)}>+</button>
+    </article>)}</section>)}</div></>;
 }
