@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { LazyPanelBoundary } from "./LazyPanelBoundary";
 import type { PublicMeal } from "../shared/contracts";
 import type { PublicUser } from "../shared/contracts";
 import type { CatalogFood } from "../shared/foodCatalog";
@@ -247,7 +248,7 @@ export function DiaryPanel({ user, active }: { user: PublicUser; active: boolean
     </>}
     {route === "manual" && <>
       <button type="button" className="diary-back" onClick={goHome}><Icon name="back"/> กลับไปบันทึก</button>
-      <Suspense fallback={<p role="status">กำลังเปิดแบบฟอร์ม…</p>}><MealPanel key={pendingMeal?.id ?? pendingCatalogFood?.id ?? "diary-meal"} userId={user.id} selectedDate={editingHistoryMeal ? pendingMeal?.activityDate ?? date : date} initialMode={photoData ? "photo" : "manual"} initialImage={photoData} initialMeal={pendingMeal} initialEdit={editingHistoryMeal} initialCatalogFood={pendingCatalogFood} onDateChange={value => { if (!editingHistoryMeal) setDate(value); }} showDailyList={false} onSaved={mealSaved}/></Suspense>
+      <LazyPanelBoundary><Suspense fallback={<p role="status">กำลังเปิดแบบฟอร์ม…</p>}><MealPanel key={pendingMeal?.id ?? pendingCatalogFood?.id ?? "diary-meal"} userId={user.id} selectedDate={editingHistoryMeal ? pendingMeal?.activityDate ?? date : date} initialMode={photoData ? "photo" : "manual"} initialImage={photoData} initialMeal={pendingMeal} initialEdit={editingHistoryMeal} initialCatalogFood={pendingCatalogFood} onDateChange={value => { if (!editingHistoryMeal) setDate(value); }} showDailyList={false} onSaved={mealSaved}/></Suspense></LazyPanelBoundary>
     </>}
     {route === "camera" && <>
       <button type="button" className="diary-back" onClick={goHome}><Icon name="back"/> กลับไปบันทึก</button>
@@ -266,7 +267,7 @@ export function DiaryPanel({ user, active }: { user: PublicUser; active: boolean
       </div>
       <input ref={uploadRef} className="diary-file-input" type="file" accept="image/*" aria-label="เลือกรูปอาหารจากอัลบั้ม" onChange={(e) => { choosePhoto(e.target.files?.[0]); e.currentTarget.value = ""; }}/>
     </>}
-    {route === "activity" && <><button type="button" className="diary-back" onClick={goHome}><Icon name="back"/> กลับไปบันทึก</button><Suspense fallback={<p role="status">กำลังเปิดกิจกรรม…</p>}><ExercisePanel key={date} user={user} initialDate={date} onSaved={mealSaved}/></Suspense></>}
+    {route === "activity" && <><button type="button" className="diary-back" onClick={goHome}><Icon name="back"/> กลับไปบันทึก</button><LazyPanelBoundary><Suspense fallback={<p role="status">กำลังเปิดกิจกรรม…</p>}><ExercisePanel key={date} user={user} initialDate={date} onSaved={mealSaved}/></Suspense></LazyPanelBoundary></>}
     {route === "history" && <><button type="button" className="diary-back" onClick={goHome}><Icon name="back"/> กลับไปบันทึก</button><div className="diary-history-head"><h1>ประวัติอาหาร</h1><button type="button" className="diary-link" onClick={goHome}>เสร็จสิ้น</button></div>{saveNotice && <p className="feedback success" role="status">{saveNotice}</p>}<label className="diary-search"><Icon name="search"/><input aria-label="ค้นหาประวัติอาหาร" value={query} maxLength={80} onChange={(e) => updateQuery(e.target.value)} placeholder="ค้นหาอาหารในประวัติ"/></label><MealHistory meals={meals} error={error} loading={historyLoading} onReuse={reuse} onEdit={editMeal} onDelete={deleteMeal} emptyMessage="ยังไม่มีประวัติอาหารที่ตรงกับการค้นหา"/>{historyFooter}</>}
   </section>;
 }
