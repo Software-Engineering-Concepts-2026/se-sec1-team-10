@@ -82,7 +82,7 @@ test('meal save failure keeps draft; success returns home; history edits and del
   await expect(page.getByText('ข้าวสวย', { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('บันทึกอาหารแล้ว');
+  await expect(page.getByRole('status').filter({ hasText: 'บันทึกอาหารแล้ว' })).toContainText('บันทึกอาหารแล้ว');
   await expect(page.locator('.diary-meal-history')).toContainText('มื้อทดสอบ');
   expect(state.savedMealBodies()).toHaveLength(1);
 
@@ -91,7 +91,7 @@ test('meal save failure keeps draft; success returns home; history edits and del
   await page.getByLabel('ชื่ออาหาร').fill('มื้อแก้ไข');
   await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
   await page.getByRole('button', { name: 'บันทึกการแก้ไข', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('แก้ไขอาหารแล้ว');
+  await expect(page.getByRole('status').filter({ hasText: 'แก้ไขอาหารแล้ว' })).toContainText('แก้ไขอาหารแล้ว');
   await expect(page.locator('.diary-meal-history')).toContainText('มื้อแก้ไข');
   expect(state.savedMealBodies()).toHaveLength(2);
   expect((state.savedMealBodies()[1] as { activityDate: string }).activityDate).toBe((state.savedMealBodies()[0] as { activityDate: string }).activityDate);

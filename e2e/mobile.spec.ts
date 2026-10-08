@@ -627,13 +627,13 @@ test.describe('mobile navigation and food logging', () => {
     await page.getByLabel('ชื่ออาหาร').fill('มื้อทดสอบ');
     await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
     await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
-    await expect(page.getByRole('status')).toContainText('บันทึกอาหารแล้ว');
+    await expect(page.getByRole('status').filter({ hasText: 'บันทึกอาหารแล้ว' })).toContainText('บันทึกอาหารแล้ว');
     await expect(page.locator('.diary-meal-history')).toContainText('มื้อทดสอบ');
     await page.getByRole('button', { name: 'ดูทั้งหมด', exact: true }).click();
     await page.getByRole('button', { name: 'แก้ไข มื้อทดสอบ' }).click();
     await page.getByLabel('ชื่ออาหาร').fill('มื้อแก้ไข');
     await page.getByRole('button', { name: 'บันทึกการแก้ไข', exact: true }).click();
-    await expect(page.getByRole('status')).toContainText('แก้ไขอาหารแล้ว');
+    await expect(page.getByRole('status').filter({ hasText: 'แก้ไขอาหารแล้ว' })).toContainText('แก้ไขอาหารแล้ว');
     await expect(page.locator('.diary-meal-history')).toContainText('มื้อแก้ไข');
     await expect(page.getByRole('heading', { name: 'ประวัติอาหาร', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'เสร็จสิ้น', exact: true })).toBeVisible();

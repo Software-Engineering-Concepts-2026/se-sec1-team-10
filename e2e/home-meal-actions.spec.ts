@@ -71,7 +71,7 @@ test('selected date add/edit uses existing editor and refreshes the overview wit
   await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
   await page.getByRole('button', { name: 'บันทึกข้อมูล' }).click();
   await expect(page.locator('.ref-today-meals-header h2')).toContainText('อาหาร · 7 ต.ค. 2569');
-  await expect(page.getByRole('status')).toContainText('บันทึกอาหารแล้ว');
+  await expect(page.getByRole('status').filter({ hasText: 'บันทึกอาหารแล้ว' })).toContainText('บันทึกอาหารแล้ว');
   await expect(page.locator('.ref-meal-card')).toHaveCount(1);
   expect(state.writes.filter(item => item.method === 'POST')).toHaveLength(1);
   expect(state.writes.find(item => item.method === 'POST')?.body.activityDate).toBe(yesterday);

@@ -108,8 +108,16 @@ test('compact ingredient cards preserve editing, provenance, recalculation, save
   await expect(page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'คำนวณสารอาหารใหม่' }).click();
   await expect(page.locator('.meal-total-calories')).toContainText('715');
-  await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('บันทึกอาหารแล้ว');
+  // Keep history loading while the save notice appears, as can happen on slower CI runners.
+  let releaseHistory!: () => void;
+  const historyGate = new Promise<void>(resolve => { releaseHistory = resolve; });
+  await page.route('**/api/meals/history?**', async route => { await historyGate; await route.fallback(); });
+  try {
+    await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'กำลังโหลดประวัติอาหาร' })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'บันทึกอาหารแล้ว' })).toContainText('บันทึกอาหารแล้ว');
+  } finally { releaseHistory(); }
+  await expect(page.getByRole('status').filter({ hasText: 'กำลังโหลดประวัติอาหาร' })).toHaveCount(0);
   expect(saved()).toMatchObject({ name: 'มื้อทดสอบ', ingredients: [{ name: 'ข้าวสวย', amount: 200, referenceNutrients: nutrients }, { name: longAiName, amount: 350, source: 'ai-estimate' }] });
 });
 
