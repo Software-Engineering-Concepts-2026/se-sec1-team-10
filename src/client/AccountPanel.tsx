@@ -13,6 +13,7 @@ import { ApiError } from "./api";
 import { accountApi } from "./Account";
 import { FeedbackMessage, Field, type Feedback } from "./FormFeedback";
 import { ProfileAvatar } from "./ProfileAvatar";
+import { LazyPanelBoundary } from "./LazyPanelBoundary";
 
 import { UiIcon, PageHeading } from './Ui';
 
@@ -190,8 +191,8 @@ export function AccountPanel({
               </fieldset>
             </form>
       </section>}
-      {settingsView === 'goals' && <Suspense fallback={<p role="status">กำลังโหลดเป้าหมาย…</p>}><GoalPanel user={user} onSaved={(nextUser) => { onUserChanged(nextUser); setAccountNotice('บันทึกเป้าหมายเรียบร้อยแล้ว'); setSettingsView(null); }} /></Suspense>}
-      {settingsView === 'reminders' && <Suspense fallback={<p role="status">กำลังโหลดการแจ้งเตือน…</p>}><ReminderPanel userId={user.id} /></Suspense>}
+      {settingsView === 'goals' && <LazyPanelBoundary><Suspense fallback={<p role="status">กำลังโหลดเป้าหมาย…</p>}><GoalPanel user={user} onSaved={(nextUser) => { onUserChanged(nextUser); setAccountNotice('บันทึกเป้าหมายเรียบร้อยแล้ว'); setSettingsView(null); }} /></Suspense></LazyPanelBoundary>}
+      {settingsView === 'reminders' && <LazyPanelBoundary><Suspense fallback={<p role="status">กำลังโหลดการแจ้งเตือน…</p>}><ReminderPanel userId={user.id} /></Suspense></LazyPanelBoundary>}
     </>}
   </div>;
 }

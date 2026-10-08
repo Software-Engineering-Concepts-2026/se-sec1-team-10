@@ -8,6 +8,7 @@ import { AccountPanel } from "./AccountPanel";
 import { FeedbackMessage, Field, type Feedback } from "./FormFeedback";
 import { BrandMark, BrandWordmark, LeafBackdrop, UiIcon } from './Ui';
 import { ProfileAvatar } from './ProfileAvatar';
+import { LazyPanelBoundary } from './LazyPanelBoundary';
 const DiaryPanel = lazy(() =>
   import("./DiaryPanel").then((module) => ({ default: module.DiaryPanel })),
 );
@@ -275,7 +276,7 @@ export function App() {
               </div>
             )}
             {visitedSections.has("progress") && (
-              <Suspense
+              <LazyPanelBoundary className={`mobile-page ${mobileSection === "progress" ? "is-active" : ""}`}><Suspense
                 fallback={
                   <div
                     className={`mobile-page ${mobileSection === "progress" ? "is-active" : ""} loading`}
@@ -291,10 +292,10 @@ export function App() {
                   <HealthTrendPanel user={user} onUserChanged={setUser} onOpenAccount={() => navigate("account")} />
                   <WeeklySummaryPanel user={user} />
                 </div>
-              </Suspense>
+              </Suspense></LazyPanelBoundary>
             )}
             {visitedSections.has("diary") && (
-              <Suspense
+              <LazyPanelBoundary className={`mobile-page ${mobileSection === "diary" ? "is-active" : ""}`}><Suspense
                 fallback={
                   <div
                     className={`mobile-page ${mobileSection === "diary" ? "is-active" : ""} loading`}
@@ -309,7 +310,7 @@ export function App() {
                 >
                   <DiaryPanel user={user} active={mobileSection === "diary"} />
                 </div>
-              </Suspense>
+              </Suspense></LazyPanelBoundary>
             )}
             <MobileNav active={mobileSection} onChange={navigate} />
           </div>

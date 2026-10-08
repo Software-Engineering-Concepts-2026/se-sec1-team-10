@@ -3,6 +3,7 @@ import type { PublicMeal, PublicUser } from '../shared/contracts';
 import { calorieBudget, dailyMacroTargets } from '../shared/goals';
 import { api, ApiError } from './api';
 import { UiIcon } from './Ui';
+import { LazyPanelBoundary } from './LazyPanelBoundary';
 import { formatDisplayDate } from './formatDisplay';
 import { localDate, mealOptions } from './mealHelpers';
 import './home-meal-groups.css';
@@ -81,9 +82,9 @@ export function DashboardPanel({ user }: { user: PublicUser }) {
   }
   if (editingMeal !== undefined) return <section className="dashboard-meal-editor" aria-label="บันทึกอาหาร">
     <button className="secondary dashboard-meal-back" type="button" onClick={() => setEditingMeal(undefined)}>← กลับหน้าแรก</button>
-    <Suspense fallback={<p role="status">กำลังเปิดแบบฟอร์มอาหาร…</p>}>
+    <LazyPanelBoundary><Suspense fallback={<p role="status">กำลังเปิดแบบฟอร์มอาหาร…</p>}>
       <MealPanel key={editingMeal?.id ?? 'new-meal'} userId={user.id} selectedDate={editingMeal?.activityDate ?? date} initialMeal={editingMeal} initialEdit={Boolean(editingMeal)} showDailyList={false} onSaved={(message) => { setEditingMeal(undefined); setMealStatus(message); }} />
-    </Suspense>
+    </Suspense></LazyPanelBoundary>
   </section>;
   return <><section className="dashboard-panel ref-today" aria-label="พลังงานของคุณ">
     <div className="ref-date-selector" role="group" aria-label="เลือกวันที่ดูข้อมูลหน้าแรก">
