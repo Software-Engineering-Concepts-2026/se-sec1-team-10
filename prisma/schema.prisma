@@ -11,12 +11,14 @@ model User {
   id                 String         @id @default(uuid())
   email              String         @unique
   passwordHash       String
-  displayName        String
+    displayName        String
+    avatarImageData    String?
   age                Int?
   weightKg           Float?
   heightCm           Float?
   targetWeightKg     Float?
   dailyCalorieTarget Int?
+  goalSettings       Json?
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
   sessions           Session[]

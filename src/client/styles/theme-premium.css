@@ -1,0 +1,290 @@
+/* ============================================================
+   LifeBalance – Premium Mobile Theme
+   ============================================================
+   Designed mobile-first for health-tracking apps.
+   Imported AFTER reference.css so these rules win by cascade.
+   ============================================================ */
+
+/* ── 1. Design Tokens ──────────────────────────────────────── */
+:root {
+  --lb-bg: #f5f7f6;
+  --lb-card: #ffffff;
+  --lb-card-radius: 18px;
+  --lb-card-shadow: 0 2px 12px rgba(0,0,0,0.045);
+  --lb-card-shadow-hover: 0 6px 20px rgba(0,0,0,0.07);
+  --lb-green: #10b981;
+  --lb-green-dark: #059669;
+  --lb-green-soft: #ecfdf5;
+  --lb-green-gradient: linear-gradient(135deg, #10b981, #059669);
+  --lb-shadow-btn: 0 4px 14px rgba(16,185,129,0.28);
+  --lb-text: #1a2e23;
+  --lb-muted: #6b7f74;
+  --lb-line: #e8f0eb;
+  --lb-transition: all 0.18s ease;
+  --lb-radius-pill: 999px;
+  --lb-input-bg: #f0f4f2;
+}
+
+/* ── 2. Global Background ──────────────────────────────────── */
+body,
+.ref-app,
+.app-shell {
+  background: var(--lb-bg) !important;
+}
+
+/* ── 3. Cards – borderless soft-shadow style ───────────────── */
+.ref-today-summary,
+.ref-today-meals,
+.ref-date,
+.ref-profile-card,
+.ref-menu,
+.settings-menu,
+.ref-goal-recommendation,
+.ref-goal-compare,
+.ref-trend-chart,
+.ref-trend-stats,
+.ref-weekly-bars,
+.ref-weekly-stats,
+.ref-reminder-times,
+.ref-notification-status,
+.ref-weight-logs,
+.diary-search,
+.diary-action,
+.diary-meal-row,
+.profile-summary,
+.ref-exercise .exercise-form,
+.ref-exercise .exercise-list article,
+.ref-exercise .calorie-cards > div,
+.meal-panel .meal-photo-name-card,
+.manual-ingredient-form,
+.food-search-inline,
+.ingredient-row,
+.meal-list article,
+.nutrition-card,
+.meal-total-calories,
+.food-result {
+  background: var(--lb-card) !important;
+  border: none !important;
+  border-radius: var(--lb-card-radius) !important;
+  box-shadow: var(--lb-card-shadow) !important;
+}
+
+/* ── 4. Intake summary card ────────────────────────────────── */
+.ref-intake-card {
+  background: var(--lb-card) !important;
+  border: none !important;
+  border-radius: var(--lb-card-radius) !important;
+  box-shadow: var(--lb-card-shadow) !important;
+  padding: 14px !important;
+}
+
+/* ── 5. Remaining calories card ────────────────────────────── */
+.ref-remaining {
+  border: none !important;
+  border-radius: 16px !important;
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5) !important;
+  box-shadow: 0 2px 10px rgba(16,185,129,0.10) !important;
+  padding: 14px 16px !important;
+}
+
+/* ── 6. Macros ─────────────────────────────────────────────── */
+.ref-macro-track {
+  height: 7px !important;
+  border-radius: var(--lb-radius-pill) !important;
+  background: #e2e8e4 !important;
+}
+.ref-macro-track span {
+  border-radius: var(--lb-radius-pill) !important;
+  transition: width 0.5s ease !important;
+}
+.ref-carbs .ref-macro-track span,
+.ref-macro-track span {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24) !important;
+}
+.ref-protein .ref-macro-track span {
+  background: linear-gradient(90deg, #f43f5e, #fb7185) !important;
+}
+.ref-fat .ref-macro-track span {
+  background: linear-gradient(90deg, #a855f7, #c084fc) !important;
+}
+
+/* ── 7. Greeting ───────────────────────────────────────────── */
+.ref-greeting h1 {
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  color: var(--lb-text) !important;
+  background: none !important;
+  -webkit-text-fill-color: unset !important;
+}
+
+/* ── 8. Primary buttons – pill-shaped gradient ─────────────── */
+.ref-app .primary,
+.ref-app button.primary,
+.ref-app .mobile-quick-log {
+  background: var(--lb-green-gradient) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 14px !important;
+  min-height: 52px !important;
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  box-shadow: var(--lb-shadow-btn) !important;
+  transition: var(--lb-transition) !important;
+}
+@media (hover: hover) {
+  .ref-app .primary:hover:not(:disabled),
+  .ref-app button.primary:hover:not(:disabled),
+  .ref-app .mobile-quick-log:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 20px rgba(16,185,129,0.35) !important;
+    filter: brightness(1.04) !important;
+  }
+}
+.ref-app .primary:active:not(:disabled),
+.ref-app button.primary:active:not(:disabled),
+.ref-app .mobile-quick-log:active {
+  transform: scale(0.97) !important;
+  box-shadow: 0 2px 6px rgba(16,185,129,0.2) !important;
+}
+
+/* ── 9. Secondary buttons ──────────────────────────────────── */
+.ref-app .secondary {
+  border: 1.5px solid var(--lb-line) !important;
+  border-radius: 14px !important;
+  background: var(--lb-card) !important;
+  box-shadow: var(--lb-card-shadow) !important;
+  transition: var(--lb-transition) !important;
+}
+
+/* ── 10. Bottom Navigation – frosted glass ─────────────────── */
+.ref-app .ref-nav,
+.ref-app .mobile-nav {
+  background: rgba(255,255,255,0.82) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-top: 1px solid rgba(232,240,235,0.7) !important;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.04) !important;
+}
+.ref-app .ref-nav button.active,
+.ref-app .mobile-nav button.active {
+  color: var(--lb-green-dark) !important;
+  font-weight: 700 !important;
+}
+
+/* ── 11. Diary action cards ────────────────────────────────── */
+.diary-actions {
+  gap: 10px !important;
+}
+.diary-action {
+  min-height: 112px !important;
+  padding: 16px 8px !important;
+  transition: var(--lb-transition) !important;
+}
+.diary-action > span {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 16px !important;
+  transition: transform 0.2s ease !important;
+}
+.diary-action > span svg {
+  width: 24px !important;
+  height: 24px !important;
+}
+.diary-action.photo {
+  background: #eef4ff !important;
+}
+.diary-action.food {
+  background: #fff8ec !important;
+}
+.diary-action.activity {
+  background: var(--lb-green-soft) !important;
+}
+
+/* ── 12. Inputs ────────────────────────────────────────────── */
+input, select {
+  border-radius: 14px !important;
+  border: 1.5px solid var(--lb-line) !important;
+  background: var(--lb-input-bg) !important;
+  transition: var(--lb-transition) !important;
+}
+input:focus, select:focus {
+  background: #fff !important;
+  border-color: var(--lb-green) !important;
+  box-shadow: 0 0 0 3px rgba(16,185,129,0.15) !important;
+  outline: none !important;
+}
+
+/* ── 13. Menu items ────────────────────────────────────────── */
+.ref-menu,
+.settings-menu {
+  padding: 6px 14px !important;
+}
+.ref-menu > button,
+.ref-menu > a,
+.settings-menu > button {
+  border-bottom: 1px solid #f2f5f3 !important;
+}
+.ref-menu > button:last-child,
+.ref-menu > a:last-child,
+.settings-menu > button:last-child {
+  border-bottom: none !important;
+}
+
+/* ── 14. Profile card ──────────────────────────────────────── */
+.ref-profile-card {
+  padding: 24px 16px !important;
+}
+
+/* ── 15. Auth screen ───────────────────────────────────────── */
+.ref-auth {
+  background: linear-gradient(160deg, #f0fdf4 0%, #f8faf8 50%, #ecfdf5 100%) !important;
+}
+
+/* ── 16. Chart tabs/ranges ─────────────────────────────────── */
+.ref-chart-tabs button,
+.ref-chart-ranges button {
+  border-radius: var(--lb-radius-pill) !important;
+  border: 1px solid var(--lb-line) !important;
+  background: var(--lb-card) !important;
+  transition: var(--lb-transition) !important;
+}
+.ref-chart-tabs button[aria-pressed="true"],
+.ref-chart-ranges button[aria-pressed="true"] {
+  background: var(--lb-green-soft) !important;
+  border-color: var(--lb-green) !important;
+  color: var(--lb-green-dark) !important;
+  font-weight: 700 !important;
+}
+
+/* ── 17. Goal mode labels ──────────────────────────────────── */
+.goal-panel .goal-mode-options > label {
+  border: none !important;
+  box-shadow: var(--lb-card-shadow) !important;
+  border-radius: var(--lb-card-radius) !important;
+  transition: var(--lb-transition) !important;
+}
+.goal-panel .goal-mode-options > label.selected {
+  background: var(--lb-green-soft) !important;
+  box-shadow: 0 0 0 2px var(--lb-green), var(--lb-card-shadow) !important;
+}
+
+/* ── 18. Energy ring subtle glow ───────────────────────────── */
+.ref-ring {
+  filter: drop-shadow(0 3px 8px rgba(16,185,129,0.12)) !important;
+}
+
+/* ── 19. Spinner ───────────────────────────────────────────── */
+.ref-spinner {
+  border-color: #d1fae5 !important;
+  border-top-color: var(--lb-green) !important;
+}
+
+/* ── 20. Disable hover lift on touch-only devices ──────────── */
+@media (hover: none) {
+  .diary-action:hover,
+  .ref-app .primary:hover:not(:disabled),
+  .ref-app button.primary:hover:not(:disabled) {
+    transform: none !important;
+    box-shadow: var(--lb-card-shadow) !important;
+  }
+}

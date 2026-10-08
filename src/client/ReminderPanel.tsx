@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { UiIcon } from "./Ui";
 import {
   notificationsSupported,
   notificationWorker,
@@ -59,20 +60,20 @@ export function ReminderPanel({
 
   const supported = notificationsSupported();
   return (
-    <section className="card reminder-panel">
-      <span className="eyebrow">MEAL REMINDERS</span>
-      <h2>แจ้งเตือนมื้ออาหาร</h2>
-      <p className="muted">
+    <section className="reminder-panel ref-reminder">
+
+      <h2 className="sr-only">แจ้งเตือนมื้ออาหาร</h2>
+      <p className="ref-info-note"><UiIcon name="info" />
         ตั้งเวลาตามเวลาบนอุปกรณ์นี้ ต้องเปิดแอปค้างไว้ การปิดแอปหรือพักการทำงานของเบราว์เซอร์อาจทำให้ไม่ได้รับแจ้งเตือน
       </p>
       <FeedbackMessage value={feedback} />
       <fieldset disabled={busy}>
-        <div>
+        <section className="ref-reminder-times"><h3>ตั้งเวลาเตือนอาหาร</h3>
           {settings.times.map((time, index) => {
             const inputId = `reminder-time-${index + 1}`;
             return (
               <label key={inputId} htmlFor={inputId}>
-                มื้อที่ {index + 1}
+                <span><UiIcon name={index === 2 ? "clock" : "calendar"} /> มื้อที่ {index + 1}<small className="reminder-time-24h">เวลา 24 ชั่วโมง: {time}</small></span>
                 <input
                   id={inputId}
                   type="time"
@@ -91,7 +92,8 @@ export function ReminderPanel({
               </label>
             );
           })}
-        </div>
+        </section>
+        <section className="ref-notification-status"><h3>สถานะการแจ้งเตือนของเบราว์เซอร์</h3><p><UiIcon name="bell" /> {supported ? Notification.permission === "granted" ? "อนุญาตแล้ว" : Notification.permission === "denied" ? "ถูกบล็อก" : "ยังไม่ได้อนุญาต" : "ไม่รองรับ"} · {settings.enabled ? "เปิดเตือนทั้ง 3 มื้อ" : "ปิดการเตือน"}</p>
         {supported ? (
           <button
             type="button"
@@ -114,6 +116,7 @@ export function ReminderPanel({
             เบราว์เซอร์นี้ยังไม่รองรับการแจ้งเตือน ต้องใช้ HTTPS หรือเปิดบน localhost
           </p>
         )}
+        </section>
       </fieldset>
     </section>
   );

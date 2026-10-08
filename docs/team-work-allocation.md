@@ -22,7 +22,7 @@
 
 ## A — อาหารและ AI: ชยากร
 
-ไฟล์หลัก: `src/client/MealPanel.tsx`, `FoodSearchPanel.tsx`, `FavoriteMealsPanel.tsx`, `FoodHistoryPanel.tsx`, `favorites.ts`, `src/server/ai.ts`, `nutrition.ts`, `meal.ts`
+ไฟล์หลัก: `src/client/MealPanel.tsx`, `FoodSearchPanel.tsx`, `FavoriteMealsPanel.tsx`, `DiaryPanel.tsx`, `favorites.ts`, `src/server/ai.ts`, `nutrition.ts`, `meal.ts`
 
 สถานะตรวจ 22 กันยายน 2026:
 

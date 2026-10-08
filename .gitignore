@@ -2,6 +2,8 @@
 .env
 .env.local
 .env.development.local
+.env.*
+!.env.example
 
 # Python
 __pycache__/
@@ -9,6 +11,10 @@ __pycache__/
 *$py.class
 .coverage
 htmlcov/
+.pytest_cache/
+.hypothesis/
+.ruff_cache/
+.venv/
 venv/
 ENV/
 
@@ -19,6 +25,12 @@ dist/
 .local/
 playwright-report/
 test-results/
+
+# Local reference uploads and one-off test configuration
+.codex-remote-attachments/
+.profile-photo-playwright.config.ts
+# Accidental nested seed copy; the supported seed is prisma/seed.ts
+/prisma/prisma/
 
 # OS Header files
 .DS_Store

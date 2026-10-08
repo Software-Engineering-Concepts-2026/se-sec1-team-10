@@ -56,7 +56,7 @@ API (Express + TypeScript)
 | `src/client/*Panel.tsx` | ฟีเจอร์แต่ละส่วนของหน้าจอ | พัฒนาฟีเจอร์ UI แยกตาม panel |
 | `src/client/MealPanel.tsx` | ถ่าย/เลือกรูป, วิเคราะห์อาหาร และ orchestration การบันทึกมื้อ | งานบันทึกอาหารและ UX ของ AI |
 | `src/client/MealIngredientEditor.tsx`, `MealList.tsx`, `mealHelpers.ts` | UI ส่วนประกอบ, รายการที่บันทึก และกฎคำนวณสารอาหารบริสุทธิ์ | แก้ UI/คำนวณอาหารโดยไม่แตะ flow อื่น |
-| `src/client/styles.css`, `src/client/styles/` | entry point โหลด `base.css` → `panels.css` → `mobile-overrides.css` | ปรับ UI โดยคงลำดับ import; ไฟล์ overrides ยังใช้ร่วมกันทั้งแอป |
+| `src/client/styles.css`, `src/client/styles/` | entry point โหลด base → panels → goals → mobile → reference → profile → theme → mockup; `main.tsx` โหลด meal editor overrides เป็นไฟล์สุดท้าย | ปรับ UI โดยคงลำดับ import; editor styles อยู่ใน `meal-editor-refresh.css` |
 | `src/client/FormFeedback.tsx` | ช่องกรอกข้อมูลและข้อความตอบกลับที่บัญชี/ล็อกอินใช้ร่วมกัน | ปรับฟอร์มร่วมโดยตรวจทั้งสองหน้า |
 | `src/client/api.ts` | ฟังก์ชันเรียก API จากหน้าเว็บ | เพิ่มหรือปรับ client API |
 | `src/server/app.ts` | สร้าง Express app, security middleware และ error handler | เพิ่ม middleware หรือเปลี่ยนการประกอบแอป |
@@ -79,7 +79,7 @@ API (Express + TypeScript)
 | หน้า | หน้าที่ | ไฟล์หลัก |
 | --- | --- | --- |
 | วันนี้ | สรุปแคลอรีที่กิน, เผาผลาญ, Net Calories และ BMI ของวันนี้ | `DashboardPanel.tsx` |
-| บันทึก | บันทึกอาหาร, รายการโปรด, กิจกรรม, ประวัติอาหาร | `MealPanel.tsx`, `FavoriteMealsPanel.tsx`, `ExercisePanel.tsx`, `FoodHistoryPanel.tsx` |
+| บันทึก | บันทึกอาหาร, รายการโปรด, กิจกรรม, ประวัติอาหาร | `MealPanel.tsx`, `FavoriteMealsPanel.tsx`, `ExercisePanel.tsx`, `DiaryPanel.tsx` |
 | ความคืบหน้า | กราฟสุขภาพและสรุปรายสัปดาห์ | `HealthTrendPanel.tsx`, `WeeklySummaryPanel.tsx` |
 | บัญชี | ดูข้อมูลย่อ และกดเปิดหัวข้อตั้งค่าข้อมูลส่วนตัว เป้าหมาย และแจ้งเตือน | `AccountPanel.tsx`, `GoalPanel.tsx`, `ReminderPanel.tsx` |
 

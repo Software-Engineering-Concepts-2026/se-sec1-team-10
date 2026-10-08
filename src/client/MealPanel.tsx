@@ -8,6 +8,8 @@ import {
 import { mealSchema, type PublicMeal } from "../shared/contracts";
 import type { CatalogFood, CatalogMatch } from "../shared/foodCatalog";
 import { api, ApiError } from "./api";
+import { formatDisplayDate } from "./formatDisplay";
+import { UiIcon } from "./Ui";
 import type { FavoriteMeal } from "./FavoriteMealsPanel";
 import { rememberFavorite } from "./favorites";
 import { FoodSearchPanel, type FoodSearchResult } from "./FoodSearchPanel";
@@ -42,9 +44,12 @@ type MealPanelProps = {
   initialImage?: string | null;
   initialMeal?: PublicMeal | null;
   initialCatalogFood?: CatalogFood | null;
+  initialEdit?: boolean;
+  showDailyList?: boolean;
+  onSaved?: (message: string) => void;
 };
 
-export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "manual", initialImage = null, initialMeal = null, initialCatalogFood = null }: MealPanelProps) {
+export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "manual", initialImage = null, initialMeal = null, initialCatalogFood = null, initialEdit = false, showDailyList = true, onSaved }: MealPanelProps) {
   const [date, setDate] = useState(selectedDate ?? localDate);
   const [meals, setMeals] = useState<DailyMeals | null>(null);
   const [name, setName] = useState("");
@@ -87,12 +92,12 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
     setMealType(initialMeal.mealType);
     setIngredients(initialMeal.ingredients.map(({ id: _id, caloriesKcal: _calories, carbsGrams: _carbs, sugarGrams: _sugar, proteinGrams: _protein, fatGrams: _fat, ...item }) => item));
     setImageData(initialMeal.imageData ?? null);
-    setEditingId(null);
+    setEditingId(initialEdit ? initialMeal.id : null);
     setAnalysis(null);
     setShowManualFields(true);
     setNeedsRecalculation(false);
     setMessage({ text: `เติมข้อมูล ${initialMeal.name} แล้ว ตรวจสอบปริมาณก่อนบันทึกได้เลย`, error: false });
-  }, [initialMeal]);
+  }, [initialMeal, initialEdit]);
 
   useEffect(() => {
     if (!initialCatalogFood) return;
@@ -123,8 +128,8 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
     }
   }
   useEffect(() => {
-    void load();
-  }, [date]);
+    if (showDailyList) void load();
+  }, [date, showDailyList]);
   const reset = () => {
     setName("");
     setMealType("breakfast");
@@ -333,18 +338,19 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
         body,
         editingId ? "PUT" : "POST",
       );
-      rememberFavorite(userId, {
-        name: result.meal.name,
-        mealType: result.meal.mealType as FavoriteMeal["mealType"],
-        ingredients: body.ingredients,
-      });
-      setMessage({
-        text: editingId ? "แก้ไขอาหารแล้ว" : "บันทึกอาหารแล้ว",
-        error: false,
-      });
+      try {
+        rememberFavorite(userId, {
+          name: result.meal.name,
+          mealType: result.meal.mealType as FavoriteMeal["mealType"],
+          ingredients: body.ingredients,
+        });
+      } catch { /* The meal is already saved; local favorite storage is optional. */ }
+      const successMessage = editingId ? "แก้ไขอาหารแล้ว" : "บันทึกอาหารแล้ว";
+      setMessage({ text: successMessage, error: false });
       reset();
-      await load();
       window.dispatchEvent(new Event("daily-calories-updated"));
+      if (onSaved) onSaved(successMessage);
+      else await load();
     } catch (error) {
       setMessage({
         text: error instanceof ApiError ? error.message : "บันทึกอาหารไม่ได้",
@@ -388,22 +394,7 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
   return (
     <section className="card meal-panel" aria-labelledby="meal-title">
       <div className="exercise-heading">
-        <div>
-          <span className="eyebrow">DAILY NUTRITION</span>
-          <h2 id="meal-title">บันทึกอาหาร</h2>
-          <p className="muted">
-            เพิ่มจากรูปหรือฐานข้อมูล แล้วตรวจปริมาณก่อนบันทึก
-          </p>
-        </div>
-        <label className="compact-field">
-          วันที่
-          <input
-            type="date"
-            disabled={busy || analyzing || preparingImage}
-            value={date}
-              onChange={(event) => { setDate(event.target.value); onDateChange?.(event.target.value); }}
-          />
-        </label>
+        <h2 id="meal-title">{editingId ? 'แก้ไขมื้ออาหาร' : 'บันทึกอาหาร'}</h2>
       </div>
       {message && (
         <div
@@ -419,6 +410,7 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
       </p>}
       <form className="meal-form" onSubmit={save}>
         <fieldset disabled={busy || analyzing || preparingImage}>
+          <div className={`meal-photo-name-card ${imageData || catalogImageUrl ? "has-image" : ""}`}>
           <div className="image-picker">
             <input
               ref={cameraInput}
@@ -435,33 +427,31 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
               accept="image/*"
               onChange={chooseImage}
             />
-            {imageData ? (
-              <img src={imageData} alt="ตัวอย่างรูปอาหาร" />
+            {imageData || catalogImageUrl ? (
+              <img src={imageData ?? catalogImageUrl ?? undefined} alt={imageData ? "ตัวอย่างรูปอาหาร" : `ภาพ ${name}`} />
             ) : (
               <div className="image-choice">
-                <strong>เพิ่มรูปอาหาร</strong>
-                <span>ถ่ายรูปใหม่หรือเลือกจากอัลบั้ม</span>
-                <div>
-                  <button
-                    className="secondary"
-                    type="button"
-                    onClick={() => cameraInput.current?.click()}
-                  >
-                    ถ่ายรูป
-                  </button>
-                  <button
-                    className="secondary"
-                    type="button"
-                    onClick={() => uploadInput.current?.click()}
-                  >
-                    อัลบั้ม
-                  </button>
-                </div>
+                <UiIcon name="image" size={28} />
               </div>
             )}
-            {imageData && (
+
+          </div>
+          <label className="compact-field meal-name">
+            ชื่ออาหาร
+            <input
+              value={name}
+              maxLength={120}
+              placeholder="เช่น ข้าวมันไก่"
+              onChange={(event) => setName(event.target.value)}
+              required
+            />
+          </label>
+          </div>
               <div className="image-actions">
-                {photoWorkflow && !analysis && <button
+                {imageData || catalogImageUrl
+                  ? <button className="secondary" type="button" onClick={() => uploadInput.current?.click()}>เปลี่ยนรูป</button>
+                  : <><button className="secondary" type="button" onClick={() => cameraInput.current?.click()}>ถ่ายรูป</button><button className="secondary" type="button" onClick={() => uploadInput.current?.click()}>อัลบั้ม</button></>}
+                {imageData && photoWorkflow && !analysis && <button
                   className="secondary"
                   type="button"
                   disabled={estimatingIngredient}
@@ -469,7 +459,7 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
                 >
                   {analyzing ? "กำลังวิเคราะห์…" : "วิเคราะห์รูป"}
                 </button>}
-                <button
+                {imageData && <button
                   className="text-button"
                   type="button"
                   onClick={() => {
@@ -479,12 +469,9 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
                   }}
                 >
                   ลบรูป
-                </button>
+                </button>}
               </div>
-            )}
-          </div>
           <div className="meal-top-row">
-            {catalogImageUrl && <img className="catalog-food-image" src={catalogImageUrl} alt={`ภาพ ${name}`} />}
             <label className="compact-field">
               มื้ออาหาร
               <select
@@ -498,20 +485,22 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
                 ))}
               </select>
             </label>
-            <label className="compact-field meal-name">
-              ชื่ออาหาร
-              <input
-                value={name}
-                maxLength={120}
-                placeholder="เช่น ข้าวมันไก่"
-                onChange={(event) => setName(event.target.value)}
-                required
-              />
+            <label className="compact-field">
+              วันที่
+              <span className="meal-date-control">
+                <span className="meal-date-formatted" aria-hidden="true">{formatDisplayDate(date)}</span>
+                <input
+                  type="date"
+                  aria-label="วันที่"
+                  value={date}
+                  onChange={(event) => { setDate(event.target.value); onDateChange?.(event.target.value); }}
+                />
+              </span>
             </label>
           </div>
           {analysis && imageData && name.trim() && name.trim() !== analysis.name && (
             <div className="analysis-note">
-              <p id="meal-correction-warning">วิเคราะห์รูปเดิมตามชื่อที่แก้ไข จะใช้โควตาอีก 1 ครั้งและแทนที่ส่วนประกอบเดิมทั้งหมด รวมถึงปริมาณที่แก้ไว้ กรุณาตรวจสอบก่อนบันทึก หากต้องการแก้เฉพาะชื่อ สามารถบันทึกได้เลย</p>
+              <p id="meal-correction-warning">วิเคราะห์ใหม่ใช้โควตาอีก 1 ครั้ง และแทนที่ส่วนประกอบกับปริมาณที่แก้ไว้ทั้งหมด หากแก้เฉพาะชื่อ ให้บันทึกได้เลย</p>
               <button className="secondary" type="button" aria-describedby="meal-correction-warning" disabled={estimatingIngredient || name.trim().length < 2 || name.trim().length > 120} onClick={() => void analyzeImage(name.trim())}>
                 {analyzing ? "กำลังวิเคราะห์…" : "วิเคราะห์ใหม่ตามชื่อที่แก้ไข"}
               </button>
@@ -564,12 +553,12 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
           )}
         </fieldset>
       </form>
-      <MealList
+      {showDailyList && <MealList
         meals={meals}
         busy={busy || analyzing || preparingImage}
         onEdit={edit}
         onRemove={(id) => void remove(id)}
-      />
+      />}
     </section>
   );
 }

@@ -2,7 +2,7 @@ import express, { type ErrorRequestHandler } from "express";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { ZodError } from "zod";
-import type { PublicUser } from "../shared/contracts.js";
+import { savedGoalSettingsSchema, type PublicUser, type PublicUserData } from "../shared/contracts.js";
 import { DuplicateEmailError, type Repository } from "./repository.js";
 import { tokenService } from "./security.js";
 import { calculateBmi } from "./health.js";
@@ -17,21 +17,25 @@ export type AppConfig = {
   jwtSecret: string;
   appOrigin: string;
   production?: boolean;
+  /** Number of trusted reverse-proxy hops; leave unset for direct/local traffic. */
+  trustProxyHops?: number;
   now?: () => Date;
   /** Optional so applications without an AI provider keep the feature disabled. */
   ai?: AiConfiguration;
   nutrition?: NutritionConfiguration;
 };
 
-const publicUser = (user: Omit<PublicUser, "bmi">): PublicUser => ({
+const publicUser = (user: PublicUserData): PublicUser => ({
   id: user.id,
   email: user.email,
   displayName: user.displayName,
+  avatarImageData: user.avatarImageData,
   age: user.age,
   weightKg: user.weightKg,
   heightCm: user.heightCm,
   targetWeightKg: user.targetWeightKg,
   dailyCalorieTarget: user.dailyCalorieTarget,
+  goalSettings: savedGoalSettingsSchema.safeParse(user.goalSettings).data ?? null,
   bmi: calculateBmi(user.weightKg, user.heightCm),
 });
 
@@ -54,6 +58,12 @@ export function createApp(repository: Repository, config: AppConfig) {
     path: "/api",
   };
   const app = express();
+  if (config.trustProxyHops !== undefined) {
+    if (!Number.isInteger(config.trustProxyHops) || config.trustProxyHops < 0) {
+      throw new Error("TRUST_PROXY_HOPS must be a non-negative integer");
+    }
+    app.set("trust proxy", config.trustProxyHops);
+  }
   app.disable("x-powered-by");
   app.use(helmet());
   app.use("/api", (_req, res, next) => {

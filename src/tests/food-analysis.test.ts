@@ -18,13 +18,17 @@ class MemoryRepository implements Repository {
   async findUserByEmail(email: string) { return [...this.users.values()].find(user => user.email === email) ?? null; }
   async findUserById(id: string) { return this.users.get(id) ?? null; }
   async createUser(data: { email: string; displayName: string; passwordHash: string }) {
-    const now = new Date(); const user: User = { id: randomUUID(), ...data, age: null, weightKg: null, heightCm: null, targetWeightKg: null, dailyCalorieTarget: null, createdAt: now, updatedAt: now };
+    const now = new Date(); const user: User = { id: randomUUID(), ...data, age: null, weightKg: null, heightCm: null, targetWeightKg: null, dailyCalorieTarget: null, goalSettings: null, avatarImageData: null, createdAt: now, updatedAt: now };
     this.users.set(user.id, user); return user;
   }
   async updateProfile(id: string, data: ProfileInput) { const user = this.users.get(id)!; const updated = { ...user, ...data, updatedAt: new Date() }; this.users.set(id, updated); return updated; }
+  async updateAvatar(id: string, avatarImageData: string | null) { const user = this.users.get(id)!; const updated = { ...user, avatarImageData, updatedAt: new Date() }; this.users.set(id, updated); return updated; }
   async updateGoals(id: string, data: GoalInput) { return this.updateProfile(id, data as ProfileInput); }
   async addWeightLog() {}
   async listWeightLogs() { return []; }
+  async createWeightLog(): Promise<never> { throw new Error('unused'); }
+  async updateWeightLog() { return null; }
+  async deleteWeightLog() { return null; }
   async createSession(userId: string, expiresAt: Date) { const session = { id: randomUUID(), userId, expiresAt }; this.sessions.set(session.id, session); return session; }
   async touchSession(id: string, userId: string, now: Date, expiresAt: Date) { const session = this.sessions.get(id); if (!session || session.userId !== userId || session.expiresAt <= now) return false; session.expiresAt = expiresAt; return true; }
   async deleteSession(id: string) { this.sessions.delete(id); }
