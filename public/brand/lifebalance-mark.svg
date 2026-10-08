@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" fill="none">
+  <title>LifeBalance</title>
+  <defs>
+    <linearGradient id="ring" x1="65" y1="30" x2="206" y2="100" gradientUnits="userSpaceOnUse"><stop stop-color="#76c94c"/><stop offset=".5" stop-color="#2fa953"/><stop offset="1" stop-color="#006449"/></linearGradient>
+    <linearGradient id="lime" x1="32" y1="46" x2="96" y2="125" gradientUnits="userSpaceOnUse"><stop stop-color="#c4ec83"/><stop offset="1" stop-color="#74bf67"/></linearGradient>
+    <linearGradient id="lower" x1="24" y1="131" x2="91" y2="208" gradientUnits="userSpaceOnUse"><stop stop-color="#caedb6"/><stop offset="1" stop-color="#8bcfa1"/></linearGradient>
+    <linearGradient id="body" x1="76" y1="86" x2="148" y2="176" gradientUnits="userSpaceOnUse"><stop stop-color="#bde77d"/><stop offset=".45" stop-color="#64b644"/><stop offset="1" stop-color="#008355"/></linearGradient>
+    <linearGradient id="sweep" x1="67" y1="94" x2="136" y2="179" gradientUnits="userSpaceOnUse"><stop stop-color="#75bd47"/><stop offset=".5" stop-color="#1b9953"/><stop offset="1" stop-color="#006b4a"/></linearGradient>
+  </defs>
+  <path d="M94 28C57 40 29 76 27 116" stroke="url(#lime)" stroke-width="25"/>
+  <path d="M116 24C153 21 192 48 207 81" stroke="url(#ring)" stroke-width="26" stroke-linecap="round"/>
+  <path d="M28 134C33 168 56 197 86 208" stroke="url(#lower)" stroke-width="26" stroke-linecap="round"/>
+  <path d="M106 215C131 221 159 214 177 201" stroke="#dce5df" stroke-width="25" stroke-linecap="round"/>
+  <circle cx="217" cy="108" r="10" fill="#2fa454"/>
+  <circle cx="218" cy="137" r="9" fill="#5eb65f"/>
+  <circle cx="209" cy="164" r="8" fill="#9acb9e"/>
+  <circle cx="193" cy="187" r="7" fill="#ceded3"/>
+  <circle cx="120" cy="85" r="17" fill="url(#ring)"/>
+  <path d="M62 88C55 82 55 86 59 98C66 116 84 129 95 144C106 159 104 172 92 190C89 194 96 193 105 189C129 180 148 158 157 137C166 118 178 103 183 88C185 81 182 82 176 87C147 114 99 117 62 88Z" fill="url(#body)"/>
+  <path d="M62 88C80 104 94 113 112 126C144 149 136 174 105 189C96 193 89 194 92 190C104 172 106 159 95 144C84 129 66 116 59 98C55 86 55 82 62 88Z" fill="url(#sweep)"/>
+</svg>

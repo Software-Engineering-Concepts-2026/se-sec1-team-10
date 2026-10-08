@@ -100,35 +100,6 @@
   background: #94a75c;
   border-radius: 9px;
 }
-.history-panel {
-  padding: 32px;
-  margin-top: 28px;
-}
-.history-filter {
-  display: flex;
-  gap: 12px;
-}
-.history-filter label {
-  font-size: 12px;
-  color: #667363;
-}
-.history-filter input {
-  display: block;
-  margin-top: 6px;
-  padding: 8px;
-  border: 1px solid #dfe6d9;
-  border-radius: 8px;
-}
-.history-panel article {
-  padding: 12px 0;
-  border-bottom: 1px solid #edf0e8;
-}
-.history-panel article span {
-  display: block;
-  font-size: 12px;
-  color: #7d8878;
-  margin-top: 4px;
-}
 .favorite-panel,
 .reminder-panel {
   padding: 32px;
@@ -201,51 +172,77 @@
   padding: 32px;
   margin-top: 28px;
 }
+.weekly-panel .exercise-heading .muted {
+  margin-bottom: 8px;
+}
+.weekly-date-field {
+  width: 100%;
+  min-width: 0;
+  margin-top: 0;
+}
+.weekly-date-field input {
+  width: 100%;
+  min-width: 0;
+}
 .weekly-totals {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
   gap: 14px;
+  margin-top: 12px;
 }
 .weekly-totals div {
-  flex: 1;
-  padding: 14px;
+  min-width: 0;
+  padding: 14px 12px;
   border-radius: 12px;
   background: #f5f7f0;
+  color: #192b20;
 }
 .weekly-totals span,
 .weekly-totals small {
   display: block;
   font-size: 11px;
-  color: #788474;
+  color: #192b20;
 }
 .weekly-totals strong {
-  font-size: 23px;
-  margin-right: 5px;
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 22px;
+  line-height: 1.2;
+}
+.weekly-totals small {
+  margin-top: 5px;
 }
 .weekly-bars {
-  height: 150px;
+  height: 168px;
+  min-width: 0;
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 10px;
-  align-items: end;
-  padding: 18px 0 0;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  align-items: stretch;
+  padding: 10px 0 0;
 }
 .weekly-bars > div {
+  min-width: 0;
   height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: end;
-  gap: 6px;
+  justify-content: flex-end;
+  gap: 12px;
 }
 .bar-pair {
-  height: 120px;
+  width: 100%;
+  min-height: 0;
+  flex: 1;
   display: flex;
   align-items: end;
+  justify-content: center;
   gap: 3px;
 }
 .bar-pair span {
-  width: 10px;
+  width: min(10px, 38%);
+  min-width: 3px;
   min-height: 2px;
   border-radius: 4px 4px 0 0;
 }
@@ -256,7 +253,11 @@
   background: #789fc5;
 }
 .weekly-bars small {
-  font-size: 10px;
+  flex: 0 0 auto;
+  padding-top: 2px;
+  white-space: nowrap;
+  font-size: 9px;
+  line-height: 1.2;
   color: #788474;
 }
 .chart-key {
@@ -276,7 +277,7 @@
   background: #789fc5;
 }
 .meal-form {
-  border-top: 1px solid #e9ede2;
+  border-top: 1px solid #dcebdc;
   padding-top: 22px;
 }
 .meal-top-row {
@@ -296,7 +297,7 @@
   gap: 12px;
   min-height: 90px;
   padding: 12px;
-  border: 1px dashed #a8be93;
+  border: 1px dashed #dcebdc;
   border-radius: 14px;
   background: #f7faf2;
   margin-bottom: 20px;
@@ -304,21 +305,21 @@
 .image-picker input {
   display: none;
 }
-.image-picker label {
+.image-choice {
   display: grid;
   place-items: center;
   min-height: 62px;
   flex: 1;
-  color: #607253;
+  color: #192b20;
   cursor: pointer;
 }
-.image-picker label strong {
+.image-choice strong {
   font-size: 13px;
 }
-.image-picker label span {
+.image-choice span {
   margin-top: 5px;
   font-size: 11px;
-  color: #85917d;
+  color: #704a3a;
 }
 .image-picker img {
   display: block;
@@ -436,4 +437,22 @@
   margin-top: 4px;
   color: #7d8878;
   font-size: 12px;
+}
+.lazy-panel-error {
+  width: min(100%, 34rem);
+  margin: 1rem auto;
+  padding: 1.25rem;
+  border: 1px solid var(--border, #d8e6dc);
+  border-radius: 1rem;
+  background: var(--surface, #fff);
+  color: var(--text, #20352a);
+}
+
+.lazy-panel-error h2 { margin: 0 0 .5rem; font-size: 1.15rem; }
+.lazy-panel-error p { margin: .5rem 0; line-height: 1.55; }
+.lazy-panel-error-note { font-size: .9rem; color: var(--muted, #58675d); }
+.lazy-panel-error .primary { max-width: 100%; white-space: normal; }
+
+@media (max-width: 480px) {
+  .lazy-panel-error { margin: .75rem auto; padding: 1rem; }
 }

@@ -1,0 +1,9 @@
+# Live food image check
+
+Checked on 2026-10-03 against the configured university-compatible AI service and the configured PostgreSQL database through an authenticated `createApp` instance backed by `prismaRepository`. The source image was the existing `.local/banana-test.jpg`, a single banana image attributed in the existing harness to Wikimedia Commons, “Banana-Single.jpg” by Evan-Amos. The temporary account and saved meal were deleted after the check.
+
+The instrumented provider call returned HTTP 200 and classified the image as `กล้วยหอม` (banana cultivar), estimating 118 g and 105 kcal, with 27 g carbohydrate, 14 g sugar, 1.3 g protein, and 0.4 g fat. The local catalog returned `not-found` for `กล้วยหอม`, so the component correctly remained `ai-estimate`. The explicit generic `banana` lookup through `/api/foods/estimate` returned the local USDA SR Legacy record at 89 kcal per 100 g. In this run that selection used 100 g.
+
+Saving the AI estimate through `/api/meals`, editing it to half portion, and reading it back through the daily meals route all passed: total energy changed from 105 to 53 kcal and the saved amount was 59 g. The values are rounded by the application during calculation. The check used two image requests total: the first attempt stopped on an assertion without preserving diagnostic output; the second instrumented attempt captured the result above. No further provider request was made.
+
+The AI food name and amount remain estimates even when image classification is correct. An exact catalog miss is expected for the cultivar name in this check; a user can choose the generic banana catalog entry to use its reference nutrients. The ignored local harness and safe response evidence are in `.local/live-food-ai-check.ts` and `.local/live-food-ai-result.json` for local review; neither contains provider credentials or session cookies.

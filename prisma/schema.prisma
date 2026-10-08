@@ -8,22 +8,24 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
-  passwordHash String
-  displayName  String
-  age          Int?
-  weightKg     Float?
-  heightCm     Float?
-  targetWeightKg Float?
+  id                 String         @id @default(uuid())
+  email              String         @unique
+  passwordHash       String
+    displayName        String
+    avatarImageData    String?
+  age                Int?
+  weightKg           Float?
+  heightCm           Float?
+  targetWeightKg     Float?
   dailyCalorieTarget Int?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  sessions     Session[]
-  exerciseLogs ExerciseLog[]
-  mealLogs     MealLog[]
-  weightLogs   WeightLog[]
-  aiDailyQuotas AiDailyQuota[]
+  goalSettings       Json?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  sessions           Session[]
+  exerciseLogs       ExerciseLog[]
+  mealLogs           MealLog[]
+  weightLogs         WeightLog[]
+  aiDailyQuotas      AiDailyQuota[]
 }
 
 model AiDailyQuota {
@@ -36,12 +38,12 @@ model AiDailyQuota {
 }
 
 model WeightLog {
-  id        String   @id @default(uuid())
-  userId    String
-  weightKg  Float
-  heightCm  Float
-  loggedAt  DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id       String   @id @default(uuid())
+  userId   String
+  weightKg Float
+  heightCm Float
+  loggedAt DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, loggedAt])
 }
@@ -86,10 +88,10 @@ model MealIngredient {
 }
 
 model Session {
-  id         String   @id @default(uuid())
-  userId     String
-  expiresAt  DateTime
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid())
+  userId    String
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
@@ -108,4 +110,31 @@ model ExerciseLog {
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, activityDate])
+}
+
+model Food {
+  id            String  @id @default(uuid())
+  name          String
+  aliases       String[] @default([])
+  caloriesKcal  Float
+  carbsGrams    Float?
+  sugarGrams    Float?
+  proteinGrams  Float?
+  fatGrams      Float?
+  servingAmount Float   @default(1)
+  servingUnit   String  @default("serving")
+  imageUrl      String?
+  servingWeightGrams Float?
+  sourceName    String?
+  sourceUrl     String?
+  catalogKey    String? @unique
+
+  createdByUserId String?
+  isCustom        Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([aliases], type: Gin)
 }

@@ -1,15 +1,23 @@
+import type { CatalogFood, CatalogReference } from '../shared/foodCatalog.js';
+import { catalogFood, normalizeFoodSearch } from './foodCatalog.js';
 import { Prisma, type PrismaClient, type User } from '@prisma/client';
-import type { ExerciseInput, ExerciseRecord, GoalInput, MealInput, MealRecord, ProfileInput } from '../shared/contracts.js';
+import type { ExerciseInput, ExerciseRecord, SavedGoalInput, MealInput, MealRecord, ProfileInput, WeightLogRecord } from '../shared/contracts.js';
 import { calculatedIngredient, scaleReferenceNutrients } from './meal.js';
 
 export interface Repository {
+  searchFoods(userId: string, query: string): Promise<CatalogFood[]>;
+  lookupFoodReferences(userId: string, names: string[]): Promise<CatalogReference[]>;
   findUserByEmail(email: string): Promise<User | null>;
   findUserById(id: string): Promise<User | null>;
   createUser(data: { email: string; displayName: string; passwordHash: string }): Promise<User>;
-  updateProfile(id: string, data: ProfileInput): Promise<User>;
+  updateProfile(id: string, data: ProfileInput, loggedAt?: Date): Promise<User>;
+  updateAvatar(id: string, avatarImageData: string | null): Promise<User>;
   addWeightLog(userId: string, weightKg: number, heightCm: number): Promise<void>;
-  listWeightLogs(userId: string, start: Date): Promise<{ weightKg: number; heightCm: number; loggedAt: Date }[]>;
-  updateGoals(id: string, data: GoalInput): Promise<User>;
+  listWeightLogs(userId: string, start: Date): Promise<WeightLogRecord[]>;
+  createWeightLog(userId: string, weightKg: number, heightCm: number, loggedAt: Date): Promise<{ log: WeightLogRecord; user: User }>;
+  updateWeightLog(id: string, userId: string, weightKg: number, loggedAt: Date): Promise<{ log: WeightLogRecord; user: User } | null>;
+  deleteWeightLog(id: string, userId: string): Promise<User | null>;
+  updateGoals(id: string, data: SavedGoalInput): Promise<User>;
   createSession(userId: string, expiresAt: Date): Promise<{ id: string }>;
   touchSession(id: string, userId: string, now: Date, expiresAt: Date): Promise<boolean>;
   deleteSession(id: string): Promise<void>;
@@ -17,7 +25,7 @@ export interface Repository {
   createExercise(userId: string, data: ExerciseInput, weightKg: number, caloriesBurned: number): Promise<ExerciseRecord>;
   updateExercise(id: string, userId: string, data: ExerciseInput, weightKg: number, caloriesBurned: number): Promise<ExerciseRecord | null>;
   deleteExercise(id: string, userId: string): Promise<boolean>;
-  listMeals(userId: string, start: Date, end: Date): Promise<MealRecord[]>;
+  listMeals(userId: string, start: Date, end: Date, page?: { query?: string; offset: number; limit: number }): Promise<MealRecord[]>;
   createMeal(userId: string, data: MealInput, totalCalories: number): Promise<MealRecord>;
   updateMeal(id: string, userId: string, data: MealInput, totalCalories: number): Promise<MealRecord | null>;
   deleteMeal(id: string, userId: string): Promise<boolean>;
@@ -28,6 +36,15 @@ export interface Repository {
 export class DuplicateEmailError extends Error {}
 
 export function prismaRepository(db: PrismaClient): Repository {
+  // Serialize weight mutations per user and update the current weight in the same transaction.
+  const mutateWeight = async <T>(userId: string, mutate: (tx: Prisma.TransactionClient) => Promise<T | null>) => db.$transaction(async tx => {
+    await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE`);
+    const result = await mutate(tx);
+    if (result === null) return null;
+    const latest = await tx.weightLog.findFirst({ where: { userId }, orderBy: [{ loggedAt: 'desc' }, { id: 'desc' }] });
+    const user = await tx.user.update({ where: { id: userId }, data: { weightKg: latest?.weightKg ?? null } });
+    return { result, user };
+  });
   const exerciseRecord = (record: {
     id: string; userId: string; activityType: string; durationMinutes: number; weightKg: number;
     caloriesBurned: number; activityDate: Date; createdAt: Date; updatedAt: Date;
@@ -36,8 +53,47 @@ export function prismaRepository(db: PrismaClient): Repository {
     id: string; userId: string; name: string; mealType: string; imageData: string | null; totalCalories: number;
     activityDate: Date; createdAt: Date; updatedAt: Date;
     ingredients: { id: string; mealLogId: string; name: string; carbsGrams: number; sugarGrams: number; proteinGrams: number; fatGrams: number; amount: number; unit: string; referenceAmount: number; referenceUnit: string; source: string; referenceCaloriesKcal: number | null; referenceCarbsGrams: number | null; referenceSugarGrams: number | null; referenceProteinGrams: number | null; referenceFatGrams: number | null }[];
-  }): MealRecord => ({ ...record, mealType: record.mealType as MealRecord['mealType'], activityDate: record.activityDate.toISOString().slice(0, 10), ingredients: record.ingredients.map(({ mealLogId: _mealLogId, referenceCaloriesKcal, referenceCarbsGrams, referenceSugarGrams, referenceProteinGrams, referenceFatGrams, unit, referenceUnit, source, ...ingredient }) => ({ ...ingredient, ...scaleReferenceNutrients({ caloriesKcal: referenceCaloriesKcal, carbsGrams: referenceCarbsGrams, sugarGrams: referenceSugarGrams, proteinGrams: referenceProteinGrams, fatGrams: referenceFatGrams }, ingredient.amount, ingredient.referenceAmount), unit: unit as 'g' | 'serving', referenceUnit: referenceUnit as 'g' | 'serving', source: source as 'usda-fdc' | 'ai-estimate' | 'legacy' | 'manual', referenceNutrients: { caloriesKcal: referenceCaloriesKcal, carbsGrams: referenceCarbsGrams, sugarGrams: referenceSugarGrams, proteinGrams: referenceProteinGrams, fatGrams: referenceFatGrams } })) });
+  }): MealRecord => ({ ...record, mealType: record.mealType as MealRecord['mealType'], activityDate: record.activityDate.toISOString().slice(0, 10), ingredients: record.ingredients.map(({ mealLogId: _mealLogId, referenceCaloriesKcal, referenceCarbsGrams, referenceSugarGrams, referenceProteinGrams, referenceFatGrams, unit, referenceUnit, source, ...ingredient }) => ({ ...ingredient, ...scaleReferenceNutrients({ caloriesKcal: referenceCaloriesKcal, carbsGrams: referenceCarbsGrams, sugarGrams: referenceSugarGrams, proteinGrams: referenceProteinGrams, fatGrams: referenceFatGrams }, ingredient.amount, ingredient.referenceAmount), unit: unit as 'g' | 'serving', referenceUnit: referenceUnit as 'g' | 'serving', source: source as MealRecord['ingredients'][number]['source'], referenceNutrients: { caloriesKcal: referenceCaloriesKcal, carbsGrams: referenceCarbsGrams, sugarGrams: referenceSugarGrams, proteinGrams: referenceProteinGrams, fatGrams: referenceFatGrams } })) });
   return {
+    async lookupFoodReferences(userId, names) {
+      const terms = [...new Set(names.map(normalizeFoodSearch).filter(Boolean))];
+      if (!terms.length) return [];
+      const foods = await db.food.findMany({
+        where: {
+          OR: [
+            ...terms.map(name => ({ name: { equals: name, mode: 'insensitive' as const } })),
+            { aliases: { hasSome: terms } },
+          ],
+          AND: [
+            { OR: [{ createdByUserId: userId }, { createdByUserId: null, isCustom: false }] },
+            { OR: [{ servingWeightGrams: { gt: 0 } }, { servingWeightGrams: null, servingUnit: 'g', servingAmount: { gt: 0 } }] },
+          ],
+        },
+        orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      });
+      return foods.flatMap(food => {
+        const catalog = catalogFood(food);
+        return catalog ? [{ ...catalog, aliases: food.aliases.map(normalizeFoodSearch) }] : [];
+      });
+    },
+    async searchFoods(userId, query) {
+      const term = normalizeFoodSearch(query);
+      const foods = await db.food.findMany({
+        where: {
+          OR: [
+            { name: { contains: term, mode: 'insensitive' } },
+            { aliases: { has: term } },
+          ],
+          AND: [
+            { OR: [{ createdByUserId: userId }, { createdByUserId: null, isCustom: false }] },
+            { OR: [{ servingWeightGrams: { gt: 0 } }, { servingWeightGrams: null, servingUnit: 'g', servingAmount: { gt: 0 } }] },
+          ],
+        },
+        orderBy: [{ name: 'asc' }, { id: 'asc' }],
+        take: 30,
+      });
+      return foods.map(catalogFood).filter((food): food is CatalogFood => food !== null);
+    },
     findUserByEmail: email => db.user.findUnique({ where: { email } }),
     findUserById: id => db.user.findUnique({ where: { id } }),
     async createUser(data) {
@@ -49,10 +105,32 @@ export function prismaRepository(db: PrismaClient): Repository {
         throw error;
       }
     },
-    updateProfile: (id, data) => db.user.update({ where: { id }, data }),
+    updateProfile: (id, data, loggedAt = new Date()) => db.user.update({ where: { id }, data: {
+      ...data, weightLogs: { create: { weightKg: data.weightKg, heightCm: data.heightCm, loggedAt } },
+    } }),
+    updateAvatar: (id, avatarImageData) => db.user.update({ where: { id }, data: { avatarImageData } }),
     async addWeightLog(userId, weightKg, heightCm) { await db.weightLog.create({ data: { userId, weightKg, heightCm } }); },
-    listWeightLogs: (userId, start) => db.weightLog.findMany({ where: { userId, loggedAt: { gte: start } }, orderBy: { loggedAt: 'asc' }, select: { weightKg: true, heightCm: true, loggedAt: true } }),
-    updateGoals: (id, data) => db.user.update({ where: { id }, data }),
+    listWeightLogs: (userId, start) => db.weightLog.findMany({ where: { userId, loggedAt: { gte: start } }, orderBy: [{ loggedAt: 'asc' }, { id: 'asc' }], select: { id: true, weightKg: true, heightCm: true, loggedAt: true } }),
+    async createWeightLog(userId, weightKg, heightCm, loggedAt) {
+      const saved = await mutateWeight(userId, tx => tx.weightLog.create({ data: { userId, weightKg, heightCm, loggedAt } }));
+      return { log: saved!.result, user: saved!.user };
+    },
+    async updateWeightLog(id, userId, weightKg, loggedAt) {
+      const saved = await mutateWeight(userId, async tx => {
+        if (!(await tx.weightLog.updateMany({ where: { id, userId }, data: { weightKg, loggedAt } })).count) return null;
+        return tx.weightLog.findUnique({ where: { id } });
+      });
+      return saved ? { log: saved.result, user: saved.user } : null;
+    },
+    async deleteWeightLog(id, userId) {
+      const saved = await mutateWeight(userId, async tx => (await tx.weightLog.deleteMany({ where: { id, userId } })).count ? true : null);
+      return saved?.user ?? null;
+    },
+    updateGoals: (id, data) => db.user.update({ where: { id }, data: {
+      targetWeightKg: data.targetWeightKg,
+      dailyCalorieTarget: data.dailyCalorieTarget,
+      ...(data.goalSettings !== undefined ? { goalSettings: data.goalSettings === null ? Prisma.DbNull : data.goalSettings as Prisma.InputJsonValue } : {}),
+    } }),
     async createSession(userId, expiresAt) {
       // Clean up expired sessions without ending active sessions on other devices.
       await db.session.deleteMany({ where: { userId, expiresAt: { lte: new Date() } } });
@@ -90,9 +168,16 @@ export function prismaRepository(db: PrismaClient): Repository {
     async deleteExercise(id, userId) {
       return (await db.exerciseLog.deleteMany({ where: { id, userId } })).count === 1;
     },
-    async listMeals(userId, start, end) {
+    async listMeals(userId, start, end, page) {
       const records = await db.mealLog.findMany({
-        where: { userId, activityDate: { gte: start, lt: end } }, orderBy: [{ activityDate: 'desc' }, { createdAt: 'desc' }], include: { ingredients: true },
+        where: {
+          userId,
+          activityDate: { gte: start, lt: end },
+          ...(page?.query ? { name: { contains: page.query, mode: 'insensitive' as const } } : {}),
+        },
+        orderBy: [{ activityDate: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
+        include: { ingredients: true },
+        ...(page ? { skip: page.offset, take: page.limit } : {}),
       });
       return records.map(mealRecord);
     },

@@ -1,7 +1,12 @@
 import type { MealIngredientRecord, ReferenceNutrients } from "../shared/contracts";
+import type { CatalogMatch } from "../shared/foodCatalog";
 
 export type Nutrients = ReferenceNutrients;
-export type IngredientDraft = Omit<MealIngredientRecord, "id" | keyof ReferenceNutrients>;
+export type IngredientDraft = Omit<MealIngredientRecord, "id" | keyof ReferenceNutrients> & {
+  /** Transient provenance from photo analysis or a manual estimate. */
+  catalogMatch?: CatalogMatch;
+  photoEstimate?: boolean;
+};
 
 export const mealOptions = [
   { id: "breakfast", label: "อาหารเช้า" },
@@ -10,7 +15,10 @@ export const mealOptions = [
   { id: "snack", label: "ของว่าง" },
 ] as const;
 
-export const localDate = () => new Date().toISOString().slice(0, 10);
+export const localDate = () => {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
 
 export const nutrientValues = (item: Partial<Nutrients>): Nutrients => ({ caloriesKcal: item.caloriesKcal ?? null, carbsGrams: item.carbsGrams ?? null, sugarGrams: item.sugarGrams ?? null, proteinGrams: item.proteinGrams ?? null, fatGrams: item.fatGrams ?? null });
 export const scaled = (item: IngredientDraft): Nutrients => {
