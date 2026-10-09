@@ -60,7 +60,7 @@ async function expectVisibleAboveNav(page: Page, button: import('@playwright/tes
   expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('button')?.textContent, center)).toContain((await button.textContent())!.trim());
 }
 
-test('dashboard fits mobile widths and preserves the requested vertical desktop layout', async ({ page }) => {
+test('dashboard fits mobile widths and presents summary beside meals on desktop', async ({ page }) => {
   const screenshotDirectory = '.local/ui-cleanup-check-20261007';
   mkdirSync(screenshotDirectory, { recursive: true });
   await useMockedDashboard(page);
@@ -71,7 +71,7 @@ test('dashboard fits mobile widths and preserves the requested vertical desktop 
   await expect(page.getByRole('heading', { name: /สวัสดี/ })).toBeVisible();
   await expect(page.getByText('ข้าวผัดจานกลางที่ไม่มีรูป')).toBeVisible();
 
-  for (const width of [320, 390]) {
+  for (const width of [320, 390, 768]) {
     await page.setViewportSize({ width, height: 844 });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     await expect(page.getByRole('button', { name: 'หน้าแรก', exact: true })).toBeVisible();
@@ -94,9 +94,9 @@ test('dashboard fits mobile widths and preserves the requested vertical desktop 
   const [summaryBox, mealsBox] = await Promise.all([summary.boundingBox(), meals.boundingBox()]);
   expect(summaryBox).not.toBeNull();
   expect(mealsBox).not.toBeNull();
-  expect(Math.abs(mealsBox!.x - summaryBox!.x)).toBeLessThan(12);
-  expect(Math.abs(mealsBox!.width - summaryBox!.width)).toBeLessThan(2);
-  expect(mealsBox!.y).toBeGreaterThanOrEqual(summaryBox!.y + summaryBox!.height);
+  expect(mealsBox!.x).toBeGreaterThanOrEqual(summaryBox!.x + summaryBox!.width);
+  expect(Math.abs(mealsBox!.y - summaryBox!.y)).toBeLessThan(2);
+  expect(summaryBox!.width).toBeGreaterThan(400);
   await page.screenshot({ path: `${screenshotDirectory}/today-1440.png`, fullPage: true });
 });
 

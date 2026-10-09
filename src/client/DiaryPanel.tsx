@@ -226,9 +226,9 @@ export function DiaryPanel({ user, active }: { user: PublicUser; active: boolean
       <header className="diary-title"><h1>บันทึกอาหาร</h1><p>ค้นหาอาหารและบันทึกมื้อของคุณ</p></header>
       {saveNotice && <p className="feedback success" role="status">{saveNotice}</p>}
       <label className="diary-search"><Icon name="search"/><input aria-label="ค้นหาประวัติอาหาร" value={query} maxLength={80} onChange={(e) => updateQuery(e.target.value)} placeholder="ค้นหาประวัติหรือฐานข้อมูลอาหาร"/></label>
-      <div className="diary-actions" aria-label="สร้างบันทึก">
+      <div className="diary-actions" role="group" aria-label="สร้างบันทึก">
         <button className="diary-action photo" type="button" onClick={() => { returnRoute.current = "home"; openCamera(); }}><span><UiIcon name="camera"/></span><strong>ถ่ายภาพอาหาร</strong><small>ใช้กล้องหรืออัลบั้ม</small></button>
-        <button className="diary-action food" type="button" onClick={() => { returnRoute.current = "home"; setPhotoData(null); setPendingMeal(null); setPendingCatalogFood(null); setRoute("manual"); }}><span><UiIcon name="edit"/></span><strong>บันทึกอาหาร</strong><small>กรอกรายการด้วยตัวเอง</small></button>
+        <button className="diary-action food" type="button" onClick={() => { returnRoute.current = "home"; setPhotoData(null); setPendingMeal(null); setPendingCatalogFood(null); setRoute("manual"); }}><span><UiIcon name="edit"/></span><strong>บันทึกอาหาร</strong><small>กรอกด้วยตัวเอง</small></button>
         <button className="diary-action activity" type="button" onClick={() => { returnRoute.current = "home"; setRoute("activity"); }}><span><UiIcon name="run"/></span><strong>บันทึกกิจกรรม</strong><small>บันทึกการเคลื่อนไหว</small></button>
       </div>
       <div className="diary-history-head"><div><h2>{query.trim() ? "ประวัติอาหาร" : "ประวัติล่าสุด"}</h2><p>{query.trim() ? "ผลจากประวัติอาหาร" : "มื้ออาหารที่บันทึกไว้"}</p></div><button type="button" className="diary-link" onClick={() => { setHistoryOffset(0); setRoute("history"); }}>ดูทั้งหมด <span aria-hidden="true">→</span></button></div>
@@ -276,10 +276,10 @@ function MealHistory({ meals, error, loading = false, onReuse, onEdit, onDelete,
   if (!meals.length) return error ? <p className="diary-error" role="alert">{error}</p> : loading ? null : <p className="diary-empty">{emptyMessage}</p>;
   const groups = meals.reduce<Record<string, PublicMeal[]>>((all, meal) => { (all[meal.activityDate] ??= []).push(meal); return all; }, {});
   return <>{error && <p className="diary-error" role="alert">{error}</p>}<div className="diary-meal-history">{Object.entries(groups).map(([date, items]) => <section className="diary-date-group" key={date} aria-label={date}>
-    <h3>{formatDisplayDate(date)}</h3>{items.map((meal) => <article className="diary-meal-row" key={meal.id}>
+    <h3>{formatDisplayDate(date)}</h3>{items.map((meal) => <article className="diary-meal-row diary-food-history-card" key={meal.id} data-meal-type={meal.mealType}>
       {meal.imageData ? <img src={meal.imageData} alt=""/> : <span className="diary-meal-image"><Icon name="meal"/></span>}
-      <div className="diary-meal-info"><strong>{meal.name}</strong><span>{meal.ingredients.length > 0 && meal.ingredients.every(item => item.unit === "g") ? `${meal.ingredients.reduce((sum, item) => sum + item.amount, 0)} กรัม · ` : ""}{Math.round(meal.totalCalories)} kcal</span><small>{({ breakfast: "เช้า", lunch: "กลางวัน", dinner: "เย็น", snack: "ของว่าง" } as Record<string, string>)[meal.mealType] ?? meal.mealType}</small></div>
-      <div className="row-actions"><button type="button" aria-label={`แก้ไข ${meal.name}`} onClick={() => onEdit(meal)}><UiIcon name="edit" size={17}/></button><button type="button" aria-label={`ลบ ${meal.name}`} onClick={() => onDelete(meal)}><UiIcon name="trash" size={17}/></button></div>
-      <button type="button" aria-label={`บันทึกมื้อนี้อีกครั้ง: ${meal.name}`} onClick={() => onReuse(meal)}>+</button>
+      <div className="diary-meal-info"><strong title={meal.name}>{meal.name}</strong><span>{meal.ingredients.length > 0 && meal.ingredients.every(item => item.unit === "g") ? `${meal.ingredients.reduce((sum, item) => sum + item.amount, 0)} กรัม · ` : ""}{Math.round(meal.totalCalories)} kcal</span><small className="diary-meal-badge">{({ breakfast: "เช้า", lunch: "กลางวัน", dinner: "เย็น", snack: "ของว่าง" } as Record<string, string>)[meal.mealType] ?? meal.mealType}</small></div>
+      <div className="row-actions"><button type="button" aria-label={`แก้ไข ${meal.name}`} onClick={() => onEdit(meal)}><UiIcon name="edit" size={15}/><span>แก้ไข</span></button><button type="button" aria-label={`ลบ ${meal.name}`} onClick={() => onDelete(meal)}><UiIcon name="trash" size={15}/><span>ลบ</span></button></div>
+      <button type="button" className="diary-meal-reuse" aria-label={`บันทึกมื้อนี้อีกครั้ง: ${meal.name}`} onClick={() => onReuse(meal)}>+</button>
     </article>)}</section>)}</div></>;
 }

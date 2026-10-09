@@ -96,7 +96,7 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
     setAnalysis(null);
     setShowManualFields(true);
     setNeedsRecalculation(false);
-    setMessage({ text: `เติมข้อมูล ${initialMeal.name} แล้ว ตรวจสอบปริมาณก่อนบันทึกได้เลย`, error: false });
+    setMessage({ text: 'ตรวจปริมาณก่อนบันทึก', error: false });
   }, [initialMeal, initialEdit]);
 
   useEffect(() => {
@@ -158,7 +158,7 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
       setEditingId(null);
       setNeedsRecalculation(false);
       setMessage({
-        text: `เติมข้อมูล ${favorite.name} แล้ว ตรวจสอบปริมาณก่อนบันทึกได้เลย`,
+        text: 'ตรวจปริมาณก่อนบันทึก',
         error: false,
       });
     };
@@ -257,7 +257,7 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
         setMessage({ text: "เตรียมรูปแล้ว กดวิเคราะห์เพื่อรับค่าประมาณ", error: false });
       } else {
         setShowManualFields(true);
-        setMessage({ text: "แนบรูปแล้ว กรอกรายการอาหารและส่วนประกอบได้เลย", error: false });
+        setMessage({ text: "แนบรูปแล้ว เพิ่มส่วนประกอบเพื่อบันทึก", error: false });
       }
     } catch (error) {
       setMessage({
@@ -295,7 +295,7 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
       setShowManualFields(true);
       setNeedsRecalculation(false);
       setMessage({
-        text: "วิเคราะห์แล้ว ปรับปริมาณหรือลบส่วนประกอบก่อนบันทึกได้",
+        text: "วิเคราะห์แล้ว ตรวจปริมาณก่อนบันทึก",
         error: false,
       });
     } catch (error) {
@@ -393,7 +393,7 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
   }
   return (
     <section className="card meal-panel" aria-labelledby="meal-title">
-      <div className="exercise-heading">
+      <div className="exercise-heading meal-panel-heading">
         <h2 id="meal-title">{editingId ? 'แก้ไขมื้ออาหาร' : 'บันทึกอาหาร'}</h2>
       </div>
       {message && (

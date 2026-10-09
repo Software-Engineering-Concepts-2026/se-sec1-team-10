@@ -2,7 +2,7 @@
 
 ระบบนี้ใช้ Docker Desktop บนเครื่องนักพัฒนาเพื่อ build image, Docker Hub private repository เก็บ image, Render รัน container และ Supabase ให้บริการ PostgreSQL แอปไม่ได้ build บน Render และ container ไม่ได้เปิดฐานข้อมูลหรือ migrate ตอนเริ่มทำงาน
 
-ผลตรวจชุดเตรียม deploy วันที่ 6 ตุลาคม 2026 อยู่ใน [รายงาน Docker](docker-check-2026-10-06.md) แยกผลตรวจในเครื่องออกจากสิ่งที่ต้องตรวจหลัง deploy
+เอกสาร [รายงาน Docker วันที่ 6 ตุลาคม 2026](docker-check-2026-10-06.md), [บันทึก release วันที่ 8 ตุลาคม 2026](release-2026-10-08.md) และ [รายงาน readiness วันที่ 8 ตุลาคม 2026](readiness-2026-10-08.md) เป็นหลักฐานย้อนหลังของการตรวจและ release ในวันดังกล่าว ไม่ยืนยันสถานะ production ปัจจุบัน; ให้ตรวจสถานะ service และฐานข้อมูลจริงก่อนดำเนินการ deploy ครั้งใหม่
 
 ## 1. Build และ push image
 

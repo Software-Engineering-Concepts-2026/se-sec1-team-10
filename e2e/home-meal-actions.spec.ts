@@ -129,6 +129,12 @@ test('meal card and actions fit narrow and desktop viewports without horizontal 
     const card = page.locator('.ref-meal-card');
     const bounds = await card.boundingBox();
     expect(bounds).not.toBeNull();
+    const heading = (await page.locator('.ref-today-meals-header h2').boundingBox())!;
+    const add = page.getByRole('button', { name: 'เพิ่มรายการ', exact: false });
+    const addBox = (await add.boundingBox())!;
+    expect(addBox.x).toBeGreaterThanOrEqual(heading.x + heading.width);
+    expect(heading.y + heading.height / 2).toBeCloseTo(addBox.y + addBox.height / 2, 0);
+    expect(addBox.height).toBeGreaterThanOrEqual(44);
     for (const heading of await page.locator('.ref-today-meal-group-header').all()) {
       const headingBounds = await heading.boundingBox();
       expect(headingBounds).not.toBeNull();
@@ -139,6 +145,43 @@ test('meal card and actions fit narrow and desktop viewports without horizontal 
     expect(await card.getByRole('button', { name: /แก้ไข/ }).evaluate(element => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
     expect(await card.getByRole('button', { name: /ลบ/ }).evaluate(element => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
     await page.screenshot({ path: `${directory}/home-${width}.png`, fullPage: true });
+  }
+});
+
+test('macro summary keeps actual amounts above target visible and fits narrow widths', async ({ page }) => {
+  const largeMeal = meal('macro-over-target', 'มื้อทดสอบสารอาหารเกินเป้าหมาย', today, 'dinner', 2921);
+  const overTarget = { caloriesKcal: 2921, carbsGrams: 271, sugarGrams: 2, proteinGrams: 196, fatGrams: 117 };
+  largeMeal.ingredients[0] = { ...largeMeal.ingredients[0], ...overTarget, referenceNutrients: overTarget };
+  await setup(page, false, [largeMeal]);
+  const rows = page.locator('.ref-macro-stack .ref-macro-row');
+  await expect(rows).toHaveCount(3);
+  for (const [selector, text] of [['.ref-carbs', '303 / 250'], ['.ref-protein', '202 / 100'], ['.ref-fat', '120 / 67']]) {
+    await expect(page.locator(`.ref-macro-stack ${selector} strong`)).toContainText(text);
+    expect(await page.locator(`.ref-macro-stack ${selector} .ref-macro-track > span`).evaluate(element => (element as HTMLElement).style.width)).toBe('100%');
+  }
+  for (const width of [320, 360, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    for (const row of await rows.all()) {
+      const icon = (await row.locator('svg').boundingBox())!;
+      expect(icon.width).toBe(20);
+      expect(icon.height).toBe(20);
+      const badge = row.locator('.ref-macro-icon-badge');
+      const circle = (await badge.boundingBox())!;
+      expect(circle.width).toBe(36);
+      expect(circle.height).toBe(36);
+      await expect(badge).toHaveCSS('border-radius', '50%');
+      expect(await badge.evaluate(element => getComputedStyle(element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
+      expect(Math.abs(icon.x + icon.width / 2 - circle.x - circle.width / 2)).toBeLessThan(1);
+      expect(Math.abs(icon.y + icon.height / 2 - circle.y - circle.height / 2)).toBeLessThan(1);
+      const label = (await row.locator('> div:first-child > span').boundingBox())!;
+      const amount = (await row.locator('strong').boundingBox())!;
+      if (amount.y < label.y + label.height - 1) expect(amount.x).toBeGreaterThanOrEqual(label.x + label.width);
+      else expect(amount.y).toBeGreaterThanOrEqual(label.y + label.height);
+      const track = (await row.locator('.ref-macro-track').boundingBox())!;
+      expect(track.height).toBeGreaterThanOrEqual(6);
+      expect(track.height).toBeLessThanOrEqual(8);
+    }
   }
 });
 

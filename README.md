@@ -35,7 +35,10 @@ LifeBalance ช่วยลดความยุ่งยากจากกา�
     ```bash
     Copy-Item .env.example .env
     ```
-    จากนั้นแก้ `JWT_SECRET` ใน `.env` เป็นค่าสุ่มที่มีความยาวอย่างน้อย 32 ตัวอักษร
+    จากนั้นตั้ง `DATABASE_URL` ของฐานที่ได้รับอนุญาตให้ใช้ และแก้ `JWT_SECRET` ใน `.env` เป็นค่าสุ่มที่มีความยาวอย่างน้อย 32 ตัวอักษร แล้วสร้าง Prisma Client:
+    ```bash
+    npm run db:generate
+    ```
 
 3. **ถ้าใช้ PostgreSQL ในเครื่อง ให้เปิดฐานข้อมูลและเตรียม schema:**
     ```bash
@@ -59,7 +62,9 @@ npm run build
 
 ### เว็บแอปมือถือและ AI วิเคราะห์รูป
 
-ทุกขนาดจอใช้หน้าแอปเดียวกัน: วันนี้ / บันทึก / ความคืบหน้า / บัญชี หน้าอาหารรองรับถ่ายรูปหรือเลือกรูป → วิเคราะห์ → ตรวจแก้ → ยืนยันบันทึก ค่าสารอาหารจาก AI เป็นค่าประมาณ ไม่ใช่ผลวัดจริง
+ทุกขนาดจอใช้หน้าแอปเดียวกัน: หน้าแรก / บันทึก / ความคืบหน้า / บัญชี หน้าอาหารรองรับถ่ายรูปหรือเลือกรูป → วิเคราะห์ → ตรวจแก้ → ยืนยันบันทึก ค่าสารอาหารจาก AI เป็นค่าประมาณ ไม่ใช่ผลวัดจริง
+
+หน้าแรกเลือกวันย้อนหลังและเพิ่ม/แก้/ลบอาหารของวันนั้นได้ โดยแยกรายการตามมื้อ หน้า “ความคืบหน้า” บันทึกน้ำหนักและแก้ประวัติได้โดยไม่ต้องเปิดข้อมูลส่วนตัว ดูขั้นตอนใน [คู่มือใช้งาน](docs/user-guide.md)
 
 ใส่ค่าจริงใน `.env` เท่านั้น (`.env.example` เป็นตัวอย่างสาธารณะ):
 
@@ -73,7 +78,7 @@ NUTRITION_API_KEY=
 
 `AI_MODEL` ใช้ชื่อโมเดลที่มหาวิทยาลัยเปิดให้และรองรับภาพ ส่วน `NUTRITION_API_KEY` เป็น key ของ USDA/data.gov อีกบริการหนึ่ง ใช้เฉพาะการค้นข้อมูลสารอาหาร หากเว้นว่างยังใช้ AI ได้ อ่านรายละเอียดที่ [คู่มือตั้งค่า AI](docs/ai-setup.md)
 
-หลังแก้ `.env` ให้บันทึกไฟล์และเริ่ม API ใหม่ ต้องเปิด PostgreSQL และรัน migration ก่อนใช้งานระบบจริง หน้าเว็บทดสอบกับ API จำลองไม่ยืนยันการบันทึกฐานข้อมูลจริง
+หลังแก้ `.env` ให้บันทึกไฟล์และเริ่ม API ใหม่ ต้องมี PostgreSQL และ schema พร้อมใช้งาน สำหรับฐานใหม่ให้ผู้รับผิดชอบรัน migration ก่อน ส่วนฐานร่วมที่เตรียมไว้แล้วไม่ต้องรัน migration/seed ซ้ำ หน้าเว็บทดสอบกับ API จำลองไม่ยืนยันการบันทึกฐานข้อมูลจริง
 
 ทดสอบ UI ด้วย Edge ที่ติดตั้งในเครื่อง:
 
@@ -104,8 +109,8 @@ Key architectural decisions and diagrams are documented in the `/docs/architectu
 
 User personas and key scenarios that drive our development are located in the `/docs/requirements` directory.
 
-- **[User Personas](./docs/requirements/personas/)**
-- **[Main User Scenario](./docs/requirements/main_scenario.md)**
+- **[User Personas](./docs/requirements/personas.md)**
+- **[User Scenarios](./docs/requirements/scenarios.md)**
 
 # ข้อตกลงการทำงานร่วมกันในทีม (Ways of Working - WoW)
 
