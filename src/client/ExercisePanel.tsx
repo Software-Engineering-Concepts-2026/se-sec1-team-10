@@ -3,6 +3,7 @@ import { activityOptions } from '../shared/activities';
 import type { PublicExercise, PublicUser } from '../shared/contracts';
 import { api, ApiError } from './api';
 import { UiIcon } from './Ui';
+import { formatDisplayDate } from './formatDisplay';
 import { localDate } from './mealHelpers';
 
 type DailySummary = {
@@ -76,7 +77,7 @@ export function ExercisePanel({ user, onSaved, initialDate, compactHistory = fal
 
   return <section className="card exercise-panel ref-exercise" aria-labelledby="exercise-title">
     <div className="exercise-heading"><div><h2 id="exercise-title">กิจกรรม</h2><p className="muted">พลังงานคำนวณจากน้ำหนักล่าสุดของคุณ</p></div>
-      {!compactHistory && <label className="compact-field">วันที่<input aria-label="วันที่" type="date" value={date} disabled={busy} onChange={event => { if (event.target.value) { setDate(event.target.value); setSummary(null); setEditingId(null); setActivityType(activityOptions[0].id); setDurationMinutes('30'); setMessage(null); } }} /><small>{new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${date}T12:00:00`))}</small></label>}</div>
+      {!compactHistory && <label className="compact-field">วันที่<span className="meal-date-control exercise-date-control"><span className="meal-date-formatted" aria-hidden="true">{formatDisplayDate(date)}</span><input aria-label="วันที่" type="date" value={date} disabled={busy} onChange={event => { if (event.target.value) { setDate(event.target.value); setSummary(null); setEditingId(null); setActivityType(activityOptions[0].id); setDurationMinutes('30'); setMessage(null); } }} /></span></label>}</div>
     {message && <div className={`feedback ${message.error ? 'error' : 'success'}`} role={message.error ? 'alert' : 'status'}>{message.text}</div>}
     {user.weightKg === null && <div className="feedback error" role="alert">กรุณาบันทึกน้ำหนักก่อนเพิ่มกิจกรรม</div>}
     {compactHistory && !formOpen && <button type="button" className="secondary" onClick={() => { setEditingId(null); setFormOpen(true); }}>+ บันทึกกิจกรรม</button>}

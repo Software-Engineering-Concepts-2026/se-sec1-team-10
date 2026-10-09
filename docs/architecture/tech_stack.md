@@ -1,9 +1,20 @@
-# Tech Stack Decision Matrix
+# Implemented Technology Stack
 
-| Layer | Technology Choice | Context-Driven Rationale | Alternatives Considered |
-| :--- | :--- | :--- | :--- |
-| **Frontend** | React + TypeScript + Tailwind CSS | โครงสร้าง Component-based ช่วยให้จัดการ Real-time State และกราฟ Dashboard ได้อย่างมีประสิทธิภาพ | Vue.js, Angular, Svelte |
-| **Backend** | Node.js + Express + TypeScript | ทำงานแบบ Non-blocking I/O ได้ดีกับ REST API ที่รับส่งข้อมูล JSON ขนาดเล็กบ่อยครั้ง และแชร์ Type ข้ามกับ Frontend ได้ | Python (FastAPI), Go, Java Spring Boot |
-| **Database** | PostgreSQL + Prisma ORM | ต้องการ Data Integrity และ Relational Constraints สูงสำหรับข้อมูลมื้ออาหารและโภชนาการ | MongoDB, MySQL, SQLite |
-| **Authentication** | JWT (JSON Web Tokens) with HttpOnly Cookies | Stateless Authentication ที่ปลอดภัยและใช้งานร่วมกับ REST API ได้อย่างราบรื่น | Session-based (Redis), OAuth2-only |
-| **Hosting & Infra** | Docker Container | ทำให้สภาพแวดล้อมระหว่าง Development และ Deployment ตรงกัน 100% รองรับการขยายระบบในอนาคต | VM Deployment, Bare-metal |
+This matrix describes the current repository implementation. It is not a statement about the configuration of a live deployment.
+
+| Layer | Current implementation | Notes |
+| --- | --- | --- |
+| Web client | React 19, TypeScript, Vite, Tailwind CSS 4 | Vite serves the client separately during development; the production build is served by Express. |
+| API | Node.js 22.12+, Express 5, TypeScript | Modular monolith with account, meal/food, and activity route modules. |
+| Shared domain types | TypeScript modules in `src/shared/` | Contracts and helpers are imported by the client and server. |
+| Database access | PostgreSQL through Prisma ORM 6 | The application expects a configured PostgreSQL connection. Supabase may provide PostgreSQL, but is not required by the code. |
+| Validation | Zod 4 | Validates request and provider data at runtime. |
+| Authentication | Password hashing with Node.js `scrypt`; signed JWT session in an HttpOnly cookie using `jose` | The cookie uses `SameSite=Lax` and is marked `Secure` in production. Express middleware verifies authenticated requests. |
+| HTTP protections | Helmet, Express rate limiting, bounded JSON body parsing, same-origin checks for mutations | Configured in the API application and route modules. |
+| Food data integration | USDA FoodData Central API, when configured | Optional search integration; the local food catalog is also part of the application. |
+| AI integration | Configurable OpenAI-compatible provider, when configured | Optional meal-photo and ingredient estimates; outputs are labeled estimates and must be reviewed by the user. |
+| Production packaging | Multi-stage Docker build, one Node.js application image | The image serves the built SPA and API on the same port. Database remains a separate service. |
+
+In local development, `npm run dev` runs Vite on port 5173 and the API on port 3000, with Vite proxying `/api` to the API. The Docker image defaults to port 10000. `compose.yaml` provides only a local PostgreSQL service on `127.0.0.1:5432`; it does not run the application container.
+
+Redis sessions/cache, Google Fit, Apple HealthKit, SendGrid, and Firebase Cloud Messaging are not implemented in the current runtime code. Their mention in historical diagrams or decisions should be read as original design context, not as current integrations.

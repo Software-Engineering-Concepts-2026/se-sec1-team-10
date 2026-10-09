@@ -382,6 +382,9 @@ test.describe('mobile navigation and food logging', () => {
   });
 
   test('opts into account-scoped reminders and delivers a due notification once', async ({ page }) => {
+    // Keep the configured reminder minute stable while CI drives the opt-in UI.
+    // Only Date is fixed; application timers and the notification flow keep running.
+    await page.clock.setFixedTime(new Date('2026-10-10T09:23:30Z'));
     await page.addInitScript(() => {
       const calls: unknown[] = [];
       Object.assign(window, { notificationCalls: calls });
@@ -542,7 +545,8 @@ test.describe('mobile navigation and food logging', () => {
     await expect(page.locator('.mobile-nav')).toBeVisible();
     await expect(page.locator('.mobile-page:visible')).toHaveCount(1);
     const bounds = await page.locator('.profile-layout').boundingBox();
-    expect(bounds!.width).toBeLessThanOrEqual(640);
+    expect(bounds!.width).toBeGreaterThan(640);
+    expect(bounds!.width).toBeLessThanOrEqual(1080);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: 'test-results/desktop-same-app.png', fullPage: true });
   });

@@ -107,7 +107,7 @@ export function DashboardPanel({ user }: { user: PublicUser }) {
             const percent = complete && targetGrams ? value.grams / targetGrams * 100 : null;
             const width = percent === null ? 0 : Math.max(0, Math.min(100, percent));
             const progressLabel = !complete ? 'ไม่แสดงความคืบหน้า เนื่องจากข้อมูลสารอาหารไม่ครบ' : targetGrams == null ? 'ยังไม่ได้ตั้งเป้าสารอาหาร' : `${['คาร์บ','โปรตีน','ไขมัน'][i]} ${Math.round(value.grams)} จากเป้าหมายประมาณ ${Math.round(targetGrams)} กรัม · ${Math.round(percent!)} เปอร์เซ็นต์`;
-            return <div key={key} className={`ref-macro-row ref-${key}`}><div><span><UiIcon name={key} size={17} />{['คาร์บ','โปรตีน','ไขมัน'][i]}</span><strong>{shown}{targetGrams != null && <> / {Math.round(targetGrams)}</>} <small>กรัม</small></strong></div>{label && <small className="ref-macro-status">{label}</small>}<div className="ref-macro-track" aria-label={progressLabel}><span style={{ width: `${width}%` }} /></div></div>;
+            return <div key={key} className={`ref-macro-row ref-${key}`}><div><span><span className="ref-macro-icon-badge" aria-hidden="true"><UiIcon name={['grain','steak','oil'][i]} size={20} /></span>{['คาร์บ','โปรตีน','ไขมัน'][i]}</span><strong>{shown}{targetGrams != null && <> / {Math.round(targetGrams)}</>} <small>กรัม</small></strong></div>{label && <small className="ref-macro-status">{label}</small>}<div className="ref-macro-track" aria-label={progressLabel}><span style={{ width: `${width}%` }} /></div></div>;
           })}</div>
           </div>
         </div>

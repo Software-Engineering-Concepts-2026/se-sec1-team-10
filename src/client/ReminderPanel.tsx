@@ -60,11 +60,9 @@ export function ReminderPanel({
 
   const supported = notificationsSupported();
   return (
-    <section className="reminder-panel ref-reminder">
-
-      <h2 className="sr-only">แจ้งเตือนมื้ออาหาร</h2>
+    <section className="reminder-panel ref-reminder" aria-label="เตือนมื้ออาหาร">
       <p className="ref-info-note"><UiIcon name="info" />
-        ตั้งเวลาตามเวลาบนอุปกรณ์นี้ ต้องเปิดแอปค้างไว้ การปิดแอปหรือพักการทำงานของเบราว์เซอร์อาจทำให้ไม่ได้รับแจ้งเตือน
+        ใช้เวลาของอุปกรณ์นี้ และต้องเปิดแอปไว้เพื่อรับการแจ้งเตือน เบราว์เซอร์อาจหยุดทำงานเมื่อแอปปิดหรือพักอยู่
       </p>
       <FeedbackMessage value={feedback} />
       <fieldset disabled={busy}>
@@ -73,9 +71,10 @@ export function ReminderPanel({
             const inputId = `reminder-time-${index + 1}`;
             return (
               <label key={inputId} htmlFor={inputId}>
-                <span><UiIcon name={index === 2 ? "clock" : "calendar"} /> มื้อที่ {index + 1}<small className="reminder-time-24h">เวลา 24 ชั่วโมง: {time}</small></span>
+                <span className="reminder-meal-label"><UiIcon name={index === 2 ? "clock" : "calendar"} /> มื้อที่ {index + 1}<small className="reminder-time-24h">24 ชม. {time}</small></span>
                 <input
                   id={inputId}
+                  className="reminder-time-input"
                   type="time"
                   value={time}
                   onChange={(event) => {
@@ -93,7 +92,7 @@ export function ReminderPanel({
             );
           })}
         </section>
-        <section className="ref-notification-status"><h3>สถานะการแจ้งเตือนของเบราว์เซอร์</h3><p><UiIcon name="bell" /> {supported ? Notification.permission === "granted" ? "อนุญาตแล้ว" : Notification.permission === "denied" ? "ถูกบล็อก" : "ยังไม่ได้อนุญาต" : "ไม่รองรับ"} · {settings.enabled ? "เปิดเตือนทั้ง 3 มื้อ" : "ปิดการเตือน"}</p>
+        <section className="ref-notification-status"><h3>สถานะการแจ้งเตือนของเบราว์เซอร์</h3><p className="reminder-permission-status"><UiIcon name="bell" /> {supported ? Notification.permission === "granted" ? "อนุญาตแล้ว" : Notification.permission === "denied" ? "ถูกบล็อก" : "ยังไม่ได้อนุญาต" : "ไม่รองรับ"}</p><p className="reminder-enabled-status">{settings.enabled ? "เปิดเตือนทั้ง 3 มื้อ" : "ปิดการเตือน"}</p>
         {supported ? (
           <button
             type="button"
