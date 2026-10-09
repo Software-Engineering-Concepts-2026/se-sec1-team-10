@@ -30,4 +30,6 @@ Independent reviewer พบ test ขนาด thumbnail ไม่ตรงโค
 
 GitHub CI ของ PR #67 ผ่านครบ 3 jobs หลังรวมเข้า `life-balance-test` แล้ว PR #68 พบ reminder browser test บางรอบไม่ได้รับ notification เพราะ test ใช้นาทีจากนาฬิกาจริงระหว่างกรอกและกดเปิด แก้เฉพาะ fixture ด้วย `page.clock.setFixedTime` เพื่อให้ Date คงที่ แต่ timers และ flow แจ้งเตือนจริงยังทำงาน ไม่แก้ observer หรือพฤติกรรมระบบ ชุดแก้นี้ต้องตรวจ CI ใหม่ก่อนรวมเข้า `main`
 
+PR #69 ของ reminder fixture ผ่านครบ 3 jobs และรวมเข้า `life-balance-test` แล้ว รอบถัดไปของ PR #68 พบ assertion สี date input อ่านค่าในเฟรมแรกของ CSS transition จึงปรับเป็น Playwright assertion ที่รอสีไม่โปร่งใส โดยไม่แก้ CSS หรือพฤติกรรมช่องวันที่ ต้องตรวจ CI หัวล่าสุดอีกครั้ง
+
 ทดสอบ browser ด้วย API จำลองและ built preview ไม่ได้เขียนฐานข้อมูล production หรือยืนยัน AI/live Render ในรอบนี้ ไม่ได้ deploy Docker image ใหม่ การ merge และ CI ต้องตรวจบน GitHub ของ PR แต่ละขั้นแยกจากหลักฐานในเครื่องนี้
