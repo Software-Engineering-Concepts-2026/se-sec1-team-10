@@ -120,7 +120,8 @@ test('date fields expose editable native text on focus and restore the Thai disp
   await expect(formatted).toBeVisible();
   await input.focus();
   await expect(formatted).toBeHidden();
-  expect(await input.evaluate(element => getComputedStyle(element).color)).not.toBe('rgba(0, 0, 0, 0)');
+  // Inputs animate color on focus; wait for the visible state instead of sampling its first frame.
+  await expect(input).not.toHaveCSS('color', 'rgba(0, 0, 0, 0)');
   const previous = new Date(); previous.setDate(previous.getDate() - 1);
   const date = `${previous.getFullYear()}-${String(previous.getMonth() + 1).padStart(2, '0')}-${String(previous.getDate()).padStart(2, '0')}`;
   await input.fill(date);
