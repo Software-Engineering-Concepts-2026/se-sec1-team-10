@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
-test('four existing tabs stay usable on mobile and preserve reference scope', async ({ page }) => {
+test('four existing tabs stay usable across mobile and desktop and preserve reference scope', async ({ page }) => {
   const directory = process.env.UI_CAPTURE_DIR || '.local/mockup-refresh-20261008';
   mkdirSync(directory, { recursive: true });
   const date = new Date().toLocaleDateString('en-CA');
@@ -32,10 +32,26 @@ test('four existing tabs stay usable on mobile and preserve reference scope', as
         await expect(page.locator('.diary-meal-history').getByText(meal.name, { exact: true })).toBeVisible();
         await expect(page.getByRole('button', { name: /ถ่ายภาพอาหาร/ })).toBeVisible();
         await expect(page.getByRole('button', { name: /QR|barcode|สแกน/i })).toHaveCount(0);
-        const reuse = page.locator('.diary-meal-row > button').first();
+        const reuse = page.getByRole('button', { name: /^บันทึกมื้อนี้อีกครั้ง:/ }).first();
         expect((await reuse.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+        const row = page.locator('.diary-food-history-card').first();
+        const rowBox = (await row.boundingBox())!;
+        const thumbnail = (await row.locator('.diary-meal-image').boundingBox())!;
+        expect(thumbnail.width).toBe(80);
+        expect(thumbnail.height).toBe(thumbnail.width);
+        expect(rowBox.height).toBeLessThanOrEqual(145);
+        const reuseBox = (await reuse.boundingBox())!;
+        const badge = (await row.locator('.diary-meal-badge').boundingBox())!;
+        for (const action of await row.locator('.row-actions button').all()) {
+          const box = (await action.boundingBox())!;
+          expect(box.y).toBeGreaterThanOrEqual(reuseBox.y + reuseBox.height - 1);
+          expect(box.x).toBeGreaterThanOrEqual(badge.x + badge.width);
+          expect(box.x + box.width).toBeLessThanOrEqual(rowBox.x + rowBox.width);
+          expect(box.height).toBeGreaterThanOrEqual(44);
+        }
       } else if (tab === 'ความคืบหน้า') {
         await expect(page.getByRole('img', { name: 'กราฟน้ำหนักรายวัน' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'ข้อมูลเพิ่มเติม', exact: true })).toHaveCount(0);
         await expect(page.locator('.chart-key')).toContainText('เผาผลาญ');
         await expect(page.getByRole('button', { name: /ขยายกราฟ/ })).toHaveCount(0);
         for (const button of await page.locator('.ref-chart-controls button').all()) expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
@@ -55,6 +71,12 @@ test('four existing tabs stay usable on mobile and preserve reference scope', as
           const boxes = await Promise.all(sections.map(selector => page.locator(selector).boundingBox()));
           for (let i = 1; i < boxes.length; i++) {
             if (i === 2 && width >= 1024) continue; // Wide screens may place both graph controls on one row.
+            if (i === 5 && width >= 1024) {
+              const trend = (await page.locator('.ref-trend').boundingBox())!;
+              expect(boxes[i]!.x).toBeGreaterThanOrEqual(trend.x + trend.width);
+              expect(boxes[i]!.y).toBeCloseTo(trend.y, 0);
+              continue;
+            }
             expect(boxes[i]!.y).toBeGreaterThanOrEqual(boxes[i - 1]!.y + boxes[i - 1]!.height - 2);
           }
         } else if (tab === 'บัญชี') {
@@ -66,7 +88,13 @@ test('four existing tabs stay usable on mobile and preserve reference scope', as
           await page.getByRole('button', { name: 'ซ่อนข้อมูลโปรไฟล์', exact: true }).click();
           await expect(page.locator('.ref-profile-details')).toHaveCount(0);
           const [profile, menu, logout] = await Promise.all(['.ref-profile-card', '.ref-menu', '.ref-logout-area'].map(selector => page.locator(selector).boundingBox()));
-          expect(menu!.y).toBeGreaterThanOrEqual(profile!.y + profile!.height);
+          if (width >= 1024) {
+            expect(menu!.x).toBeGreaterThanOrEqual(profile!.x + profile!.width);
+            expect(menu!.y).toBeCloseTo(profile!.y, 0);
+            expect(logout!.x).toBeCloseTo(menu!.x, 0);
+          } else {
+            expect(menu!.y).toBeGreaterThanOrEqual(profile!.y + profile!.height);
+          }
           expect(logout!.y).toBeGreaterThanOrEqual(menu!.y + menu!.height);
         }
       }

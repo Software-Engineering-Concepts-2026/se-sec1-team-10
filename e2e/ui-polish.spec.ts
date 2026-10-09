@@ -55,6 +55,12 @@ test('camera fills the space above navigation on mobile and desktop', async ({ p
     const shutter = await page.getByRole('button', { name: 'ถ่ายภาพ' }).boundingBox();
     const camera = await page.locator('.diary-camera').boundingBox();
     const controls = await page.locator('.diary-camera-controls').boundingBox();
+    for (const selector of ['.diary-camera', '.diary-camera-controls']) {
+      expect(await page.locator(selector).evaluate(element => {
+        const style = getComputedStyle(element);
+        return [style.borderTopLeftRadius, style.borderTopRightRadius, style.borderBottomLeftRadius, style.borderBottomRightRadius];
+      })).toEqual(['0px', '0px', '0px', '0px']);
+    }
     expect(gallery!.y + gallery!.height).toBeLessThanOrEqual(nav!.y);
     expect(shutter!.y + shutter!.height).toBeLessThanOrEqual(nav!.y);
     expect(nav!.y - (controls!.y + controls!.height)).toBeGreaterThanOrEqual(0);
@@ -103,6 +109,25 @@ test('history loading does not show an empty state until the request completes',
   await expect(page.locator('.diary-empty')).toHaveCount(0);
   release();
   await expect(page.locator('.diary-empty')).toContainText('ยังไม่มีรายการอาหาร');
+});
+
+test('date fields expose editable native text on focus and restore the Thai display after blur', async ({ page }) => {
+  const attempts = await openApp(page);
+  attempts.allowWeekly();
+  await page.locator('.ref-nav').getByRole('button', { name: 'ความคืบหน้า', exact: true }).click();
+  const input = page.getByLabel('สิ้นสุดวันที่', { exact: true });
+  const formatted = page.locator('.weekly-date-control .meal-date-formatted');
+  await expect(formatted).toBeVisible();
+  await input.focus();
+  await expect(formatted).toBeHidden();
+  expect(await input.evaluate(element => getComputedStyle(element).color)).not.toBe('rgba(0, 0, 0, 0)');
+  const previous = new Date(); previous.setDate(previous.getDate() - 1);
+  const date = `${previous.getFullYear()}-${String(previous.getMonth() + 1).padStart(2, '0')}-${String(previous.getDate()).padStart(2, '0')}`;
+  await input.fill(date);
+  await expect(input).toHaveValue(date);
+  await expect.poll(attempts.weeklyAttempts).toBeGreaterThan(1);
+  await input.blur();
+  await expect(formatted).toBeVisible();
 });
 
 test('avatar upload and delete actions align and diary search remains readable', async ({ page }) => {

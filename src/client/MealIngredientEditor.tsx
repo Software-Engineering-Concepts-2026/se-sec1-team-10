@@ -58,22 +58,27 @@ export function MealIngredientEditor({ ingredients, analysis, needsRecalculation
       </div>
     </section>
     {analysis && <details className="analysis-note"><summary>รายละเอียดการประมาณจาก AI</summary><p>{analysis.portionDescription}</p>{analysis.notes.map(note => <small key={note}>{note}</small>)}</details>}
-    <div className="nutrient-heading"><h3>ส่วนประกอบ</h3><span>{ingredients.length} รายการ</span></div>
+    <div className="nutrient-heading meal-ingredient-heading"><h3>ส่วนประกอบ</h3><span>{ingredients.length} รายการ</span></div>
     {ingredients.map((ingredient, index) => <article className="ingredient-row portion-row" key={`${ingredient.name}-${index}`}>
       <div className="ingredient-card-heading">
-        <div className="ingredient-card-title"><strong>{ingredient.name}</strong><strong className="ingredient-calories">{needsRecalculation ? "รอคำนวณ" : `${display(values[index].caloriesKcal)} kcal`}</strong></div>
+        <div className="ingredient-card-title"><strong className="ingredient-name" title={ingredient.name}>{ingredient.name}</strong><strong className="ingredient-calories">{needsRecalculation ? "รอคำนวณ" : `${display(values[index].caloriesKcal)} kcal`}</strong></div>
       </div>
-      <label><input aria-label={`ปริมาณส่วนประกอบ ${index + 1}`} type="number" min="0.01" max="10000" step="any" value={ingredient.amount || ''} onChange={event => onQuantityChange(index, event.target.value)} required /><span>{ingredient.unit === 'g' ? 'กรัม' : 'ส่วนเดิม'}</span></label>
+      <div className="ingredient-card-controls">
+        <label className="ingredient-amount-control"><input aria-label={`ปริมาณส่วนประกอบ ${index + 1}`} type="number" min="0.01" max="10000" step="any" value={ingredient.amount || ''} onChange={event => onQuantityChange(index, event.target.value)} required /><span>{ingredient.unit === 'g' ? 'กรัม' : 'ส่วนเดิม'}</span></label>
+        <button className="remove-ingredient" type="button" aria-label={`ลบ ${ingredient.name}`} onClick={() => onRemove(index)}>ลบ</button>
+      </div>
       <div className="ingredient-card-meta">
         <small className="ingredient-source-badge">{ingredient.source === 'ai-estimate' ? 'ค่าประมาณ AI' : ingredient.source === 'usda-fdc' ? 'USDA' : ingredient.source === 'food-catalog' ? 'ฐานข้อมูล' : ingredient.source === 'manual' ? 'กรอกเอง' : 'ข้อมูลเดิม'}</small>
         <details className="ingredient-provenance"><summary>รายละเอียด</summary>
+          <div className="ingredient-provenance-body">
+          <small className="ingredient-full-name">ชื่อเต็ม: {ingredient.name}</small>
           {ingredient.catalogMatch?.status === 'matched' && ingredient.catalogMatch.food && <small className="catalog-match-feedback">{ingredient.catalogMatch.food.sourceName ?? 'ฐานข้อมูลอาหาร'}{ingredient.catalogMatch.food.url && <> · <a href={ingredient.catalogMatch.food.url} target="_blank" rel="noreferrer">แหล่งข้อมูล</a></>}{ingredient.photoEstimate && <> · ปริมาณยังเป็นค่าประมาณจากภาพ</>}</small>}
           {ingredient.catalogMatch && ingredient.catalogMatch.status !== 'matched' && <small className="catalog-match-warning" role="status">{ingredient.catalogMatch.status === 'ambiguous' ? 'ยังจับคู่กับฐานข้อมูลอาหารไม่ได้แน่ชัด' : ingredient.catalogMatch.status === 'incomplete' ? 'ข้อมูลสารอาหารในฐานข้อมูลยังไม่ครบ' : 'ไม่พบในฐานข้อมูลอาหาร'} ค่านี้ยังเป็นค่าประมาณจาก AI คุณแก้ไขหรือลบส่วนประกอบได้</small>}
           {ingredient.photoEstimate && !ingredient.catalogMatch && ingredient.source === 'ai-estimate' && <small className="catalog-match-warning" role="status">ปริมาณเป็นค่าประมาณจากภาพ คุณแก้ไขหรือลบส่วนประกอบได้</small>}
           {!ingredient.catalogMatch && !ingredient.photoEstimate && <small>{ingredient.source === 'manual' ? 'สารอาหารที่กรอกเอง' : ingredient.source === 'usda-fdc' ? 'สารอาหารจาก USDA FoodData Central' : ingredient.source === 'food-catalog' ? 'สารอาหารจากฐานข้อมูลอาหาร' : ['ai-estimate'].includes(ingredient.source) ? 'สารอาหารเป็นค่าประมาณจาก AI' : 'ข้อมูลเดิม · ไม่ทราบน้ำหนักเป็นกรัม'}</small>}
+          </div>
         </details>
       </div>
-      <button className="remove-ingredient" type="button" aria-label={`ลบ ${ingredient.name}`} onClick={() => onRemove(index)}>ลบ</button>
     </article>)}
     {!ingredients.length && <p className="empty-state">เพิ่มส่วนประกอบเพื่อคำนวณพลังงาน</p>}
     <button className="secondary add-ingredient" type="button" onClick={() => { setOpen(true); setError(''); }}><UiIcon name="plus" size={16} />เพิ่มส่วนประกอบ</button>

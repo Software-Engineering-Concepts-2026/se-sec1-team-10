@@ -542,7 +542,8 @@ test.describe('mobile navigation and food logging', () => {
     await expect(page.locator('.mobile-nav')).toBeVisible();
     await expect(page.locator('.mobile-page:visible')).toHaveCount(1);
     const bounds = await page.locator('.profile-layout').boundingBox();
-    expect(bounds!.width).toBeLessThanOrEqual(640);
+    expect(bounds!.width).toBeGreaterThan(640);
+    expect(bounds!.width).toBeLessThanOrEqual(1080);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: 'test-results/desktop-same-app.png', fullPage: true });
   });

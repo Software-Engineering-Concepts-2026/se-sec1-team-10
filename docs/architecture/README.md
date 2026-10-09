@@ -1,92 +1,32 @@
-# LifeBalance Platform - Architecture Documentation
+# LifeBalance Architecture
 
-## โภมาลักษณะ (Overview)
+LifeBalance is a browser-based personal food and activity tracking application. The current implementation is a React single-page application and an Express API in one TypeScript modular monolith. In production, Express serves both the built web files and `/api` routes from one application process. PostgreSQL is accessed separately through Prisma; the repository does not establish the health or configuration of any live deployment.
 
-**LifeBalance** เป็นแพลตฟอร์มเว็บแอปพลิเคชันสำหรับการจัดการสุขภาพและสมดุลชีวิต ออกแบบมาเพื่อรองรับผู้ใช้หลักสองกลุ่ม (Personas):
+Personas and scenarios in [`docs/requirements`](../requirements/) describe product context. They are not clinical guidance, and the application does not provide medical recommendations or a postpartum care service.
 
-| Persona | ชื่อ | อายุ | อาชีพ | เป้าหมายหลัก |
-|---------|------|------|--------|---------------|
-| **Corporate Worker** | กรณ์ (Korn) | 32 ปี | Senior Product Manager | ควบคุม BMI 18.5-24.9, ติดตาม Net Calories, Data-driven insights |
-| **Postpartum Mother** | พิมพ์ (Pim) | 34 ปี | Freelance Translator / คุณแม่ | ลดน้ำหนักอย่างปลอดภัย (≥0.5 kg/week), สูตร WHO สำหรับคุณแม่ให้นม |
+## Current C4 views
 
----
+- [C1 System Context](./c4-context.md) shows users and the integrations represented in the current code.
+- [C2 Containers](./c4-container.md) shows the logical web, API, and database containers and explains how they map to local development and the production image.
+- [Technology stack](./tech_stack.md) lists the implementation choices.
 
-## C4 Model Diagrams
+The older draw.io exports in [`diagrams/`](./diagrams/) show an original design and may describe planned or obsolete components. In particular, they do not represent the current React/Express implementation or prove that external services are deployed. Use the Mermaid files above for the current code-based view. Historical ADRs remain unchanged and record decisions at the time they were written.
 
-### Level 1: System Context Diagram (C1)
+## Source map
 
-แผนภามระดับสูงสุด แสดง **LifeBalance Platform** ในฐานะระบบหลัก พร้อมผู้ใช้และระบบภายนอกที่เกี่ยวข้อง
+| Path | Responsibility |
+| --- | --- |
+| `src/client/` | React UI, panels, browser-side API calls, and styles |
+| `src/server/index.ts` | Process entrypoint, configuration wiring, database connection, production static-file serving, and HTTP listener |
+| `src/server/app.ts` | Express middleware, health endpoint, error handling, and route registration |
+| `src/server/routes/` | Account, meal, food, activity, and weight HTTP routes |
+| `src/server/` | Application services, validation and calculations, authentication, AI/nutrition integrations, and repository implementation |
+| `src/shared/` | TypeScript contracts and shared domain helpers used across client and server |
+| `prisma/` | Prisma schema, migrations, and seed/catalog utilities |
+| `docs/architecture/` | Current diagrams and historical architecture decisions |
 
-![C1 System Context](./diagrams/c1-system-context.svg)
+## Runtime notes
 
-**ส่วนประกอบหลัก:**
-- **Users (Actors):** กรณ์ (Corporate Worker), พิมพ์ (Postpartum Mother)
-- **Our System:** LifeBalance Platform
-- **External Systems:** 
-  - Health Data APIs (Google Fit / Apple HealthKit)
-  - Nutrition Database API (USDA / Open Food Facts)
-  - Notification Service (SendGrid / FCM)
+For local development, `npm run dev` starts the Vite client at port 5173 and the Express API at port 3000; Vite proxies `/api` requests to the API. `Dockerfile` builds a single production application image that listens on port 10000 and serves the client and API together. `compose.yaml` currently defines only an optional local PostgreSQL 17 service on `127.0.0.1:5432`; it does not define an application service. A production-style deployment therefore runs the application separately from its PostgreSQL database. Supabase can provide a PostgreSQL endpoint, but these files do not establish any live deployment state.
 
-#### วิธีการดูไฟล์:
-- เปิดไฟล์ `diagrams/c1-system-context.xml` ด้วย [draw.io](https://app.diagrams.net/) (File → Open from → Device)
-- หรือ Export เป็น PNG/SVG จาก draw.io
-
----
-
-### Level 2: Container Diagram (C2)
-
-แผนภามระดับถัดไป ซูมเข้าไปดู **ส่วนประกอบภายใน** ของ LifeBalance Platform
-
-![C2 Container](./diagrams/c2-containers.svg)
-
-**Containers หลักภายในระบบ:**
-
-| Container | Technology | หน้าที่หลัก |
-|-----------|------------|--------------|
-| **Web Application** | React + Vite | Single-page application สำหรับ User Interface ทั้งหมด |
-| **Backend API** | Python / FastAPI | RESTful API สำหรับ Business Logic และ Data Processing |
-| **Primary Database** | PostgreSQL | เก็บข้อมูลผู้ใช้, บันทึกอาหาร, ประวัติน้ำหนัก |
-| **Cache Layer** | Redis | In-memory cache สำหรับ Session และ Query Optimization |
-
-#### วิธีการดูไฟล์:
-- เปิดไฟล์ `diagrams/c2-containers.xml` ด้วย [draw.io](https://app.diagrams.net/) (File → Open from → Device)
-- หรือ Export เป็น PNG/SVG จาก draw.io
-
----
-
-## Architecture Decision Records (ADRs)
-
-บันทึกการตัดสินใจทางสถาปัตยกรรมถูกเก็บไว้ใน `adr/` directory:
-
-| ADR # | Title | Status |
-|-------|-------|--------|
-| [ADR-001](./adr/0001-tech-stack-selection.md) | Selection of Core Technology Stack | ✅ Accepted |
-
----
-
-## Directory Structure
-
-```
-docs/
-└── architecture/
-    ├── README.md                 # You are here
-    ├── diagrams/
-    │   ├── c1-system-context.xml # C4 Level 1: System Context
-    │   └── c2-containers.xml     # C4 Level 2: Container View
-    └── adr/
-        └── 0001-tech-stack-selection.md
-```
-
----
-
-## Quick Start with draw.io
-
-1. เปิด [draw.io](https://app.diagrams.net/)
-2. เลือก **File → Open From → Device**
-3. เลือกไฟล์ `.xml` ที่ต้องการดู
-4. แก้ไขและ Export เป็นรูปแบบที่ต้องการ (PNG, SVG, PDF)
-
----
-
-*Last Updated: July 21, 2026*
-*Project: LifeBalance Platform*
+The code includes optional integrations for an OpenAI-compatible image/ingredient estimation provider and USDA FoodData Central search. Their availability depends on runtime configuration and provider access; their presence in code does not assert that they are configured in production. No Google Fit, Apple HealthKit, SendGrid, FCM, or Redis integration is implemented in the current application entrypoints and modules.
