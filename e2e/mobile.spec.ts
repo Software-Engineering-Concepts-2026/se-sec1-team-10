@@ -382,6 +382,9 @@ test.describe('mobile navigation and food logging', () => {
   });
 
   test('opts into account-scoped reminders and delivers a due notification once', async ({ page }) => {
+    // Keep the configured reminder minute stable while CI drives the opt-in UI.
+    // Only Date is fixed; application timers and the notification flow keep running.
+    await page.clock.setFixedTime(new Date('2026-10-10T09:23:30Z'));
     await page.addInitScript(() => {
       const calls: unknown[] = [];
       Object.assign(window, { notificationCalls: calls });
