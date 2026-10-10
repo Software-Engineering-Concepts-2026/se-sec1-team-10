@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Route } from '@playwright/test';
+import { expect, test, type Page, type Route } from './coverage-fixture';
 import type { PublicMeal, PublicUser } from '../src/shared/contracts';
 
 const user: PublicUser = { id: 'history-user', email: 'history@example.com', displayName: 'ทดสอบประวัติ', age: 30, weightKg: 70, heightCm: 175, bmi: 22.9, dailyCalorieTarget: 1900, targetWeightKg: null, goalSettings: null };

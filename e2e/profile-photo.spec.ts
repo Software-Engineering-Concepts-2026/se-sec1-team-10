@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Route } from '@playwright/test';
+import { expect, test, type Page, type Route } from './coverage-fixture';
 
 const user = { id: 'photo-user', email: 'photo@example.com', displayName: 'ผู้ทดสอบ', age: null, weightKg: null, heightCm: null, bmi: null, avatarImageData: null };
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');

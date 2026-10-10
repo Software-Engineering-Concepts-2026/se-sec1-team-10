@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './coverage-fixture';
 import { mkdirSync } from 'node:fs';
 import { goalSchema, type GoalInput, type PublicUser } from '../src/shared/contracts';
 

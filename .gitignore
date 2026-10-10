@@ -25,6 +25,7 @@ dist/
 .local/
 playwright-report/
 test-results/
+coverage/
 
 # Local reference uploads and one-off test configuration
 .codex-remote-attachments/

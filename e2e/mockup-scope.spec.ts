@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './coverage-fixture';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
 test('four existing tabs stay usable across mobile and desktop and preserve reference scope', async ({ page }) => {

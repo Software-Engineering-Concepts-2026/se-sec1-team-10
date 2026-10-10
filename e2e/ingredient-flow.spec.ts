@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './coverage-fixture';
 
 async function openManualDiary(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
