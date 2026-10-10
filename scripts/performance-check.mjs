@@ -9,7 +9,12 @@ import { hashPassword } from '../dist/server/security.js';
 
 // All writes target a database created by this process. No .env or external URL is accepted.
 const image = process.argv[2];
-assert.ok(image, 'Usage: node scripts/performance-check.mjs <locally-built-image>');
+const mode = process.argv[3] ?? '--demo';
+assert.ok(image, 'Usage: node scripts/performance-check.mjs <locally-built-image> [--demo|--load]');
+assert.ok(['--demo', '--load'].includes(mode) && process.argv.length <= 4, 'Choose --demo (single user) or --load (100 concurrent users)');
+const loadTest = mode === '--load';
+const userCount = loadTest ? 100 : 1;
+const repetitions = 20;
 const id = randomUUID().slice(0, 8);
 const network = `lifebalance-perf-${id}`;
 const containers = [];
@@ -20,7 +25,7 @@ const origin = 'https://lifebalance-performance.invalid';
 const results = {
   image, measuredAt: new Date().toISOString(),
   environment: { hostPlatform: platform(), hostArchitecture: arch(), cpuParallelism: availableParallelism(), hostMemoryGiB: +(totalmem()/2**30).toFixed(1), database: 'disposable PostgreSQL 17', app: 'production Docker image', network: 'loopback / Docker bridge' },
-  scope: { users: 100, recordsPerUser: 1000, records: { meals: 500, weights: 300, exercises: 200 }, imagePayloads: false, aiCalls: 0, productionRequests: 0, databaseMocked: false },
+  scope: { mode: loadTest ? 'load' : 'demo', users: userCount, concurrentUsers: userCount, repetitions, recordsPerUser: 1000, records: { meals: 500, weights: 300, exercises: 200 }, imagePayloads: false, aiCalls: 0, productionRequests: 0, databaseMocked: false },
   metrics: {}, passed: false, cleanup: false,
 };
 let networkCreated = false;
@@ -69,7 +74,7 @@ try {
   db=new PrismaClient({datasourceUrl:databaseUrl});
   phase='seed synthetic users and 1000 records each';
   const sharedHash=await hashPassword(password);
-  const users=Array.from({length:100},(_,index)=>({id:randomUUID(),email:`performance-${id}-${index}@example.test`,displayName:'Synthetic performance user',passwordHash:sharedHash,age:30,heightCm:175,weightKg:70,dailyCalorieTarget:2000}));
+  const users=Array.from({length:userCount},(_,index)=>({id:randomUUID(),email:`performance-${id}-${index}@example.test`,displayName:'Synthetic performance user',passwordHash:sharedHash,age:30,heightCm:175,weightKg:70,dailyCalorieTarget:2000}));
   await db.user.createMany({data:users});
   for(const user of users) {
     const meals=Array.from({length:500},(_,i)=>({id:randomUUID(),userId:user.id,name:'Synthetic rice meal',mealType:['breakfast','lunch','dinner'][i%3],totalCalories:260,activityDate:dateAt(i%365)}));
@@ -96,19 +101,28 @@ try {
       assert.equal(response.status,status,`${method} ${path} HTTP ${response.status}`);
       const result={data:response.status===204?null:await response.json(),cookie:response.headers.get('set-cookie')?.split(';')[0]};
       ok=true;return result;
-    } finally {httpSamples.push({ms:performance.now()-start,ok});}
+    } finally {httpSamples.push({ms:performance.now()-start,ok,route:`${method} ${path.split('?')[0]}`});}
   }
   const sessions=[];
   const loginSamples=[];
   // Exercise the real login route without disabling its per-IP limiter.
-  phase='100 concurrent logins';
-  await Promise.all(users.map(async(user,index)=>{
+  phase=loadTest ? '100 concurrent logins' : '20 sequential logins with the normal authentication limiter';
+  async function login(user,index) {
     const start=performance.now();
     try { const login=await request('/auth/login',index,{method:'POST',body:{email:user.email,password}});assert.ok(login.cookie);sessions[index]=login.cookie;loginSamples.push({ms:performance.now()-start,ok:true}); }
     catch {loginSamples.push({ms:performance.now()-start,ok:false});}
-  }));
-  results.metrics.concurrentLogin=summary(loginSamples,2000);
-  assert.equal(sessions.filter(Boolean).length,100,'All synthetic users must authenticate successfully');
+  }
+  if(loadTest) {
+    await Promise.all(users.map(login));
+  } else {
+    for(let i=0;i<repetitions;i++) {
+      await login(users[0],0);
+      assert.ok(loginSamples.at(-1).ok,'Each login must succeed');
+      if(i<repetitions-1) await request('/auth/logout',0,{method:'POST',cookie:sessions[0],status:204});
+    }
+  }
+  results.metrics[loadTest ? 'concurrentLogin' : 'loginApi']=summary(loginSamples,2000);
+  assert.equal(sessions.filter(Boolean).length,userCount,'All synthetic users must authenticate successfully');
   async function dashboard(index,{history=false}={}) {
     const paths=[`/exercises/daily?date=${day}`,`/meals/daily?date=${day}`];
     if(history) paths.push('/health-history','/weight-logs',`/summary/weekly?date=${day}`);
@@ -118,19 +132,38 @@ try {
     assert.equal(responses[0].data.caloriesConsumed,responses[1].data.caloriesConsumed);
     if(history) assert.equal(responses[2].data.points.length,300);
   }
-  phase='warm and measure year-history API bundles';
-  await dashboard(0,{history:true});
+  phase='measure year-history API bundles';
+  // Keep the original load baseline warm-up. Demo mode retains the first action sample.
+  if(loadTest) await dashboard(0,{history:true});
   const historySamples=[];
-  for(let i=0;i<20;i++) {
+  for(let i=0;i<repetitions;i++) {
     const start=performance.now();
     try {await dashboard(0,{history:true});historySamples.push({ms:performance.now()-start,ok:true});}
     catch {historySamples.push({ms:performance.now()-start,ok:false});}
   }
-  results.metrics.yearHistoryApiBundle=summary(historySamples,1500);
+  results.metrics.yearHistoryApiBundle=summary(historySamples,loadTest ? 1500 : 2000);
+  if(!loadTest) {
+    const historyFrom=dateAt(364).toISOString().slice(0,10);
+    for(const [name,route] of [['diaryHistoryApi',`/meals/history?from=${historyFrom}&to=${day}&limit=20&offset=0`],['accountApi','/auth/me']]) {
+      phase=`measure ${name}`;
+      const samples=[];
+      for(let i=0;i<repetitions;i++) {
+        const start=performance.now();
+        try {
+          const {data}=await request(route,0,{cookie:sessions[0]});
+          if(name==='diaryHistoryApi') {assert.equal(data.meals.length,20);assert.equal(data.hasMore,true);}
+          else assert.equal(data.user.id,users[0].id);
+          samples.push({ms:performance.now()-start,ok:true});
+        }
+        catch {samples.push({ms:performance.now()-start,ok:false});}
+      }
+      results.metrics[name]=summary(samples,2000);
+    }
+  }
   phase='save and verify refreshed daily totals';
   const updateSamples=[];
   const readAfterSaveSamples=[];
-  for(let i=0;i<20;i++) {
+  for(let i=0;i<repetitions;i++) {
     const before=(await request(`/meals/daily?date=${day}`,0,{cookie:sessions[0]})).data.caloriesConsumed;
     const body={name:'Synthetic update measurement',mealType:'snack',activityDate:day,ingredients:[{name:'Synthetic rice',amount:100,unit:'g',referenceAmount:100,referenceUnit:'g',source:'manual',referenceNutrients:{caloriesKcal:130,carbsGrams:28,sugarGrams:0,proteinGrams:3,fatGrams:1}}]};
     const start=performance.now();
@@ -146,10 +179,10 @@ try {
   }
   results.metrics.saveThenReadApi=summary(updateSamples,2000);
   results.metrics.afterSaveReadApi=summary(readAfterSaveSamples,2000);
-  phase='100 concurrent user journeys: view, save, refresh';
+  phase=loadTest ? '100 concurrent user journeys: view, save, refresh' : '20 sequential user journeys: view, save, refresh';
   const loadSamples=[];
   const loadDashboardSamples=[];
-  for(let round=0;round<3;round++) {
+  for(let round=0;round<(loadTest ? 3 : repetitions);round++) {
     await Promise.all(users.map(async(_user,index)=>{
       const start=performance.now();
       let dashboardRecorded=false;
@@ -168,17 +201,25 @@ try {
       }
     }));
   }
-  results.metrics.concurrentDashboardApi=summary(loadDashboardSamples,3000);
-  results.metrics.concurrentUserJourney=summary(loadSamples,3000);
+  results.metrics[loadTest ? 'concurrentDashboardApi' : 'dashboardApi']=summary(loadDashboardSamples,loadTest ? 3000 : 2000);
+  results.metrics[loadTest ? 'concurrentUserJourney' : 'userJourneyApi']=summary(loadSamples,loadTest ? 3000 : 2000);
   results.metrics.httpResponses=summary(httpSamples,2000);
-  results.criteria={
+  results.criteria=loadTest ? {
     normalApiUnder2s:results.metrics.yearHistoryApiBundle.p95Ms<=1500&&results.metrics.saveThenReadApi.p95Ms<=2000&&historySamples.every(x=>x.ok)&&updateSamples.every(x=>x.ok),
     concurrentUsers100:loadSamples.length===300&&loadDashboardSamples.length===300&&results.metrics.concurrentUserJourney.errorRatePct<1&&results.metrics.concurrentDashboardApi.p95Ms<=3000&&results.metrics.httpResponses.errorRatePct<1&&loginSamples.every(x=>x.ok),
     browserRenderTiming:'not measured; these are HTTP/API response measurements',
     productionAndAiTiming:'not measured; local isolated baseline only',
+  } : {
+    teacherTarget:'response < 2 seconds; teacher handout does not specify concurrency or percentile',
+    acceptance:'Every measured HTTP response and API action must succeed and take strictly less than 2000 ms, including the first action sample; p95 is descriptive, not the pass gate',
+    demoApiUnder2s:Object.values(results.metrics).every(metric=>metric.count>0&&metric.errors===0&&metric.maxMs<2000),
+    browserRenderTiming:'not measured; these are HTTP/API response measurements',
+    productionAndAiTiming:'not measured; local isolated baseline only',
+    projectLoadRequirement:'NFR-07 not tested in demo mode; use --load separately',
   };
-  results.passed=results.criteria.normalApiUnder2s&&results.criteria.concurrentUsers100;
-  for(const [name,metric] of Object.entries(results.metrics)) console.log(`${name}: p95 ${metric.p95Ms} ms; errors ${metric.errors}/${metric.count}`);
+  results.passed=loadTest ? results.criteria.normalApiUnder2s&&results.criteria.concurrentUsers100 : results.criteria.demoApiUnder2s;
+  console.log(`Scope: ${results.scope.mode}; ${userCount} synthetic user(s); real PostgreSQL; local isolated API timings (not Render, browser rendering or AI)`);
+  for(const [name,metric] of Object.entries(results.metrics)) console.log(`${name}: p95 ${metric.p95Ms} ms; max ${metric.maxMs} ms; errors ${metric.errors}/${metric.count}`);
   if(!results.passed) process.exitCode=1;
 } catch {
   results.failure={phase,message:`Performance check failed during ${phase}; credential-bearing process output suppressed.`};
@@ -198,6 +239,6 @@ try {
   if(!cleaned) process.exitCode=1;
   clearInterval(keepAlive);
   await mkdir('.local/performance',{recursive:true});
-  await writeFile('.local/performance/result.json',JSON.stringify(results,null,2));
+  await writeFile(`.local/performance/${results.scope.mode}-result.json`,JSON.stringify(results,null,2));
   console.log(`Passed: ${results.passed}; own disposable resources cleaned: ${cleaned}`);
 }
