@@ -1,5 +1,9 @@
 # เอกสารทดสอบ
 
+- [หลักฐานเทคนิคก่อน Demo: coverage / performance / CD](demo-technical-readiness-2026-10-10.md) — ผลตรวจบนเครื่องและสิ่งที่ยังต้องทำบน GitHub/Render
+- [Coverage ของ TypeScript ทั้ง unit และ browser](typescript-coverage.md) — ขอบเขตการวัดและเกณฑ์ 60% / business logic 80%
+- [Performance baseline วันที่ 10 ตุลาคม 2569](performance-2026-10-10.md) — API บน PostgreSQL แยก ผู้ใช้จำลอง 100 คน ไม่ใช่ผลโหลด production
+- [Continuous deployment](../deployment/continuous-deployment.md) — ขั้นตอนอัตโนมัติหลัง CI ผ่านและการเปิดใช้งาน
 - [ผลตรวจ UI และเตรียมรวม branch วันที่ 10 ตุลาคม 2569](ui-polish-merge-check-2026-10-10.md) — regression, responsive, date focus และ independent review
 - [ผลตรวจและปรับคู่มือวันที่ 9 ตุลาคม 2569](documentation-check-2026-10-09.md) — ข้อมูลหน้าจอ/สถาปัตยกรรม/setup/CI และลิงก์ในคู่มือปัจจุบัน
 - [ผลแก้ lazy chunk recovery วันที่ 9 ตุลาคม 2569](chunk-recovery-2026-10-09.md) — fallback, reload ที่ผู้ใช้กดเอง และ production-build browser tests

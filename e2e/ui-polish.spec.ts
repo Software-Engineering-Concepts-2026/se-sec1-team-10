@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './coverage-fixture';
 import { mkdirSync } from 'node:fs';
 
 const captures = '.local/camera-home-cleanup-20261008';

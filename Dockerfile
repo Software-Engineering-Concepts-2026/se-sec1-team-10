@@ -22,6 +22,10 @@ COPY src/shared ./src/shared
 COPY scripts/build-web.mjs ./scripts/build-web.mjs
 RUN npm run build
 
+# Public revision marker lets CD verify the requested commit became live, without an API token.
+ARG VCS_REF=unknown
+RUN node -e "const fs=require('fs'); const revision=process.argv[1]; if(revision!=='unknown'&&!/^[a-f0-9]{40}$/.test(revision))process.exit(1); fs.writeFileSync('dist/client/release.json',JSON.stringify({revision}));" "$VCS_REF"
+
 FROM base AS production-dependencies
 WORKDIR /app
 ENV NODE_ENV=production
@@ -30,6 +34,9 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 FROM base AS runtime
 WORKDIR /app
+ARG VCS_REF=unknown
+LABEL org.opencontainers.image.revision=$VCS_REF \
+    org.opencontainers.image.source="https://github.com/Software-Engineering-Concepts-2026/se-sec1-team-10"
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=10000

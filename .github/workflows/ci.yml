@@ -6,6 +6,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -73,14 +76,135 @@ jobs:
       - name: Build application
         run: npm run build
 
-      - name: Run unit tests
-        run: npm test
-
       - name: Install Chromium for browser tests
         run: npx playwright install --with-deps chromium
 
-      - name: Run mocked browser tests
-        run: npm run test:e2e
+      - name: Run unit and mocked browser coverage with gates
+        run: npm run test:coverage:all
+
+      - name: Save TypeScript coverage evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: typescript-coverage
+          path: coverage/
+          if-no-files-found: ignore
+
+      - name: Test deployment verification behavior
+        run: node --test scripts/deploy-render.test.mjs
 
       - name: Run built lazy chunk recovery test
         run: npm run test:e2e:chunks
+
+  performance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22.12"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Build isolated performance image
+        env:
+          RELEASE_REVISION: ${{ github.sha }}
+        run: docker build --build-arg VCS_REF="$RELEASE_REVISION" -t lifebalance:performance .
+      - name: Measure real PostgreSQL API with 100 concurrent synthetic users
+        run: node scripts/performance-check.mjs lifebalance:performance
+      - name: Save performance evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: performance-results
+          path: .local/performance/result.json
+          include-hidden-files: true
+          if-no-files-found: ignore
+
+  deploy:
+    needs: [lint, test, javascript, performance]
+    # Secrets are never used on PRs or feature/life branches. Enable once repository setup is reviewed.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.CD_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    concurrency:
+      group: lifebalance-render-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22.12"
+      - name: Skip stale successful CI run
+        id: before_build
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_REVISION: ${{ github.sha }}
+        run: node scripts/current-main.mjs
+      - name: Require existing repository credentials
+        if: steps.before_build.outputs.current == 'true'
+        env:
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          test -n "$DOCKERHUB_TOKEN" || { echo 'Missing DOCKERHUB_TOKEN repository secret'; exit 1; }
+          test -n "$RENDER_DEPLOY_HOOK" || { echo 'Missing RENDER_DEPLOY_HOOK repository secret'; exit 1; }
+      - name: Sign in to existing Docker Hub repository
+        if: steps.before_build.outputs.current == 'true'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          username: chayakorn7777
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Set up Linux builder
+        if: steps.before_build.outputs.current == 'true'
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Build and push tested main image
+        if: steps.before_build.outputs.current == 'true'
+        id: image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: docker.io/chayakorn7777/lifebalance:cd-${{ github.sha }}
+          build-args: VCS_REF=${{ github.sha }}
+      - name: Prepare hashes from the exact registry image
+        if: steps.before_build.outputs.current == 'true'
+        env:
+          RELEASE_DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          mkdir -p .local/cd
+          container=$(docker create "docker.io/chayakorn7777/lifebalance@$RELEASE_DIGEST")
+          trap 'docker rm "$container" >/dev/null' EXIT
+          docker cp "$container:/app/dist/client" .local/cd/client
+          node scripts/release-manifest.mjs .local/cd/client
+      - name: Recheck main before requesting rollout
+        if: steps.before_build.outputs.current == 'true'
+        id: before_deploy
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_REVISION: ${{ github.sha }}
+        run: node scripts/current-main.mjs
+      - name: Deploy immutable image and verify public build
+        if: steps.before_deploy.outputs.current == 'true'
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+          RELEASE_IMAGE: docker.io/chayakorn7777/lifebalance@${{ steps.image.outputs.digest }}
+          RELEASE_REVISION: ${{ github.sha }}
+        run: node scripts/deploy-render.mjs
+      - name: Save deployment proof
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: deployment-proof-${{ github.sha }}
+          path: |
+            .local/cd/asset-manifest.json
+            .local/cd/deployment-result.json
+          include-hidden-files: true
+          if-no-files-found: ignore

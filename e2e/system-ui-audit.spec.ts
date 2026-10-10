@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './coverage-fixture';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
 const directory = '.local/system-ui-audit-20261008';
