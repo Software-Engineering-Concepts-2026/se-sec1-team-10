@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './coverage-fixture';
 
 const baseUser = { id: 'reliability', email: 'reliability@example.com', displayName: 'ผู้ใช้ทดสอบ', age: 30, weightKg: 70 as number | null, heightCm: 175, bmi: 22.9, dailyCalorieTarget: 1900, targetWeightKg: null, goalSettings: null };
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };

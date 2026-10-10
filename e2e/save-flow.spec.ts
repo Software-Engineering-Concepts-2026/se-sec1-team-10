@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Route } from '@playwright/test';
+import { expect, test, type Page, type Route } from './coverage-fixture';
 import type { PublicMeal, PublicUser } from '../src/shared/contracts';
 
 const initialUser: PublicUser = {

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './coverage-fixture';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
 const today = () => { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; };
@@ -142,8 +142,10 @@ test('Diary, exercise, weight, and profile actions retain 44px hit areas', async
   await login(page);
   await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
   async function checkHistoryActions() {
-    const buttons = page.locator('.diary-meal-history .row-actions button');
-    await expect(buttons).toHaveCount(2);
+    const card = page.locator('.diary-meal-history .diary-food-history-card');
+    await expect(card).toHaveCount(1);
+    const buttons = card.locator('.row-actions button, .diary-meal-reuse');
+    await expect(buttons).toHaveCount(3);
     for (const width of [320, 390, 533]) {
       await page.setViewportSize({ width, height: 900 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

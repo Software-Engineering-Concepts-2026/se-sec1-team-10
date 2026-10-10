@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './coverage-fixture';
 import { mkdirSync } from 'node:fs';
 
 const initialUser = { id: 'weight-user', email: 'weight@example.com', displayName: 'ผู้ทดสอบน้ำหนัก', age: 30, weightKg: 68, heightCm: 165, bmi: 25, dailyCalorieTarget: 1900, targetWeightKg: 64, goalSettings: null };
