@@ -31,3 +31,13 @@ AI assistance in this follow-up produced the chapter-exercise test structure, im
 ## Lab 12 reflection follow-up (2026-09-28)
 
 Codex drafted the Post-quiz 12 section in `reflect.md` from the existing Stats Service code, tests, and recorded CI evidence at the user's request. It does not assert unverified personal experiences or a human-authorship percentage. The team should read and revise the interpretation before submission. The LifeBalance-based revision remains separate future work.
+
+## Lab 15 — Final Reflection draft (2026-10-11)
+
+**เครื่องมือ:** Codex
+
+**คำขอ:** ร่าง Final Reflection ของนิสิต 67026001 ให้ครบ 8 คำถามตามคู่มือ Demo โดยใช้ผลงานจริงและแยกเครดิตของสมาชิกในทีม
+
+**ส่วนที่ AI ช่วย:** ตรวจคู่มือ ประวัติ commit และเอกสารของโปรเจกต์ แล้วเรียบเรียงฉบับร่างใน `docs/final-reflection-67026001.md` ตามคำขอของผู้เขียน ฉบับปรับปรุงนำชื่อและลิงก์ผลงานของเพื่อนออก และใช้หลักฐานที่เกี่ยวข้องกับงานอาหารของ Chayakorn05 ช่วงนี้เป็นงานเอกสาร ไม่ได้รันทดสอบระบบใหม่ และไม่อ้างผลการตรวจย้อนหลังเป็นผลของการรันครั้งนี้
+
+**การทบทวน:** ผู้เขียนแจ้งว่าอ่านทบทวนแล้วและอนุญาตให้ส่งเมื่อวันที่ 11 ตุลาคม 2569 เอกสารยังรอ peer review ผ่าน PR ไม่มีการอ้างเปอร์เซ็นต์ผลงานจากจำนวน commit
