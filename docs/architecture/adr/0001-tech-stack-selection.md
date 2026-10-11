@@ -4,6 +4,8 @@
 **Date:** July 21, 2026  
 **Decision Makers:** LifeBalance Development Team  
 
+**Implementation note (11 October 2026):** The following text preserves the original proposal. The current application uses React + Vite, Node.js + Express and PostgreSQL through Prisma; Python/FastAPI, Redis and separate frontend hosting described here are not the current application stack. See the [implemented technology stack](../tech_stack.md) and [C4 containers](../c4-container.md).
+
 ---
 
 ## Context (บริบท)
