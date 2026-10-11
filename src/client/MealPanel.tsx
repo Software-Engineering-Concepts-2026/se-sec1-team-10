@@ -210,11 +210,20 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
     setNeedsRecalculation(true);
   }
   async function compressImage(file: File): Promise<string> {
+    // Production CSP allows data images, but deliberately excludes blob URLs.
+    const imageDataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => typeof reader.result === "string"
+        ? resolve(reader.result)
+        : reject(new Error("อ่านรูปไม่ได้"));
+      reader.onerror = () => reject(new Error("อ่านรูปไม่ได้"));
+      reader.readAsDataURL(file);
+    });
     const source = await new Promise<HTMLImageElement>((resolve, reject) => {
       const image = new Image();
       image.onload = () => resolve(image);
       image.onerror = () => reject(new Error("อ่านรูปไม่ได้"));
-      image.src = URL.createObjectURL(file);
+      image.src = imageDataUrl;
     });
     const scale = Math.min(
       1,
@@ -226,7 +235,6 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
     const context = canvas.getContext("2d");
     if (!context) throw new Error("ไม่สามารถเตรียมรูปได้");
     context.drawImage(source, 0, 0, canvas.width, canvas.height);
-    URL.revokeObjectURL(source.src);
     let quality = 0.82;
     let result = canvas.toDataURL("image/jpeg", quality);
     while (result.length * 0.75 > 200_000 && quality > 0.42) {
@@ -240,12 +248,15 @@ export function MealPanel({ userId, selectedDate, onDateChange, initialMode = "m
   async function chooseImage(event: ChangeEvent<HTMLInputElement>) {
     if (analyzingRef.current || busy || preparingImage) return;
     const file = event.target.files?.[0];
+    // Allow selecting the same file again after an error or removing its preview.
+    event.currentTarget.value = "";
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       setMessage({ text: "เลือกรูปภาพอาหารที่ถูกต้อง", error: true });
       return;
     }
     setPreparingImage(true);
+    setMessage(null);
     try {
       setImageData(await compressImage(file));
       setIngredients((current) => current.map(({ catalogMatch: _match, photoEstimate: _photo, ...item }) => item));
