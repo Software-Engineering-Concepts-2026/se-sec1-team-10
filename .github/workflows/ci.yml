@@ -113,14 +113,14 @@ jobs:
         env:
           RELEASE_REVISION: ${{ github.sha }}
         run: docker build --build-arg VCS_REF="$RELEASE_REVISION" -t lifebalance:performance .
-      - name: Measure real PostgreSQL API with 100 concurrent synthetic users
-        run: node scripts/performance-check.mjs lifebalance:performance
+      - name: Measure normal single-user API responses against the Demo 2-second target
+        run: node scripts/performance-check.mjs lifebalance:performance --demo
       - name: Save performance evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: performance-results
-          path: .local/performance/result.json
+          path: .local/performance/demo-result.json
           include-hidden-files: true
           if-no-files-found: ignore
 

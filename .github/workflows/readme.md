@@ -5,7 +5,7 @@
 - `lint`: Python 3.12 และ Ruff
 - `test`: Python tests พร้อม branch coverage ขั้นต่ำ 90% เฉพาะโมดูลที่ workflow ระบุ และเก็บ coverage report
 - `javascript`: Node.js 22.12, build/typecheck, coverage รวม unit + Playwright Chromium ผ่าน `npm run test:coverage:all` (ทั้งแอปขั้นต่ำ 60%, core business logic 80%), deployment verifier tests และ lazy chunk recovery tests
-- `performance`: build production Docker image แล้ววัด API กับ PostgreSQL ชั่วคราว ผู้ใช้จำลอง 100 คน ไม่มีการเขียนข้อมูลจริง เก็บผลเป็น artifact
+- `performance`: build production Docker image แล้ววัด API กับ PostgreSQL ชั่วคราว ผู้ใช้จำลอง 1 คน ใช้งานทีละขั้น ทำซ้ำ 20 รอบต่อรายการ ทุก response/action ที่วัดต้องสำเร็จและใช้เวลาน้อยกว่า 2 วินาที เก็บผลเป็น artifact; ไม่เขียนข้อมูลจริง ไม่วัด browser rendering หรือ Render/AI latency การทดสอบ NFR-07 ที่ 100 คนยังรันแยกได้ด้วย `--load` แต่ไม่รันใน CI รอบปกติ
 - `deploy`: เฉพาะ push เข้า `main` หลังทั้งสี่ jobs ข้างต้นผ่าน และตั้ง `CD_ENABLED=true`; build/push image ไป Docker Hub แล้วส่ง immutable digest ไป Render พร้อมตรวจ revision, health และ hash ของไฟล์เว็บ
 
 Browser tests ใช้ API จำลอง ไม่ใช้ฐานข้อมูลหรือโควตา AI จริง ชุด `test:e2e:live` ไม่รันใน CI

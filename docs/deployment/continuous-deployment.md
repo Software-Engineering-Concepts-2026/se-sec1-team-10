@@ -11,7 +11,9 @@ The `CI` workflow tests pull requests and main pushes. On a **push to main**, af
 5. Waits until the public `release.json` contains that SHA, every exported HTML/JS/CSS asset matches, and `/api/health` returns HTTP 200 / `status: ok`.
 6. Saves safe deployment proof and asset hashes as GitHub Actions artifacts.
 
-The implementation is prepared locally. It is **not active or proven end-to-end in GitHub/Render yet**: the repository currently has no Actions secrets, the workflow must be reviewed/merged to main, and a real successful workflow execution is required. Local verifier tests use mocked responses and do not deploy production.
+Automatic CD has been enabled and completed for main revision `151b60927d4c424463df00d56fce44a9679fd0b9`. The recorded [successful GitHub run, attempt 3](https://github.com/Software-Engineering-Concepts-2026/se-sec1-team-10/actions/runs/38076002736/attempts/3) pushed an immutable image and verified the public revision, health and 12 public files. Its prerequisites passed on the same commit in attempt 2; deploy was rerun after correcting Docker Hub token permissions. The setup below is a reference, not a list of credentials still missing.
+
+On 11 October 2026 at 03:43 Thailand time, a separate public read confirmed `/api/health` returned `status: ok` and `/release.json` still identified that revision. This is a dated verification, not a claim about future releases. Local verifier tests use mocked responses and do not deploy production.
 
 ## One-time repository setup
 
@@ -38,7 +40,7 @@ Adding these credentials authorizes this repository's trusted main workflows to 
 
 ## Evidence to show the lecturer
 
-After an actual enabled main run, show its four successful prerequisite jobs, Docker Hub digest/tag, successful deploy step, `deployment-proof-<sha>` artifact, and the matching public `/release.json`. Until then, describe CD as implemented and locally tested, with activation/live proof pending.
+Show the successful main workflow, its four successful prerequisite jobs, Docker Hub digest/tag, successful deploy step, `deployment-proof-<sha>` artifact, and matching public `/release.json`. The successful run linked above establishes the recorded deployment; a new commit requires its own CI/deployment evidence. The 11 October single-user performance update does not replace the old run's 100-user results until its new workflow actually executes.
 
 Local verifier command: `node --test scripts/deploy-render.test.mjs`. Performance and coverage reports are separate evidence; neither substitutes for a successful production CD run.
 

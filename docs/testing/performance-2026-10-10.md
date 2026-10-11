@@ -1,5 +1,7 @@
 # Performance baseline — 10 October 2026
 
+Historical load-test result. The 11 October update changes normal Demo checks and the CI configuration to the [single-user Demo benchmark](performance-demo-2026-10-11.md). Results in this document predate that update and are not results from a new CI run. The 100-user project load check remains available separately with `--load`; it is not required by the teacher's Demo handout.
+
 This is an isolated API benchmark, not a load test against Render/Supabase or a measurement of browser rendering or AI latency.
 
 ## Measured setup
@@ -30,11 +32,11 @@ After `npm ci` and `npm run build`, with Docker running:
 
 ```sh
 docker build --build-arg VCS_REF=<full-tested-commit-sha> -t lifebalance:performance .
-node scripts/performance-check.mjs lifebalance:performance
+node scripts/performance-check.mjs lifebalance:performance --load
 ```
 
 The script creates a new database and network itself, applies existing migrations to that database only, seeds synthetic data, starts the image, measures HTTP requests and cleans up its own resources in `finally`. It does not accept a database URL or read `.env`; never substitute Supabase data into this test. `DOCKER_EXECUTABLE` can select a local Docker executable when Docker is not on PATH.
 
 ## Interpretation for presentation
 
-This provides reproducible evidence for the application/API portions of the Demo response target and NFR-01/02/07. It does **not** prove the complete browser-visible NFR-01/02 timing, production capacity, cold-start time, availability, photo payload performance, external AI response time or nutrition accuracy. Do not present these local timings as Render timings. Measure those separately if claiming their full requirements are satisfied. CI reruns this baseline on its own Linux runner and retains its actual results; local results do not guarantee identical CI numbers.
+This provides reproducible evidence for the application/API portions of the Demo response target and NFR-01/02/07. It does **not** prove the complete browser-visible NFR-01/02 timing, production capacity, cold-start time, availability, photo payload performance, external AI response time or nutrition accuracy. Do not present these local timings as Render timings. Measure those separately if claiming their full requirements are satisfied. Earlier CI runs measured this load baseline on their own Linux runner; local results do not guarantee identical CI numbers. The current script writes `load-result.json` for `--load` and `demo-result.json` for the default Demo mode; the `result.json` referenced above is the historical output.
