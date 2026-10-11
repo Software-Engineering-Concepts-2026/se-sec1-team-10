@@ -1,11 +1,15 @@
-# Project: [LifeBalance]
+# LifeBalance
+
+เอกสารการใช้งานและสถาปัตยกรรมทบทวนเทียบโค้ดวันที่ 11 ต.ค. 2569 สถานะเว็บจริงและผลทดสอบแต่ละรุ่นต้องดูหลักฐานของรุ่นนั้นแยกต่างหาก
+
 LifeBalance เป็นแดชบอร์ดสำหรับติดตามสุขภาพส่วนบุคคลที่ออกแบบมาเพื่อช่วยให้ผู้ใช้งานสามารถดูแลสุขภาพได้สะดวกยิ่งขึ้น โดยเฉพาะวัยทำงานที่มีเวลาจำกัดในการวางแผนและติดตามการรับประทานอาหาร
 
 ระบบสามารถคำนวณปริมาณแคลอรี บันทึกข้อมูลด้านสุขภาพ เช่น น้ำหนัก ส่วนสูง และข้อมูลการรับประทานอาหาร พร้อมทั้งสรุปผลและแสดงข้อมูลทั้งหมดในหน้าแดชบอร์ดเดียว ทำให้ผู้ใช้สามารถติดตามความคืบหน้าของตนเองได้อย่างง่ายดาย
 
 LifeBalance ช่วยลดความยุ่งยากจากการคำนวณด้วยตนเองหรือการใช้งานหลายแอปพลิเคชันร่วมกัน ผู้ใช้จึงสามารถประหยัดเวลา วางแผนการรับประทานอาหารได้อย่างเหมาะสม และสร้างสมดุลในการดูแลสุขภาพในชีวิตประจำวันได้อย่างมีประสิทธิภาพ
 
-## Team: [Another]
+## Team: Another
+
 - [จิตตินี สุดตา], GitHub: `[@JJ08039]`
 - [ชยากร เตชะพัฒนาวงศ์], GitHub: `[@Chayakorn05]`
 - [ภัทรพล รัชนิกรเพ็ญ], GitHub: `[@Pattarapol01]`
@@ -94,10 +98,20 @@ npm run test:e2e
 
 ## 🏛️ Architecture & Design
 
-Key architectural decisions and diagrams are documented in the `/docs/architecture` directory.
+เอกสารปัจจุบันสำหรับอ่านระบบและประกอบ Demo:
 
-- **[C4 Models & Tech Stack](./docs/architecture/README.md)**
-- **[Architectural Decision Records (ADRs)](./docs/architecture/adr/)**
+- **[คู่มือใช้งาน (USER_GUIDE)](./docs/user-guide.md)** — ขั้นตอนใช้ทั้ง 4 หน้าหลักและตรวจแก้อาหาร
+- **[C4 System Context](./docs/architecture/c4-context.md)** และ **[C4 Container](./docs/architecture/c4-container.md)** — ใช้แผนภาพ Mermaid ปัจจุบัน; รูปเก่าใน `diagrams/` เป็นประวัติ
+- **[สถาปัตยกรรมและดัชนี ADR](./docs/architecture/README.md)** — แยกการตัดสินใจที่ใช้อยู่กับแนวทางที่ถูกแทนที่
+- **[Technology stack](./docs/architecture/tech_stack.md)**
+
+### CI/CD และหลักฐาน
+
+CI ตรวจ Python lint/tests, TypeScript build/tests/coverage และ performance กับ PostgreSQL ชั่วคราว การวัดปกติใช้ผู้ใช้จำลอง 1 คน ทำซ้ำ 20 รอบ โดยทุก response/action ที่วัดต้องน้อยกว่า 2 วินาที ผลนี้ไม่รวมเวลา Render เริ่มบริการ, browser rendering หรือ AI และไม่ใช่การพิสูจน์รองรับผู้ใช้พร้อมกัน
+
+เมื่อ push เข้า `main` และ CI ผ่านครบ พร้อมตั้ง `CD_ENABLED=true` และ secrets ที่จำเป็น CD จะ build/push image ไป Docker Hub แล้ว deploy image ตาม digest ไป Render พร้อมตรวจ revision, health และไฟล์เว็บ PR และ branch อื่นไม่ deploy production กระบวนการนี้ไม่รัน migration/seed กับฐาน production
+
+ดู [คู่มือ CD](./docs/deployment/continuous-deployment.md), [วิธี deploy แบบ manual สำรอง](./docs/deployment/render-docker.md) และ [ดัชนีรายงานทดสอบ](./docs/testing/readme.md) รายงานที่มีวันที่เป็นหลักฐานของรอบนั้น ไม่ใช่การยืนยันสถานะเว็บล่าสุด
 
 ## 👩‍💻 คู่มือสำหรับสมาชิกทีม
 
@@ -114,7 +128,7 @@ User personas and key scenarios that drive our development are located in the `/
 
 # ข้อตกลงการทำงานร่วมกันในทีม (Ways of Working - WoW)
 
-เอกสารฉบับนี้จัดทำขึ้นเพื่อกำหนดแนวทางปฏิบัติ กระบวนการทำงาน และมาตรฐานทางวิศวกรรมซอฟต์แวร์ของทีมเรา สำหรับโปรเจกต์ **The Quantified Self Dashboard** เพื่อให้ทุกคนทำงานร่วมกันได้อย่างราบรื่นและมีประสิทธิภาพ
+เอกสารฉบับนี้จัดทำขึ้นเพื่อกำหนดแนวทางปฏิบัติ กระบวนการทำงาน และมาตรฐานทางวิศวกรรมซอฟต์แวร์ของทีมเรา สำหรับโปรเจกต์ **LifeBalance** เพื่อให้ทุกคนทำงานร่วมกันได้อย่างราบรื่นและมีประสิทธิภาพ ส่วนที่ยังเป็นช่องให้กรอกด้านล่างต้องให้ทีมยืนยัน ไม่ใช่ค่าตั้งระบบหรือฟีเจอร์ที่ใช้งานแล้ว
 
 ---
 
@@ -124,7 +138,7 @@ User personas and key scenarios that drive our development are located in the `/
 ### 📅 การวางแผนประจำสัปดาห์ (Sprint Planning)
 *   **ความถี่:** สัปดาห์ละ 1 ครั้ง (ทุกวันจันทร์)
 *   **ระยะเวลา:** 30–45 นาที
-*   **เป้าหมาย:** ร่วมกันกำหนดเป้าหมายของสัปดาห์นั้น ประเมินความยากง่ายของงาน และแบ่งงานกันอย่างชัดเจน (เช่น ใครจะทำหน้า UI กราฟ หรือใครจะทำระบบเชื่อมต่อ API การนอนหลับ)
+*   **เป้าหมาย:** ร่วมกันกำหนดเป้าหมายของสัปดาห์นั้น ประเมินความยากง่ายของงาน และแบ่งงานกันอย่างชัดเจน (เช่น UI กราฟ หรือ API ประวัติอาหาร)
 
 ### 💬 การอัปเดตงานด่วน (Asynchronous Stand-up)
 *   **ความถี่:** 3 ครั้งต่อสัปดาห์ (วันอังคาร, พฤหัสบดี, และศุกร์)
@@ -159,14 +173,14 @@ User personas and key scenarios that drive our development are located in the `/
 เพื่อป้องกันไม่ให้เกิดปัญหาโค้ดพังหรือเขียนทับกัน เราจะแบ่งขั้นตอนการทำโค้ดออกเป็นสัดส่วนชัดเจน:
 
 ### 1) การตั้งชื่อ Branch (Branch Naming)
-เมื่อจะเริ่มทำอะไรใหม่ ให้แตก Branch ออกมาจาก `main` (หรือ `develop`) และใช้ชื่อนำหน้าดังนี้:
-*   `feature/ชื่อฟีเจอร์` (สำหรับเพิ่มฟีเจอร์ใหม่ เช่น `feature/sleep-data-chart`)
+ใช้ branch งานที่ทีมและเจ้าของงานตกลงกัน ส่ง PR เข้า `life-balance-test` ก่อน แล้วจึงส่ง PR จาก `life-balance-test` เข้า `main` หลังตรวจผ่าน ไม่ push ตรงหรือข้าม review ของ protected branch ตัวอย่างชื่อ branch งาน:
+*   `feature/ชื่อฟีเจอร์` (สำหรับเพิ่มฟีเจอร์ใหม่ เช่น `feature/meal-history`)
 *   `bugfix/ชื่อบั๊ก` (สำหรับแก้บั๊ก เช่น `bugfix/api-auth-error`)
 *   `docs/เรื่องที่เขียน` (สำหรับงานเอกสาร เช่น `docs/update-readme`)
 
 ### 2) การเขียน Commit Message
 ใช้ภาษาอังกฤษที่สั้น กระชับ และสื่อความหมายชัดเจน:
-*   *ตัวอย่างที่ดี:* `feat: add Google Fit OAuth integration`
+*   *ตัวอย่างที่ดี:* `feat: group daily meals by meal type`
 *   *ตัวอย่างที่ดี:* `fix: resolve chart scaling issue on mobile`
 *   *หลีกเลี่ยงคำคลุมเครือ:* `updated`, `fixed bug`, `แก้แล้ว`, `งานน้า`
 

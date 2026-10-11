@@ -3,6 +3,10 @@
 ## Status
 Accepted — 2026-08-25
 
+ทบทวนการนำไปใช้วันที่ 11 ต.ค. 2569: ยังคงใช้ Modular Monolith ตามการตัดสินใจนี้ React SPA และ Express API อยู่ใน production image เดียว โดย Express ให้บริการไฟล์เว็บและ `/api` ฐาน PostgreSQL แยกจาก application image; Compose ใน repository เปิดเฉพาะฐาน local ดู [C4 ปัจจุบัน](../c4-container.md) และ [technology stack](../tech_stack.md)
+
+Context ด้านล่างเป็นบริบท ณ วันที่ตัดสินใจ ไม่ใช่จำนวนสมาชิกหรือสถิติผู้ใช้ที่ตรวจวัดล่าสุด รายชื่อสมาชิกปัจจุบันอยู่ใน [README](../../../README.md) ตัวเลข 1,000 คนในแนวทางอนาคตไม่ใช่ผล load test หรือการรับประกัน capacity
+
 ## Context
 - ทีมขนาดเล็ก (4 คน), มีเวลาจำกัดตาม Sprint (~8 สัปดาห์)
 - ปริมาณผู้ใช้งานเริ่มต้นเป็นกลุ่มผู้ใช้งานทั่วไปและคนทำงานออฟฟิศ (~100 users/day)
