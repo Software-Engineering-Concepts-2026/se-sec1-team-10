@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Route } from './coverage-fixture';
 import type { PublicMeal, PublicUser } from '../src/shared/contracts';
+import helmet from 'helmet';
 
 const initialUser: PublicUser = {
   id: 'save-flow-user', email: 'save@example.com', displayName: 'ผู้ทดสอบ', age: 30,
@@ -8,7 +9,14 @@ const initialUser: PublicUser = {
 };
 const nutrients = { caloriesKcal: 130, carbsGrams: 28, sugarGrams: 0.1, proteinGrams: 3, fatGrams: 0.3 };
 
-async function setup(page: Page) {
+async function setup(page: Page, productionImagePolicy = false) {
+  if (productionImagePolicy) {
+    const imageSources = helmet.contentSecurityPolicy.getDefaultDirectives()['img-src'];
+    await page.route('http://127.0.0.1:5174/', async route => {
+      const response = await route.fetch();
+      await route.fulfill({ response, headers: { ...response.headers(), 'content-security-policy': `img-src ${imageSources.join(' ')}` } });
+    });
+  }
   let user = structuredClone(initialUser);
   let meals: PublicMeal[] = [];
   let failMealSave = true;
@@ -100,6 +108,59 @@ test('meal save failure keeps draft; success returns home; history edits and del
   await page.getByRole('button', { name: 'ลบ มื้อแก้ไข' }).click();
   await expect(page.locator('.diary-empty')).toContainText('ยังไม่มีประวัติอาหาร');
   expect(state.meals()).toHaveLength(0);
+});
+
+const mealPhoto = { name: 'meal.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64') };
+
+for (const [action, inputId] of [['ถ่ายรูป', 'meal-camera'], ['อัลบั้ม', 'meal-upload']] as const) {
+  test(`manual meal ${action} attaches and saves an image under the production image policy`, async ({ page }) => {
+    const state = await setup(page, true);
+    await openDiary(page);
+    await fillMeal(page);
+    if (inputId === 'meal-camera') await expect(page.locator(`#${inputId}`)).toHaveAttribute('capture', 'environment');
+    const chooserPromise = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: action, exact: true }).click();
+    await (await chooserPromise).setFiles(mealPhoto);
+    const preview = page.getByRole('img', { name: 'ตัวอย่างรูปอาหาร', exact: true });
+    await expect(preview).toBeVisible();
+    await expect(preview).toHaveAttribute('src', /^data:image\/jpeg;base64,/);
+    expect(await preview.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+    const imageData = await preview.getAttribute('src');
+    await expect(page.getByLabel('ชื่ออาหาร')).toHaveValue('มื้อทดสอบ');
+    await expect(page.getByText('ข้าวสวย', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
+    await expect(page.getByRole('alert')).toContainText('บันทึกไม่สำเร็จ');
+    await expect(preview).toHaveAttribute('src', imageData!);
+    await page.getByRole('button', { name: 'บันทึกข้อมูล', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'บันทึกอาหารแล้ว' })).toBeVisible();
+    expect((state.savedMealBodies()[0] as PublicMeal).imageData).toBe(imageData);
+    await page.getByRole('button', { name: 'แก้ไข มื้อทดสอบ' }).click();
+    await expect(preview).toHaveAttribute('src', imageData!);
+  });
+}
+
+test('manual meal image errors preserve the draft and allow retry, replacement and removal', async ({ page }) => {
+  await setup(page, true);
+  await openDiary(page);
+  await fillMeal(page);
+  const upload = page.locator('#meal-upload');
+  const preview = page.getByRole('img', { name: 'ตัวอย่างรูปอาหาร', exact: true });
+  await upload.setInputFiles(mealPhoto);
+  await expect(preview).toBeVisible();
+  const imageData = await preview.getAttribute('src');
+  await page.getByRole('button', { name: 'เปลี่ยนรูป', exact: true }).click();
+  await upload.setInputFiles({ name: 'broken.png', mimeType: 'image/png', buffer: Buffer.from('not an image') });
+  await expect(page.getByRole('alert')).toContainText('อ่านรูปไม่ได้');
+  await expect(preview).toHaveAttribute('src', imageData!);
+  await expect(upload).toHaveValue('');
+  await upload.setInputFiles(mealPhoto);
+  await expect(page.getByRole('status')).toContainText('แนบรูปแล้ว');
+  await page.getByRole('button', { name: 'ลบรูป', exact: true }).click();
+  await expect(preview).toHaveCount(0);
+  await upload.setInputFiles(mealPhoto);
+  await expect(preview).toBeVisible();
+  await expect(page.getByLabel('ชื่ออาหาร')).toHaveValue('มื้อทดสอบ');
+  await expect(page.getByText('ข้าวสวย', { exact: true })).toBeVisible();
 });
 
 test('exercise save returns to the Diary home with a success notice', async ({ page }) => {
