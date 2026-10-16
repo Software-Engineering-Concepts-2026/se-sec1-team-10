@@ -1,5 +1,6 @@
 # เอกสารทดสอบ
 
+- [หลักฐาน CI/CD ที่ตรวจวันที่ 16 ตุลาคม 2569](../deployment/continuous-deployment.md#latest-recorded-verification--16-october-2026) — CI #171 attempt 3 ของ `bc10444` ผ่านครบ 5 jobs มี coverage, single-user performance และ deployment proof; เป็น rerun ของ main push เดิม ไม่ใช่ผลทดสอบ UI หลัง login รอบใหม่
 - [หลักฐานเทคนิคก่อน Demo: coverage / performance / CD](demo-technical-readiness-2026-10-10.md) — ผลตรวจบนเครื่องและสิ่งที่ยังต้องทำบน GitHub/Render
 - [Coverage ของ TypeScript ทั้ง unit และ browser](typescript-coverage.md) — ขอบเขตการวัดและเกณฑ์ 60% / business logic 80%
 - [Performance ตามเกณฑ์ Demo วันที่ 11 ตุลาคม 2569](performance-demo-2026-10-11.md) — ผู้ใช้ 1 คน ทำซ้ำ 20 รอบ เกณฑ์ API response/action < 2 วินาที; แยกจากการทดสอบโหลด 100 คน

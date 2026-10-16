@@ -8,6 +8,24 @@ LifeBalance เป็นแดชบอร์ดสำหรับติดต�
 
 LifeBalance ช่วยลดความยุ่งยากจากการคำนวณด้วยตนเองหรือการใช้งานหลายแอปพลิเคชันร่วมกัน ผู้ใช้จึงสามารถประหยัดเวลา วางแผนการรับประทานอาหารได้อย่างเหมาะสม และสร้างสมดุลในการดูแลสุขภาพในชีวิตประจำวันได้อย่างมีประสิทธิภาพ
 
+## สารบัญเอกสาร
+
+เลือกเอกสารตามเรื่องที่ต้องการอ่าน ส่วนภาพรวม สมาชิก และขั้นตอนเปิดระบบอยู่ใน README นี้
+
+| ต้องการดูเรื่องอะไร | เอกสาร | เนื้อหา |
+|---|---|---|
+| วิธีใช้งานระบบ | [คู่มือผู้ใช้](docs/user-guide.md) | เริ่มใช้งาน บันทึกและแก้อาหาร ติดตามความคืบหน้า และตั้งค่าบัญชี |
+| วิธีติดตั้งและทดสอบในเครื่อง | [คู่มือทดสอบในเครื่อง](docs/local-testing.md) | เตรียมฐานข้อมูล เปิดเว็บและ API และเลือกวิธีทดสอบ |
+| เริ่มพัฒนาและตำแหน่งโค้ด | [คู่มือสมาชิกทีม](docs/team-development-guide.md) | โครงสร้างโค้ด ขั้นตอนพัฒนา และเช็กลิสต์ก่อนส่งงาน |
+| สถาปัตยกรรมและเหตุผลการตัดสินใจ | [สถาปัตยกรรม / ADR](docs/architecture/README.md) | ภาพรวมระบบและดัชนีบันทึกการตัดสินใจด้านสถาปัตยกรรม |
+| แผนภาพระบบ C4 | [System Context](docs/architecture/c4-context.md) · [Container](docs/architecture/c4-container.md) | ผู้ใช้ บริการภายนอก และส่วนประกอบของระบบ |
+| เครื่องมือที่ใช้ | [Technology stack](docs/architecture/tech_stack.md) | เทคโนโลยีและหน้าที่ของแต่ละส่วน |
+| ตั้งค่า AI วิเคราะห์อาหาร | [คู่มือตั้งค่า AI](docs/ai-setup.md) | การตั้งค่าบริการ AI และการเชื่อมต่อ |
+| CI/CD และ deploy อัตโนมัติ | [คู่มือ CD](docs/deployment/continuous-deployment.md) | เงื่อนไขการปล่อยรุ่นและขั้นตอนตรวจสอบ |
+| Deploy ด้วยตนเอง | [Docker / Render](docs/deployment/render-docker.md) | ขั้นตอนนำระบบขึ้นออนไลน์แบบ manual |
+| ผลทดสอบและหลักฐานทางเทคนิค | [ดัชนีรายงานทดสอบ](docs/testing/readme.md) | ลิงก์รายงานและหลักฐานของแต่ละรอบทดสอบ |
+| บันทึกการใช้ AI ช่วยพัฒนา | [AI Usage](AI_USAGE.md) | เครื่องมือ AI ที่ใช้ งานที่ช่วยร่าง และส่วนที่ผู้เขียนทบทวน |
+
 ## Team: Another
 
 - [จิตตินี สุดตา], GitHub: `[@JJ08039]`
@@ -110,6 +128,8 @@ npm run test:e2e
 CI ตรวจ Python lint/tests, TypeScript build/tests/coverage และ performance กับ PostgreSQL ชั่วคราว การวัดปกติใช้ผู้ใช้จำลอง 1 คน ทำซ้ำ 20 รอบ โดยทุก response/action ที่วัดต้องน้อยกว่า 2 วินาที ผลนี้ไม่รวมเวลา Render เริ่มบริการ, browser rendering หรือ AI และไม่ใช่การพิสูจน์รองรับผู้ใช้พร้อมกัน
 
 เมื่อ push เข้า `main` และ CI ผ่านครบ พร้อมตั้ง `CD_ENABLED=true` และ secrets ที่จำเป็น CD จะ build/push image ไป Docker Hub แล้ว deploy image ตาม digest ไป Render พร้อมตรวจ revision, health และไฟล์เว็บ PR และ branch อื่นไม่ deploy production กระบวนการนี้ไม่รัน migration/seed กับฐาน production
+
+วิธีนี้เป็นแนวทาง deploy หลัก โดย Render ใช้ Existing Image; วิธี build/deploy เองเป็นแผนสำรอง ตาม [ADR 0002](docs/architecture/adr/0002-ci-gated-image-deployment.md) หลักฐานที่ตรวจวันที่ 16 ต.ค. 2569 คือ [CI #171 attempt 3](https://github.com/Software-Engineering-Concepts-2026/se-sec1-team-10/actions/runs/38163220860/attempts/3) ของ commit `bc10444` ผ่านครบ 5 jobs และมี deployment proof รอบนี้เป็นการ rerun ของ main push เดิม ไม่ใช่ผลจาก push ใหม่
 
 ดู [คู่มือ CD](./docs/deployment/continuous-deployment.md), [วิธี deploy แบบ manual สำรอง](./docs/deployment/render-docker.md) และ [ดัชนีรายงานทดสอบ](./docs/testing/readme.md) รายงานที่มีวันที่เป็นหลักฐานของรอบนั้น ไม่ใช่การยืนยันสถานะเว็บล่าสุด
 

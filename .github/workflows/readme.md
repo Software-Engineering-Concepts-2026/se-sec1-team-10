@@ -11,3 +11,7 @@
 Browser tests ใช้ API จำลอง ไม่ใช้ฐานข้อมูลหรือโควตา AI จริง ชุด `test:e2e:live` ไม่รันใน CI
 
 การเปิดใช้งาน CD ต้องตั้ง repository secrets ก่อน ดู [คู่มือ Continuous deployment](../../docs/deployment/continuous-deployment.md) หากยังไม่ตั้ง flag/secrets จะมีเฉพาะ CI และ performance checks ส่วน [คู่มือ Docker/Render](../../docs/deployment/render-docker.md) เป็นขั้นตอน manual สำรอง การมี workflow ในโค้ดไม่ใช่หลักฐานว่า CD ทำงานจริงแล้ว ต้องเก็บ successful main run หลังเปิดใช้งานด้วย
+
+ตรวจหลักฐานวันที่ 16 ต.ค. 2569: [CI #171 attempt 3](https://github.com/Software-Engineering-Concepts-2026/se-sec1-team-10/actions/runs/38163220860/attempts/3) ของ `bc10444` ผ่านครบทั้ง 5 jobs และมี deployment proof ดู SHA, digest และขอบเขตการตรวจในคู่มือ CD ด้านบน รอบนี้เป็น rerun ของ main push เดิม; การเริ่มอัตโนมัติจาก push ใหม่ให้ตรวจเมื่อ merge งานจริงครั้งถัดไป
+
+ถ้าต้อง rerun หลังแก้ข้อผิดพลาด ให้เลือกรอบ **push ของ main ล่าสุด** แล้วใช้ Re-run failed jobs หรือ Re-run all jobs ตามงานที่ต้องตรวจซ้ำ ไม่ใช้รอบ PR เพื่อทดสอบ CD และไม่ใช้ commit เก่า เพราะ deploy จะตรวจว่า SHA ยังเป็น main ล่าสุดก่อนปล่อยรุ่น

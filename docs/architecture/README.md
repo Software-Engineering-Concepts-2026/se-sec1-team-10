@@ -19,6 +19,7 @@ The older draw.io exports in [`diagrams/`](./diagrams/) show an original design 
 | Record | Current status | Interpretation |
 | --- | --- | --- |
 | [Modular Monolith](./adr/0001-monolith-vs-microservices.md) | Accepted | One Node.js/Express application deployment, with a built React client and separate PostgreSQL database. |
+| [CI-gated immutable image deployment](./adr/0002-ci-gated-image-deployment.md) | Accepted | GitHub Actions builds after CI passes, publishes to Docker Hub and deploys a digest to Render. Source builds are a manual fallback. |
 | [Original technology selection](./adr/0001-tech-stack-selection.md) | Superseded | Historical Python/FastAPI, Redis and separate frontend hosting proposal; use the current technology matrix above. |
 | [Internal microservice REST communication](./adr/001-use-restful-api-internal-commu.md) | Superseded for the microservice topology | Current HTTP boundary is the browser → Express `/api`; internal modules use TypeScript calls, not separately deployed microservices. |
 
