@@ -1,3 +1,5 @@
+> **รายงานย้อนหลัง:** เก็บผลและขอบเขตของรอบเดิมไว้ ดูหลักฐาน CI/CD ล่าสุดที่บันทึกใน [คู่มือ CD](../deployment/continuous-deployment.md) โดยผลเก่าด้านล่างไม่ใช่การทดสอบรุ่นปัจจุบันซ้ำ
+
 # UI polish: ตรวจเตรียมรวม branch วันที่ 10 ตุลาคม 2569
 
 ขอบเขต: UI และคู่มือปัจจุบันจาก `feature/Chayakorn05` เตรียมรวมเข้า `life-balance-test` ก่อน `main` ไม่มี feature/route/API/schema ใหม่ และไม่มี migration

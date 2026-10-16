@@ -1,6 +1,6 @@
 # Deploy LifeBalance บน Render ด้วย Docker image
 
-ระบบนี้ใช้ Docker Desktop บนเครื่องนักพัฒนาเพื่อ build image, Docker Hub private repository เก็บ image, Render รัน container และ Supabase ให้บริการ PostgreSQL แอปไม่ได้ build บน Render และ container ไม่ได้เปิดฐานข้อมูลหรือ migrate ตอนเริ่มทำงาน
+วิธีหลักใช้ GitHub Actions build image หลัง CI ผ่าน ส่งไป Docker Hub แล้วให้ Render รัน image ตาม digest โดยมี Supabase ให้บริการ PostgreSQL แยกจาก application container คู่มือนี้อธิบายการ build/push ด้วย Docker Desktop บนเครื่องนักพัฒนาเป็นวิธีสำรอง container ไม่ migrate หรือ seed ฐานข้อมูลตอนเริ่มทำงาน
 
 คู่มือนี้เป็นขั้นตอน manual ที่ยังใช้เป็นแผนสำรองได้ ส่วน workflow สำหรับ build/push/deploy จาก `main` หลัง CI ผ่าน และสถานะการเปิดใช้งาน อยู่ที่ [Continuous deployment](continuous-deployment.md)
 
@@ -12,10 +12,13 @@
 
 ```powershell
 docker login
-docker buildx build --platform linux/amd64 -t docker.io/chayakorn7777/lifebalance:<version> --push .
+$releaseRevision = git rev-parse HEAD
+docker buildx build --platform linux/amd64 --build-arg VCS_REF=$releaseRevision -t docker.io/chayakorn7777/lifebalance:<version> --push .
 ```
 
 แทน `<version>` ด้วย tag ของ release เช่น `0.2.0` หรือ `a1b2c3d` โดย tag ช่วยระบุรุ่นที่ต้องการ แต่ Docker Hub อาจอนุญาตให้เขียนทับ tag ได้ ให้เก็บ tag รุ่นก่อนหน้าที่ยังใช้งานได้ หรือบันทึก image digest ไว้สำหรับ rollback
+
+ใช้ working tree ที่สะอาดและ commit ที่ผ่านการตรวจแล้วก่อน build เพื่อให้ `VCS_REF` ตรงกับโค้ดใน image การใส่ SHA ไม่ได้ทดแทน CI และไม่ทำให้โค้ดที่ยังไม่ commit กลายเป็นส่วนของ commit นั้น หากไม่ส่ง `VCS_REF` ค่า `/release.json` จะเป็น `unknown` และใช้ยืนยันรุ่นแบบ CD ไม่ได้
 
 Dockerfile ใช้ Node 22 บน Debian, ติดตั้ง OpenSSL สำหรับ Prisma, build หน้าเว็บและ API พร้อมสร้าง Prisma engine สำหรับ Linux จากนั้นรันด้วย user ที่ไม่มีสิทธิ์ root ตัวแอปรับ traffic ที่ `0.0.0.0:10000` และ health check เรียก `/api/health`
 
@@ -26,6 +29,8 @@ Dockerfile ใช้ Node 22 บน Debian, ติดตั้ง OpenSSL สำ
 ```text
 docker.io/chayakorn7777/lifebalance:<version>
 ```
+
+สำหรับบริการ LifeBalance เดิม ไม่ต้องสร้าง service ใหม่: เปิด **Settings → Build → Source → Edit → Existing Image** และตรวจว่าใช้ repository `chayakorn7777/lifebalance` เดิม ให้ CD ระบุ digest ของ release หลัง CI ผ่าน; การกด Manual Deploy ไม่ได้รัน CI
 
 สำหรับ private image ให้เพิ่ม Docker registry credential บน Render โดยใช้ Docker Hub username `chayakorn7777` และ Docker Hub personal access token ที่มีสิทธิ์อ่าน image ส่วนตัว Token นี้ผูกกับบัญชี Docker Hub และอาจให้สิทธิ์กับ repository อื่นตามสิทธิ์ของบัญชีด้วย ให้เก็บ token ในหน้าตั้งค่า credential ของ Render เท่านั้น ห้ามใส่ใน Git, Dockerfile, image หรือคำสั่งที่บันทึกไว้ใน shell history
 

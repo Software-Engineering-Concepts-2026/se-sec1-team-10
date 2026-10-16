@@ -1,3 +1,5 @@
+> **รายงานย้อนหลัง:** เก็บผลและขอบเขตของรอบเดิมไว้ ดูหลักฐาน CI/CD ล่าสุดที่บันทึกใน [คู่มือ CD](../deployment/continuous-deployment.md) โดยผลเก่าด้านล่างไม่ใช่การทดสอบรุ่นปัจจุบันซ้ำ
+
 # Demo technical evidence — measurements from 10–11 October 2026
 
 ## Status
@@ -32,6 +34,8 @@ Whole-source branch coverage is 59.70%; function coverage is 65.30%. The Demo ga
 - CI retains `typescript-coverage`, `performance-results` and, after an enabled deployment, `deployment-proof-<sha>` artifacts. Only the named safe JSON files under `.local` are uploaded for performance/CD.
 
 ## Production public check and remaining work
+
+Later status: publishing the benchmark and collecting CI/CD proof were completed in the [recorded workflow #171 attempt 3](../deployment/continuous-deployment.md#latest-recorded-verification--16-october-2026), revision `bc10444`. The remaining-work list below is retained as the 11 October snapshot, not a current task list.
 
 On 11 October at 03:43 Thailand time, the public health endpoint returned `ok` and the public revision matched `151b60927d4c424463df00d56fce44a9679fd0b9`. The first command-line health request took **22,837 ms** end to end. Five subsequent requests took **373, 199, 186, 174 and 188 ms**. The reason for the slow first request is not established by these measurements; do not claim all production responses are under 2 seconds. These public health checks do not measure authenticated actions or browser rendering.
 

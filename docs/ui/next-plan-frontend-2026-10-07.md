@@ -1,3 +1,5 @@
+> **รายงานย้อนหลัง:** เก็บผลและขอบเขตของรอบเดิมไว้ ดูหลักฐาน CI/CD ล่าสุดที่บันทึกใน [คู่มือ CD](../deployment/continuous-deployment.md) โดยผลเก่าด้านล่างไม่ใช่การทดสอบรุ่นปัจจุบันซ้ำ
+
 # Next-plan frontend verification — 2026-10-07
 
 The dashboard now presents intake in a compact calorie ring, recorded macros in the requested colors, and remaining calories in a pale-green strip. Macro bars show each nutrient's share of recorded food energy; they are not goal progress. The weight panel supports dated weight-log create, edit, and delete, updates the shared profile from API responses, and keeps the editor open when a save fails. Diary history supports Today, Yesterday, and a chosen date, including that date's meals and activities, while All history retains the paged searchable list.

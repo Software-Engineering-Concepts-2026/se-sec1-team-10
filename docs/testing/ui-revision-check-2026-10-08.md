@@ -1,3 +1,5 @@
+> **รายงานย้อนหลัง:** เก็บผลและขอบเขตของรอบเดิมไว้ ดูหลักฐาน CI/CD ล่าสุดที่บันทึกใน [คู่มือ CD](../deployment/continuous-deployment.md) โดยผลเก่าด้านล่างไม่ใช่การทดสอบรุ่นปัจจุบันซ้ำ
+
 # LifeBalance: ผลตรวจ UI ตามเอกสาร revision — 8 ต.ค. 2026
 
 Branch: `feature/Chayakorn05` เอกสารของผู้ใช้ `LifeBalance-UI-Revision-Instructions.md` เป็นข้อกำหนดหลักเมื่อขัดกับรอบก่อน อ่าน UI Design Brief และตรวจ component/ภาพ reference ก่อนแก้ งาน presentation ใช้ Luna หนึ่งตัว; หัวหน้าตรวจภาพทีละหน้าและทดสอบรวม
@@ -36,14 +38,14 @@ Branch: `feature/Chayakorn05` เอกสารของผู้ใช้ `Lif
 - ตรวจ diff: state/effects/การคำนวณ/API ก่อน JSX ของสาม component ตรงกับก่อนแก้ และ handler ใน JSX เดิม; `git diff --check` ผ่าน
 - ไม่เพิ่ม route, button หรือ capability; ไม่มี QR/barcode หรือ Settings รวมศูนย์ ไม่มีการสร้างข้อมูลเป้าหมาย macro หรือเปลี่ยนความหมายสีกราฟรายสัปดาห์
 
-[เปิดภาพก่อน/หลังทั้งสี่หน้า](../../.local/ui-revision-20261008/index.html)
+เปิดภาพก่อน/หลังทั้งสี่หน้า (local-only, ignored: `../../.local/ui-revision-20261008/index.html`)
 
 | หน้า | ก่อนแก้ 390 px | หลังแก้ 390 px |
 | --- | --- | --- |
-| วันนี้ | [ภาพ](../../.local/ui-revision-20261008/before/1-390.png) | [ภาพ](../../.local/ui-revision-20261008/after/1-390.png) |
-| บันทึก | [ภาพ](../../.local/ui-revision-20261008/before/2-390.png) | [ภาพ](../../.local/ui-revision-20261008/after/2-390.png) |
-| ความคืบหน้า | [ภาพ](../../.local/ui-revision-20261008/before/3-390.png) | [ภาพ](../../.local/ui-revision-20261008/after/3-390.png) |
-| บัญชี | [ภาพ](../../.local/ui-revision-20261008/before/4-390.png) | [ภาพ](../../.local/ui-revision-20261008/after/4-390.png) |
+| วันนี้ | ภาพ (local-only, ignored: `../../.local/ui-revision-20261008/before/1-390.png`) | ภาพ (local-only, ignored: `../../.local/ui-revision-20261008/after/1-390.png`) |
+| บันทึก | ภาพ (local-only, ignored: `../../.local/ui-revision-20261008/before/2-390.png`) | ภาพ (local-only, ignored: `../../.local/ui-revision-20261008/after/2-390.png`) |
+| ความคืบหน้า | ภาพ (local-only, ignored: `../../.local/ui-revision-20261008/before/3-390.png`) | ภาพ (local-only, ignored: `../../.local/ui-revision-20261008/after/3-390.png`) |
+| บัญชี | ภาพ (local-only, ignored: `../../.local/ui-revision-20261008/before/4-390.png`) | ภาพ (local-only, ignored: `../../.local/ui-revision-20261008/after/4-390.png`) |
 
 ข้อจำกัด: ทดสอบในเครื่องด้วย API จำลอง ไม่ใช่การยืนยัน production/Supabase หรือกล้องบนมือถือจริง ไม่เขียนฐานข้อมูลร่วม ไม่มี commit/push/PR/merge/deploy ในรอบนี้ รายงาน desktop สองคอลัมน์จากรอบก่อนถูกแทนที่ด้วยเกณฑ์แนวตั้งตามเอกสารล่าสุด
 
@@ -53,4 +55,4 @@ Branch: `feature/Chayakorn05` เอกสารของผู้ใช้ `Lif
 - ตรวจ HTTP จากเว็บที่ผู้ใช้เปิดอยู่พอร์ต 5173 พบ CSS รวมเดิมยังไม่รวม `mockup-refresh.css` แม้เรียกไฟล์แยกได้ การบันทึก entry stylesheet ให้ Vite ประมวลผลใหม่ทำให้ CSS รวมมี logout/layout/focus overrides ล่าสุดแล้ว
 - ความต่างของข้อมูลตัวอย่างและ viewport 390 px ยังมีผลต่อภาพเทียบกับบัญชีจริง แยกจากสาเหตุ CSS ค้างข้างต้น
 - Build ผ่าน และทดสอบเฉพาะส่วนที่ได้รับผล **7 กรณีผ่าน**: scope ที่ยืนยันเปิด/ปิดข้อมูลค่าร่างกาย, avatar 3, save flow 3 ตรวจ responsive 320/360/390/1440 px
-- [ภาพบัญชีล่าสุด 390 px](../../.local/account-summary-cleanup-20261008/4-390.png) ใช้ข้อมูลจำลอง คำขอนี้แทนที่ข้อกำหนดก่อนหน้าที่ให้แสดง metrics ตลอดเวลาใน profile card
+- ภาพบัญชีล่าสุด 390 px (local-only, ignored: `../../.local/account-summary-cleanup-20261008/4-390.png`) ใช้ข้อมูลจำลอง คำขอนี้แทนที่ข้อกำหนดก่อนหน้าที่ให้แสดง metrics ตลอดเวลาใน profile card
