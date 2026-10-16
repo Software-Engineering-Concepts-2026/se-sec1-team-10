@@ -1,3 +1,5 @@
+> **รายงานย้อนหลัง:** เก็บผลและขอบเขตของรอบเดิมไว้ ดูหลักฐาน CI/CD ล่าสุดที่บันทึกใน [คู่มือ CD](../deployment/continuous-deployment.md) โดยผลเก่าด้านล่างไม่ใช่การทดสอบรุ่นปัจจุบันซ้ำ
+
 # System UI audit — 8 ต.ค. 2569
 
 ตรวจ branch `feature/Chayakorn05` ด้วย browser fixtures, unit/API tests, ฐานข้อมูล PostgreSQL ทดสอบแยก และการอ่านเว็บ local ที่ผู้ใช้เปิดอยู่ ไม่แก้โค้ดผลิตภัณฑ์หรือ Git อ่าน [UI design brief](../ui/lifebalance-ui-design-brief.md) แล้ว โดยยึดชื่อแท็บล่าสุด “หน้าแรก” และการนำแถบเลือกวันออกจากหน้าบันทึกตามข้อกำหนดวันที่ 8 ต.ค.
@@ -13,7 +15,9 @@
 
 ## ผลที่พบ
 
-**P2 — แถวตั้งเวลาเตือนอาหารบีบข้อความจนอ่านยากที่ 390px และ 533px.** ป้ายมื้อและคำอธิบายเวลาถูกบังคับอยู่ในช่องกว้าง 22px; “มื้อที่ 1” และ “เวลา 24 ชั่วโมง: 07:00” จึงแตกเป็นตัวอักษร/คำคนละบรรทัด แถวสูง 120–121px ทั้งที่ช่องเวลาอยู่ห่างทางขวา (`x=242` ที่ viewport 390px, `x=359` ที่ 533px). พบจากภาพและ geometry fixture ที่ [reminders-390.png](../../.local/system-ui-audit-20261008/reminders-390.png), [reminders-533.png](../../.local/system-ui-audit-20261008/reminders-533.png) และไฟล์ JSON ข้างกัน
+ติดตามการแก้แถวเตือนอาหารและรายการที่เกี่ยวข้องได้ใน [ผลแก้ compact UI](compact-ui-fixes-2026-10-08.md) ข้อสังเกตด้านล่างเป็นผลของรอบ audit เดิม
+
+**P2 — แถวตั้งเวลาเตือนอาหารบีบข้อความจนอ่านยากที่ 390px และ 533px.** ป้ายมื้อและคำอธิบายเวลาถูกบังคับอยู่ในช่องกว้าง 22px; “มื้อที่ 1” และ “เวลา 24 ชั่วโมง: 07:00” จึงแตกเป็นตัวอักษร/คำคนละบรรทัด แถวสูง 120–121px ทั้งที่ช่องเวลาอยู่ห่างทางขวา (`x=242` ที่ viewport 390px, `x=359` ที่ 533px). พบจากภาพและ geometry fixture ที่ reminders-390.png (local-only, ignored: `../../.local/system-ui-audit-20261008/reminders-390.png`), reminders-533.png (local-only, ignored: `../../.local/system-ui-audit-20261008/reminders-533.png`) และไฟล์ JSON ข้างกัน
 
 สาเหตุที่เห็นใน CSS: [reference.css](../../src/client/styles/reference.css#L255) กำหนด grid ของ label เป็น `22px 1fr auto` แต่ JSX มีลูกตรงเพียง `<span>` กับ `<input>`; span จึงตกในช่อง 22px แรก และ input ในช่อง `1fr`. [mockup-refresh.css](../../src/client/styles/mockup-refresh.css#L223) จัด grid ภายใน span แต่ไม่ได้แก้การจัดช่องของ label. ยืนยันซ้ำที่ 390px และ 533px; หน้าจอที่กว้างขึ้นยังต้องมีรูปแบบแถวที่ขยายตามพื้นที่โดยไม่ปล่อยให้ span อยู่ในคอลัมน์ไอคอน.
 

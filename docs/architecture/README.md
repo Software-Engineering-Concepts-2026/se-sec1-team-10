@@ -1,6 +1,6 @@
 # LifeBalance Architecture
 
-Reviewed against repository source on 11 October 2026. This describes the implementation; live release and deployment results belong in the [deployment evidence](../deployment/continuous-deployment.md).
+Reviewed against repository source on 16 October 2026. This describes the implementation; live release and deployment results belong in the [deployment evidence](../deployment/continuous-deployment.md).
 
 LifeBalance is a browser-based personal food and activity tracking application. The current implementation is a React single-page application and an Express API in one TypeScript modular monolith. In production, Express serves both the built web files and `/api` routes from one application process. PostgreSQL is accessed separately through Prisma; the repository does not establish the health or configuration of any live deployment.
 
@@ -11,8 +11,9 @@ Personas and scenarios in [`docs/requirements`](../requirements/) describe produ
 - [C1 System Context](./c4-context.md) shows users and the integrations represented in the current code.
 - [C2 Containers](./c4-container.md) shows the logical web, API, and database containers and explains how they map to local development and the production image.
 - [Technology stack](./tech_stack.md) lists the implementation choices.
+- [Use cases and UML domain model](./uml_models.md) maps the implemented user actions and Prisma model relationships.
 
-The older draw.io exports in [`diagrams/`](./diagrams/) show an original design and may describe planned or obsolete components. They do not represent the current React/Express implementation or prove that external services are deployed. Use the Mermaid files above for the current code-based view. The UML file is an unfinished template, not implementation evidence. Historical ADR decision text is retained; status notes distinguish superseded proposals from the current architecture.
+The older draw.io exports in [`diagrams/`](./diagrams/) show an original design and may describe planned or obsolete components. They do not represent the current React/Express implementation or prove that external services are deployed. Use the Mermaid files above for the current code-based view. The UML domain view describes the Prisma models, not independently deployed services. Historical ADR decision text is retained; status notes distinguish superseded proposals from the current architecture.
 
 ## Architectural decisions
 

@@ -1,3 +1,5 @@
+> **รายงานย้อนหลัง:** เก็บผลและขอบเขตของรอบเดิมไว้ ดูหลักฐาน CI/CD ล่าสุดที่บันทึกใน [คู่มือ CD](../deployment/continuous-deployment.md) โดยผลเก่าด้านล่างไม่ใช่การทดสอบรุ่นปัจจุบันซ้ำ
+
 # TypeScript coverage
 
 Run `npm run test:coverage` or `npm run test:coverage:all` to execute Vitest and the existing Playwright E2E suite, convert Chromium's V8 coverage
@@ -12,9 +14,11 @@ coverage stays under ignored `coverage/browser/`.
 
 The unit-only baseline on `feature/Chayakorn05` was 27.56% statement coverage and 33.12% line coverage across all
 included TypeScript source. It left the client at 0.57% line coverage because Vitest does not render the application
-UI. The latest complete run measured 71.42% statements and 89.17% lines across all TypeScript source, and all 73 E2E
+UI. A previously recorded local complete run measured 71.42% statements and 89.17% lines across all TypeScript source, and all 73 E2E
 tests passed. Two earlier complete runs each had one transient failure in a different E2E case; the first failed case
-passed in isolation, and both passed in the latest complete run. The command exits unsuccessfully if the Playwright
+passed in isolation, and both passed in that complete local run. These historical figures are not the coverage values
+of the latest CI artifact; see the [recorded CI verification](../deployment/continuous-deployment.md#latest-recorded-verification--16-october-2026)
+for the relevant revision and artifact source. The command exits unsuccessfully if the Playwright
 suite fails or either whole-source threshold is missed. It reports the NFR-08 core line threshold of 80% separately.
 
 NFR-08 focuses on BMI, meal calorie calculation, and net calories. The baseline for their direct implementation paths

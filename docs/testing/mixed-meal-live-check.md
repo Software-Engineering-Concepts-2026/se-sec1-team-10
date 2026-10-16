@@ -1,6 +1,8 @@
+> **รายงานย้อนหลัง:** เก็บผลและขอบเขตของรอบเดิมไว้ ดูหลักฐาน CI/CD ล่าสุดที่บันทึกใน [คู่มือ CD](../deployment/continuous-deployment.md) โดยผลเก่าด้านล่างไม่ใช่การทดสอบรุ่นปัจจุบันซ้ำ
+
 # Mixed meal live AI check
 
-**Result: passed with one provider request.** The test used a resized 768 × 576 version of a Wikimedia Commons photo showing chicken over rice. The original is [Home-cooked Hainanese chicken rice.jpg](https://commons.wikimedia.org/wiki/File:Home-cooked_Hainanese_chicken_rice.jpg), by Kcdtsg (David), released into the public domain. The resized JPEG was 108,411 characters as a data URL. The provider returned HTTP 200 and reported 5,556 prompt, 1,550 completion, and 7,106 total tokens.
+**Result: passed with one provider request. Original run date was not recorded in the safe result metadata; this is historical evidence, not a current provider check.** The test used a resized 768 × 576 version of a Wikimedia Commons photo showing chicken over rice. The original is [Home-cooked Hainanese chicken rice.jpg](https://commons.wikimedia.org/wiki/File:Home-cooked_Hainanese_chicken_rice.jpg), by Kcdtsg (David), released into the public domain. The resized JPEG was 108,411 characters as a data URL. The provider returned HTTP 200 and reported 5,556 prompt, 1,550 completion, and 7,106 total tokens.
 
 The model classified the meal as `ข้าวราดไก่ต้ม` and returned three components:
 

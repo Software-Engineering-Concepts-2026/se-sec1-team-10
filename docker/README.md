@@ -2,7 +2,9 @@
 
 ไฟล์ [Dockerfile](../Dockerfile) ที่ root ใช้ build และรันเว็บ React กับ API Express สำหรับ production ส่วน `services/stats-service` เป็น Python prototype แยกต่างหากและไม่ได้อยู่ใน image นี้
 
-แนวทาง deploy คือ build image สำหรับ `linux/amd64` บน Docker Desktop, push tag ไปยัง Docker Hub repository แบบ private, แล้วให้ Render รัน image โดยเชื่อมฐานข้อมูล PostgreSQL ที่มีอยู่บน Supabase ผ่าน `DATABASE_URL` ตัว container ไม่ได้เปิดฐานข้อมูล ไม่รัน migration และไม่ seed ข้อมูลเอง ดูขั้นตอนที่ [คู่มือ deploy บน Render](../docs/deployment/render-docker.md)
+วิธี deploy หลักคือให้ GitHub Actions รอ CI ของ `main` ผ่าน แล้ว build image สำหรับ `linux/amd64`, push ไป Docker Hub และสั่ง Render ใช้ immutable digest พร้อมตรวจ revision, health และ hash ไฟล์เว็บ ดู [คู่มือ CD และหลักฐาน](../docs/deployment/continuous-deployment.md)
+
+การ build/push ด้วย Docker Desktop เป็นวิธีสำรองตาม [คู่มือ manual บน Render](../docs/deployment/render-docker.md) ฐานข้อมูล PostgreSQL บน Supabase แยกจาก application container และเชื่อมผ่าน `DATABASE_URL` ตัว container ไม่รัน migration หรือ seed เอง
 
 สำหรับพัฒนาในเครื่อง `compose.yaml` ยังเปิด PostgreSQL local ที่เลือกใช้ได้:
 

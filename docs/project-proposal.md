@@ -1,5 +1,9 @@
 # Project Proposal
 
+## สถานะเอกสาร
+
+เอกสารนี้เก็บ snapshot ข้อเสนอและ MoSCoW priorities ในช่วงวางแผนเดิม ไม่ใช่บันทึกสถานะการพัฒนาปัจจุบันหรือการยืนยันว่าทุกข้อส่งมอบแล้ว ข้อเสนอเดิมให้ Issue #15 เป็น Must, Issue #29 และ #32 เป็น Should; User Stories ให้ US-07/Issue #15 เป็น Should และ US-12/Issue #29 กับ US-15/Issue #32 เป็น Must คงทั้งสองชุดไว้ตามต้นฉบับโดยไม่สรุปว่ามีการตกลงเปลี่ยน Priority แล้ว และข้อเสนอฉบับนี้ไม่ได้ระบุ Issue #30/US-13 เรื่อง Dashboard ย้อนหลัง 1 ปี ซึ่งมีอยู่ใน User Stories สำหรับข้อกำหนดอ้างอิงให้ดู [User Stories](requirements/user-stories.md); ความสามารถที่มีในระบบปัจจุบันให้ดู [คู่มือผู้ใช้](user-guide.md) และ [เอกสารสถาปัตยกรรม](architecture/README.md)
+
 ## Theme 
     Theme 3 : ข้อมูลแดชบอร์ดชีวิต 
 
